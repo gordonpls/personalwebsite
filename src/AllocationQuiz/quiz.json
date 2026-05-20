@@ -1,0 +1,264 @@
+{
+  "quizTitle": "Asset Allocation Quiz",
+  "version": "1.1",
+  "description": "Five-question quiz that maps users to a stock and bond allocation based on goals, time horizon, risk tolerance, financial cushion, and return preference.",
+  "scoringMethod": {
+    "type": "sum_points",
+    "answerPoints": {
+      "A": 1,
+      "B": 2,
+      "C": 3,
+      "D": 4
+    },
+    "minScore": 5,
+    "maxScore": 20
+  },
+  "questions": [
+    {
+      "id": "goal",
+      "prompt": "What is the primary goal of this investment?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Preserve what I have and avoid losses",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "Steady, modest growth with low volatility",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "Grow meaningfully over time, with some bumps along the way",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "Maximize long-term growth and accept high volatility",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "id": "long_term_priority",
+      "prompt": "What matters more to you over the long run?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Protecting my money from large swings",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "Balancing growth and stability",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "Growing my money steadily over time",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "Maximizing long-term growth, even with more volatility",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "id": "time_horizon",
+      "prompt": "When do you expect to need most of this money?",
+      "options": [
+        {
+          "id": "A",
+          "text": "Within 1 to 3 years",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "In 3 to 7 years",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "In 7 to 15 years",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "In 15+ years",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "id": "risk_tolerance",
+      "prompt": "Which statement sounds most like you?",
+      "options": [
+        {
+          "id": "A",
+          "text": "I would rather earn less if it means fewer losses",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "I want moderate growth without taking too much risk",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "I can handle ups and downs for better returns",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "I accept big swings if the long-term payoff may be higher",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "id": "financial_safety_net",
+      "prompt": "How would you describe your current financial safety net?",
+      "options": [
+        {
+          "id": "A",
+          "text": "I have little to no safety net, and this is most of my savings",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "I have some emergency savings, but this money still matters a lot",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "I have a solid emergency fund, and this is extra money",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "I am very financially comfortable, and this is purely for growth",
+          "points": 4
+        }
+      ]
+    },
+    {
+      "id": "risk_reward_preference",
+      "prompt": "Which scenario would you prefer?",
+      "options": [
+        {
+          "id": "A",
+          "text": "A guaranteed 4% gain each year, no matter what happens",
+          "points": 1
+        },
+        {
+          "id": "B",
+          "text": "A typical 6% gain, with the chance of a small loss in a bad year",
+          "points": 2
+        },
+        {
+          "id": "C",
+          "text": "A typical 8% gain, with the chance of a meaningful drop in a bad year",
+          "points": 3
+        },
+        {
+          "id": "D",
+          "text": "A typical 11% gain, with the chance of a large decline in a bad year",
+          "points": 4
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "id": "conservative",
+      "label": "Conservative Investor",
+      "scoreRange": {
+        "min": 6,
+        "max": 8
+      },
+      "allocation": {
+        "stocks": 10,
+        "bonds": 90,
+        "display": "10% stocks / 90% bonds"
+      },
+      "shortDescription": "You prioritize stability and capital preservation. You are likely more comfortable with smaller ups and downs, even if that means lower long-term growth."
+    },
+    {
+      "id": "cautious",
+      "label": "Cautious Investor",
+      "scoreRange": {
+        "min": 9,
+        "max": 11
+      },
+      "allocation": {
+        "stocks": 30,
+        "bonds": 70,
+        "display": "30% stocks / 70% bonds"
+      },
+      "shortDescription": "You want some growth, but limiting losses still matters a lot. This mix leans defensive while keeping exposure to long-term upside."
+    },
+    {
+      "id": "balanced",
+      "label": "Balanced Investor",
+      "scoreRange": {
+        "min": 12,
+        "max": 15
+      },
+      "allocation": {
+        "stocks": 50,
+        "bonds": 50,
+        "display": "50% stocks / 50% bonds"
+      },
+      "shortDescription": "You want a middle ground between growth and stability. You can handle moderate market swings in exchange for better long-term return potential."
+    },
+    {
+      "id": "growth",
+      "label": "Growth-Oriented Investor",
+      "scoreRange": {
+        "min": 16,
+        "max": 19
+      },
+      "allocation": {
+        "stocks": 70,
+        "bonds": 30,
+        "display": "70% stocks / 30% bonds"
+      },
+      "shortDescription": "You are comfortable taking on more market risk for stronger long-term growth. Short-term volatility is acceptable if the long-run opportunity is higher."
+    },
+    {
+      "id": "aggressive",
+      "label": "Aggressive Growth Investor",
+      "scoreRange": {
+        "min": 20,
+        "max": 24
+      },
+      "allocation": {
+        "stocks": 90,
+        "bonds": 10,
+        "display": "90% stocks / 10% bonds"
+      },
+      "shortDescription": "You are focused heavily on long-term growth and can tolerate large short-term swings. This profile fits users who can stay invested through major downturns."
+    }
+  ],
+  "resultLogic": {
+    "implementationNotes": [
+      "Sum the points from all answers.",
+      "Each A answer is worth 1 point, B is 2, C is 3, and D is 4.",
+      "Find the result whose scoreRange contains the total score.",
+      "Display the label, allocation.display, and shortDescription."
+    ],
+    "tieHandling": "Not needed because score ranges are continuous and non-overlapping."
+  },
+  "uiSuggestions": {
+    "showOptionLetters": true,
+    "buttonLabels": {
+      "next": "Next",
+      "back": "Back",
+      "submit": "See results",
+      "restart": "Retake quiz"
+    }
+  }
+}

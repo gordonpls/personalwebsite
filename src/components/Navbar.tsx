@@ -1,7 +1,17 @@
+import { useLocation } from "react-router-dom";
 import { JumpToTop } from "./JumpToTop";
 import { ThemeChanger } from "./ThemeChanger";
 
 export const Navbar = () => {
+  const location = useLocation();
+
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-gray-300 shadow-sm">
       {/* Navbar Start with Mobile Dropdown */}
@@ -27,26 +37,23 @@ export const Navbar = () => {
             tabIndex={0}
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
-            <li><a className="link link-hover link-info" href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Home</a></li>
-            {/* <li><a className="link link-hover link-info" href="#about">About</a></li> */}
-            <li><a className="link link-hover link-info" href="#resume">Resume</a></li>
-            {/* <li><a className="link link-hover link-info" href="#milestones">Milestones</a></li> */}
-            <li><a className="link link-hover link-info" href="#portfolio">Portfolio</a></li>
-            <li><a className="link link-hover link-info" href="#gallery">Gallery</a></li>
+            <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
+            <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
+            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
+            <li><a className="link link-hover link-info" href="/finance" target="_blank" rel="noopener noreferrer">Finance ↗</a></li>
+            <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
           </ul>
         </div>
       </div>
 
-      {/* Centered Menu (hidden on small screens, shown on lg) */}
+      {/* Centered Menu (hidden on small screens, shown on md+) */}
       <div className="navbar-center hidden md:flex">
         <ul className="menu menu-horizontal px-1">
-          <li><a className="link link-hover link-info" href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Home</a></li>
-          {/* <li><a className="link link-hover link-info" href="#about">About</a></li> */}
-          <li><a className="link link-hover link-info" href="#resume">Resume</a></li>
-          {/* <li><a className="link link-hover link-info" href="#milestones">Milestones</a></li> */}
-          <li><a className="link link-hover link-info" href="#portfolio">Portfolio</a></li>
-          <li><a className="link link-hover link-info" href="#gallery">Gallery</a></li>
-
+          <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
+          <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
+          <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
+          <li><a className="link link-hover link-info" href="/finance" target="_blank" rel="noopener noreferrer">Finance ↗</a></li>
+          <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
         </ul>
       </div>
 

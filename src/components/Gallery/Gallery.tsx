@@ -91,7 +91,7 @@ export const Gallery = () => {
     };
 
     return (
-        <section className="p-6 md:p-10 bg-base-200 border-2 border-secondary rounded-md p-4 overflow-hidden">
+        <section className="p-6 md:p-10 bg-base-200 border-2 border-secondary rounded-md">
 
             {/* ── Category filter ── */}
             <div className="flex items-center justify-center py-4 md:py-8 flex-wrap gap-y-3" id="gallery">

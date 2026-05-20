@@ -149,9 +149,17 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     );
 };
 
-export const Portfolio = () => {
+interface PortfolioProps {
+    appliedEquityPct?: number | null;
+}
+
+export const Portfolio = ({ appliedEquityPct }: PortfolioProps = {}) => {
     const [range, setRange] = useState<RangeKey>("1y");
-    const [equityPct, setEquityPct] = useState(80);
+    const [equityPct, setEquityPct] = useState(appliedEquityPct ?? 80);
+
+    useEffect(() => {
+        if (appliedEquityPct != null) setEquityPct(appliedEquityPct);
+    }, [appliedEquityPct]);
 
     const { data: tickerData, isLive, isLoading, asOfDate } = useTickerData(range);
     const alloc = getAllocation(equityPct);
