@@ -27,6 +27,21 @@ const pointMap = quizData.scoringMethod.answerPoints as Record<string, number>;
 const questions = quizData.questions;
 const results   = quizData.results as QuizResult[];
 
+type QuizOption = typeof questions[number]["options"][number];
+
+function shuffle<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function buildShuffledOptions(): QuizOption[][] {
+    return questions.map((q) => shuffle(q.options));
+}
+
 function getResult(score: number): QuizResult {
     return (
         results.find((r) => score >= r.scoreRange.min && score <= r.scoreRange.max) ??
@@ -39,8 +54,10 @@ export const AllocationQuiz = ({ onApply }: Props) => {
     const [qIndex, setQIndex]   = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [appliedLabel, setAppliedLabel] = useState<string | null>(null);
+    const [shuffledOptions, setShuffledOptions] = useState<QuizOption[][]>(() => buildShuffledOptions());
 
     const currentQ = questions[qIndex];
+    const currentOptions = shuffledOptions[qIndex];
     const score    = Object.values(answers).reduce((sum, a) => sum + (pointMap[a] ?? 0), 0);
     const result   = step === "result" || step === "applied" ? getResult(score) : null;
 
@@ -69,6 +86,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
         setQIndex(0);
         setAnswers({});
         setAppliedLabel(null);
+        setShuffledOptions(buildShuffledOptions());
     };
 
     // ── Applied (collapsed) ──────────────────────────────────────────────────
@@ -141,7 +159,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
 
                 {/* Options */}
                 <div className="space-y-2">
-                    {currentQ.options.map((opt) => (
+                    {currentOptions.map((opt, i) => (
                         <button
                             key={opt.id}
                             onClick={() => select(opt.id)}
@@ -152,7 +170,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
                                     : "border-base-300 bg-base-200/50 text-base-content/70 hover:border-base-content/20 hover:bg-base-200",
                             ].join(" ")}
                         >
-                            <span className="font-semibold text-primary mr-2">{opt.id}.</span>
+                            <span className="font-semibold text-primary mr-2">{i + 1}.</span>
                             {opt.text}
                         </button>
                     ))}
