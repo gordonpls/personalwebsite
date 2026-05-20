@@ -1,0 +1,12 @@
+# 1. Make your changes
+
+# 2. (Optional) Refresh the ticker cache before building
+npm run fetch-cache
+
+# 3. Build
+npm run build
+
+# 4. Commit everything including dist/
+git add .
+git commit -m "your message"
+git push

@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/fmaovpetmf/gordonzhong.com/
+    - /usr/bin/rsync -a --delete dist/. "$DEPLOYPATH"

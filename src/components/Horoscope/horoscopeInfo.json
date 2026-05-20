@@ -1,0 +1,63 @@
+{
+    "Aries": {
+      "nicknames": "The Trailblazer / The Warrior",
+      "element": "Fire",
+      "attributes": "Bold, Passionate, & Energetic"
+    },
+    "Taurus": {
+      "nicknames": "The Bull / The Steadfast",
+      "element": "Earth",
+      "attributes": "Grounded, Practical, & Reliable"
+    },
+    "Gemini": {
+      "nicknames": "The Twins / The Chameleon",
+      "element": "Air",
+      "attributes": "Intellectual, Communicative, & Social"
+    },
+    "Cancer": {
+      "nicknames": "The Nurturer / The Moonchild",
+      "element": "Water",
+      "attributes": "Emotional, Intuitive, & Deep"
+    },
+    "Leo": {
+      "nicknames": "The King/Queen / The Star",
+      "element": "Fire",
+      "attributes": "Confident, Dramatic, & Loyal"
+    },
+    "Virgo": {
+      "nicknames": "The Perfectionist / The Healer",
+      "element": "Earth",
+      "attributes": "Analytical, Detail-Oriented, & Caring"
+    },
+    "Libra": {
+      "nicknames": "The Diplomat / The Charmer",
+      "element": "Air",
+      "attributes": "Balanced, Charming, & Fair-minded"
+    },
+    "Scorpio": {
+      "nicknames": "The Phoenix / The Mysterious One",
+      "element": "Water",
+      "attributes": "Intense, Mysterious, & Determined"
+    },
+    "Sagittarius": {
+      "nicknames": "The Explorer / The Free Spirit",
+      "element": "Fire",
+      "attributes": "Adventurous, Optimistic, & Independent"
+    },
+    "Capricorn": {
+      "nicknames": "The Goat / The Strategist",
+      "element": "Earth",
+      "attributes": "Ambitious, Disciplined, & Practical"
+    },
+    "Aquarius": {
+      "nicknames": "The Visionary / The Rebel",
+      "element": "Air",
+      "attributes": "Innovative, Unconventional, & Humanitarian"
+    },
+    "Pisces": {
+      "nicknames": "The Dreamer / The Mystic",
+      "element": "Water",
+      "attributes": "Compassionate, Creative, & Sensitive"
+    }
+  }
+  

@@ -1,0 +1,20 @@
+export const AboutMe = () => {
+    const aboutMe = (`My story began in the bustling streets of Brooklyn, New York. Raised by an exceptional chef and a dedicated schoolteacher, I grew up in a household that championed creativity, mastery, and lifelong learning. Inspired by my mother’s devotion to education, I come to value knowledge and cherish the bonds formed through sharing it. Learning opens doors to new opportunities and I strive to continue that cycle through growth and mentorship. 
+
+    As a child of Chinese immigrants, I am no stranger to hard work and hustle. My elders lived in a cramped NYC apartment, working tirelessly and saving every penny so that the next generation might have a better life. Their sacrifices and determination serve as a source of constant motivation. After our move to Colorado, I spent every evening in the corner of our family’s restaurant, studying while helping with the dinner rush. I grew up embodying a common Asian American story, finishing homework in the back of their local family-owned small business. When business slowed, I looked for ways to earn extra money. That early resourcefulness developed into a natural curiosity of exploring many diverse subjects and opportunities.
+
+    Yet who I am today is defined not just by my childhood, but by sudden and drastic change. In recent years, my life’s trajectory has unfolded into a Hero’s Journey. After enduring significant personal loss, I was forced to confront the fragility of life and the short time we are given on this earth. This experience tested my resolve, ignited an inner strength, and completely altered every aspect of my worldview. In the depths of solitude, I was propped up by tremendous support from those around me. Many shared that they found inspiration in my ability to move forward, and their encouragement has given me the bravery to embrace my story openly. I have learned that with a strong foundation, a positive mindset, and a loving community, even the darkest periods can lead to brighter days—I am living proof of this belief. These challenging times have granted me clarity, perspective, and a measure of wisdom that continues to guide me.
+    
+    Emerging from that chapter, I begin to channel my efforts into new ventures. Guided by these lessons, I’ve gained experience across small business, software development, the food & beverage industry, and exploring various parts of the world. Each opportunity has broadened my perspective and reinforced my desire to pursue further education. The more I encounter more in life, the more fascinated I become about the world we live in.
+
+    Outside of work and study, I carry this same spirit into my personal passions. In my free time, I love to travel, eat delicious food, compete in online video games, and stay physically fit at the gym. My deep passion for food, especially Asian cuisines and milk tea, have led me across the country and abroad. Exploring new foods and destinations has deepened my appreciation for different cultures. And through conversations with people from many backgrounds, I have come to recognize the interconnectedness of human experience and the abundance that exists in the universe.
+    
+    From New York to Colorado, shaped by my time in Vegas and now making Massachusetts my home, my journey across the United States has been nothing short of an adventure. As I embark on this next chapter, I do so with excitement and gratitude, embracing each day as an opportunity. Although I have been to many exotic places, there are still countless destinations left to explore. My greatest adventures lie waiting just around the corner.`)
+
+    return (
+        <div className="text-left bg-base-200 p-4 lg:p-8 rounded-md border-2 border-secondary scroll-mt-24" id="about">
+            <div className="lg:text-5xl text-3xl font-bold text-center lg:text-left pb-4 text-primary">A Little About Me</div>
+            <p style={{ whiteSpace: "pre-line" }}>{aboutMe}</p>
+        </div>
+    )
+}
