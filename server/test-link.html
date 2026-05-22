@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Plaid Link Setup</title>
+  <style>
+    body { font-family: monospace; max-width: 700px; margin: 60px auto; padding: 0 20px; background: #0f0f0f; color: #e0e0e0; }
+    h2 { color: #7eb3ff; }
+    button { background: #1a73e8; color: white; border: none; padding: 12px 24px; font-size: 15px; border-radius: 6px; cursor: pointer; margin-top: 16px; }
+    button:disabled { background: #444; cursor: default; }
+    pre { background: #1a1a1a; border: 1px solid #333; padding: 16px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+    .step { margin-top: 32px; border-left: 3px solid #444; padding-left: 16px; }
+    .step.active { border-color: #7eb3ff; }
+    .step.done { border-color: #4caf50; }
+    .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .token { color: #4caf50; }
+    .error { color: #f44336; }
+    .warn { color: #ff9800; font-size: 13px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Plaid Link — One-Time Account Setup</h2>
+  <p>Run this page once to connect your brokerage and get your <code>PLAID_ACCESS_TOKEN</code>.</p>
+
+  <div class="step active" id="step1">
+    <div class="label">Step 1 — Connect your brokerage</div>
+    <button id="linkBtn" onclick="startLink()">Open Plaid Link</button>
+    <p id="step1Status"></p>
+  </div>
+
+  <div class="step" id="step2">
+    <div class="label">Step 2 — Exchange public token</div>
+    <p id="step2Status">Waiting for Link to complete...</p>
+  </div>
+
+  <div class="step" id="step3">
+    <div class="label">Step 3 — Copy this into server/.env</div>
+    <pre id="envOutput">Waiting...</pre>
+    <p class="warn">⚠ Close this tab after copying. Do not commit this value to git.</p>
+  </div>
+
+  <div class="step" id="step4">
+    <div class="label">Step 4 — Verify: fetch your investments</div>
+    <button id="testBtn" onclick="testInvestments()" disabled>Test /api/investments</button>
+    <pre id="investOutput">Waiting...</pre>
+  </div>
+
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script>
+    const API = "http://localhost:3000/api";
+
+    async function startLink() {
+      document.getElementById("linkBtn").disabled = true;
+      document.getElementById("step1Status").textContent = "Fetching link token...";
+      try {
+        const res = await fetch(`${API}/link/token/create`, { method: "POST" });
+        const { link_token, error } = await res.json();
+        if (error || !link_token) throw new Error(error || "No link token returned");
+
+        const handler = Plaid.create({
+          token: link_token,
+          onSuccess: async (public_token, metadata) => {
+            document.getElementById("step1").className = "step done";
+            document.getElementById("step2").className = "step active";
+            document.getElementById("step1Status").textContent = `✓ Connected: ${metadata.institution?.name ?? "institution"}`;
+            document.getElementById("step2Status").textContent = "Exchanging token...";
+            await exchangeToken(public_token);
+          },
+          onExit: (err) => {
+            document.getElementById("linkBtn").disabled = false;
+            if (err) document.getElementById("step1Status").innerHTML = `<span class="error">Error: ${err.display_message ?? err.error_message}</span>`;
+            else document.getElementById("step1Status").textContent = "Cancelled. Click the button to try again.";
+          },
+        });
+        handler.open();
+      } catch (err) {
+        document.getElementById("step1Status").innerHTML = `<span class="error">${err.message}</span>`;
+        document.getElementById("linkBtn").disabled = false;
+      }
+    }
+
+    async function exchangeToken(public_token) {
+      try {
+        const res = await fetch(`${API}/link/token/exchange`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ public_token }),
+        });
+        const { access_token, item_id, error } = await res.json();
+        if (error || !access_token) throw new Error(error || "Exchange failed");
+
+        document.getElementById("step2").className = "step done";
+        document.getElementById("step3").className = "step active";
+        document.getElementById("step2Status").textContent = `✓ Token exchanged (item_id: ${item_id})`;
+        document.getElementById("envOutput").innerHTML =
+          `PLAID_ACCESS_TOKEN=<span class="token">${access_token}</span>`;
+        document.getElementById("step4").className = "step active";
+        document.getElementById("testBtn").disabled = false;
+      } catch (err) {
+        document.getElementById("step2Status").innerHTML = `<span class="error">${err.message}</span>`;
+      }
+    }
+
+    async function testInvestments() {
+      document.getElementById("testBtn").disabled = true;
+      document.getElementById("investOutput").textContent = "Fetching...";
+      try {
+        const res = await fetch(`${API}/investments`);
+        const data = await res.json();
+        document.getElementById("investOutput").textContent = JSON.stringify(data, null, 2);
+        document.getElementById("step4").className = "step done";
+      } catch (err) {
+        document.getElementById("investOutput").innerHTML = `<span class="error">${err.message}</span>`;
+      } finally {
+        document.getElementById("testBtn").disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

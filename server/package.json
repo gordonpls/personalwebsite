@@ -1,0 +1,16 @@
+{
+  "name": "portfolio-server",
+  "version": "1.0.0",
+  "description": "Backend API server for Plaid investment data",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "plaid": "^29.0.0"
+  }
+}

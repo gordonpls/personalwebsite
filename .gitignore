@@ -1,4 +1,7 @@
 .env
+.env.local
+server/.env
 .DS_Store
 node_modules
+server/node_modules
 keys/
