@@ -4,4 +4,4 @@ deployment:
     - export DEPLOYPATH=/home/fmaovpetmf/gordonzhong.com/
     - export SERVERPATH=/home/fmaovpetmf/server/
     - /usr/bin/rsync -a --delete dist/. "$DEPLOYPATH"
-    - /usr/bin/rsync -a --delete --exclude='node_modules' --exclude='.env' server/. "$SERVERPATH"
+    - /usr/bin/rsync -a --delete --exclude='node_modules' --exclude='.env' --exclude='.htaccess' server/. "$SERVERPATH"
