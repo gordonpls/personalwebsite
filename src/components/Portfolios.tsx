@@ -18,6 +18,18 @@ export const Portfolios = () => {
         <div className="space-y-5">
             <h2 className="text-lg font-semibold text-base-content">Personal Portfolio</h2>
 
+            {/* Disclaimer */}
+            <div className="rounded-xl border border-base-300 bg-base-200/50 px-4 py-3">
+                <p className="text-xs text-base-content/60 leading-relaxed">
+                    <span className="font-semibold text-base-content/80">Not financial advice.</span>{" "}
+                    The holdings, weights, and performance shown here are my own and are provided for
+                    informational and illustrative purposes only. Nothing on this page is investment advice
+                    or a recommendation to buy or sell any security. Past performance does not guarantee
+                    future results. Do your own research and consult a licensed financial professional
+                    before making investment decisions.
+                </p>
+            </div>
+
             {/* Portfolio selector */}
             <div role="tablist" aria-label="Portfolios" className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-base-200">
                 {TABS.map((t) => (
@@ -51,18 +63,6 @@ export const Portfolios = () => {
 
             {/* Performance is always the whole portfolio, not tab-scoped */}
             <HoldingsPerformance title="Overall Performance" />
-
-            {/* Disclaimer */}
-            <div className="border-t border-base-300 pt-4">
-                <p className="text-xs text-base-content/50 leading-relaxed">
-                    <span className="font-semibold text-base-content/70">Not financial advice.</span>{" "}
-                    The holdings, weights, and performance shown here are my own and are provided for
-                    informational and illustrative purposes only. Nothing on this page is investment advice
-                    or a recommendation to buy or sell any security. Past performance does not guarantee
-                    future results. Do your own research and consult a licensed financial professional
-                    before making investment decisions.
-                </p>
-            </div>
         </div>
     );
 };
