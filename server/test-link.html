@@ -40,8 +40,8 @@
   </div>
 
   <div class="step" id="step4">
-    <div class="label">Step 4 — Verify: fetch your investments</div>
-    <button id="testBtn" onclick="testInvestments()" disabled>Test /api/investments</button>
+    <div class="label">Step 4 — Verify: fetch your holdings</div>
+    <button id="testBtn" onclick="testInvestments()" disabled>Test /api/holdings</button>
     <pre id="investOutput">Waiting...</pre>
   </div>
 
@@ -105,7 +105,7 @@
       document.getElementById("testBtn").disabled = true;
       document.getElementById("investOutput").textContent = "Fetching...";
       try {
-        const res = await fetch(`${API}/investments`);
+        const res = await fetch(`${API}/holdings`);
         const data = await res.json();
         document.getElementById("investOutput").textContent = JSON.stringify(data, null, 2);
         document.getElementById("step4").className = "step done";

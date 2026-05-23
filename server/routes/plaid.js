@@ -19,10 +19,24 @@ const plaidConfig = new Configuration({
 
 const plaidClient = new PlaidApi(plaidConfig);
 
+// One Plaid item (access token) per institution. Vanguard falls back to the
+// legacy PLAID_ACCESS_TOKEN var so existing deploys keep working.
+function getTokens() {
+    return [
+        { institution: "Vanguard", token: process.env.PLAID_TOKEN_VANGUARD || process.env.PLAID_ACCESS_TOKEN },
+        { institution: "Robinhood", token: process.env.PLAID_TOKEN_ROBINHOOD },
+    ].filter((t) => t.token);
+}
+
+// Cache holdings in-process so a public page doesn't hit Plaid (billed) per visit.
+const HOLDINGS_TTL_MS = 6 * 60 * 60 * 1000; // 6h
+let holdingsCache = { at: 0, data: null };
+
 // ── One-time setup: create a Link token so you can connect your brokerage ──
 // Call this once from your browser dev tools or Postman, then open the
 // returned link_token in Plaid Link to authorize your accounts.
 router.post("/link/token/create", async (_req, res) => {
+    if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
     try {
         const response = await plaidClient.linkTokenCreate({
             user: { client_user_id: "owner" },
@@ -42,6 +56,7 @@ router.post("/link/token/create", async (_req, res) => {
 // After completing Link, POST the public_token here to get your access token.
 // Copy the returned access_token into PLAID_ACCESS_TOKEN in your env vars.
 router.post("/link/token/exchange", async (req, res) => {
+    if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
     const { public_token } = req.body;
     if (!public_token) return res.status(400).json({ error: "public_token required" });
     try {
@@ -57,73 +72,64 @@ router.post("/link/token/exchange", async (req, res) => {
     }
 });
 
-// ── Ongoing: fetch your investment holdings ──
-router.get("/investments", async (_req, res) => {
-    const accessToken = process.env.PLAID_ACCESS_TOKEN;
-    if (!accessToken) return res.status(503).json({ error: "No access token configured" });
+// ── Public, privacy-safe holdings: ticker + relative weight only ──
+// Aggregates every institution's holdings by (institution, ticker) and returns
+// each as a % of the total portfolio. Deliberately exposes NO dollar amounts,
+// account names, balances, or quantities — safe to serve on a public page.
+router.get("/holdings", async (_req, res) => {
+    const tokens = getTokens();
+    if (!tokens.length) return res.status(503).json({ error: "No access tokens configured" });
+
+    if (holdingsCache.data && Date.now() - holdingsCache.at < HOLDINGS_TTL_MS) {
+        return res.json(holdingsCache.data);
+    }
+
     try {
-        const [holdingsRes, accountsRes] = await Promise.all([
-            plaidClient.investmentsHoldingsGet({ access_token: accessToken }),
-            plaidClient.accountsGet({ access_token: accessToken }),
-        ]);
+        const agg = new Map(); // "Institution|TICKER" -> { ..., value }
+        let total = 0;
 
-        const { holdings, securities } = holdingsRes.data;
-        const accounts = accountsRes.data.accounts;
+        for (const { institution, token } of tokens) {
+            const resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
+            const { holdings, securities } = resp.data;
+            const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
 
-        // Build a lookup map for securities
-        const secMap = Object.fromEntries(
-            securities.map((s) => [s.security_id, s])
-        );
-
-        // Return only the fields needed for display — no raw Plaid objects
-        const payload = {
-            accounts: accounts.map((a) => ({
-                id: a.account_id,
-                name: a.name,
-                type: a.type,
-                subtype: a.subtype,
-                balance: a.balances.current,
-                currency: a.balances.iso_currency_code,
-            })),
-            holdings: holdings.map((h) => {
+            for (const h of holdings) {
+                const value = h.institution_value ?? 0;
+                if (value <= 0) continue; // skip cash-sweep dust / empty positions
+                total += value;
                 const sec = secMap[h.security_id] ?? {};
-                return {
-                    account_id: h.account_id,
-                    name: sec.name ?? "Unknown",
+                const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
+                const key = `${institution}|${ticker}`;
+                const cur = agg.get(key) ?? {
+                    institution,
                     ticker: sec.ticker_symbol ?? null,
+                    name: sec.name ?? ticker,
                     type: sec.type ?? null,
-                    quantity: h.quantity,
-                    value: h.institution_value,
-                    cost_basis: h.cost_basis,
-                    currency: h.iso_currency_code,
+                    value: 0,
                 };
-            }),
-        };
+                cur.value += value;
+                agg.set(key, cur);
+            }
+        }
 
+        // Strip raw values; emit only rounded weights.
+        const holdings = [...agg.values()]
+            .map((h) => ({
+                institution: h.institution,
+                ticker: h.ticker,
+                name: h.name,
+                type: h.type,
+                weightPct: total > 0 ? Math.round((h.value / total) * 1000) / 10 : 0,
+            }))
+            .filter((h) => h.weightPct >= 0.1) // keep the table neat
+            .sort((a, b) => b.weightPct - a.weightPct);
+
+        const payload = { asOf: new Date().toISOString(), holdings };
+        holdingsCache = { at: Date.now(), data: payload };
         res.json(payload);
     } catch (err) {
-        console.error("[investments]", err.response?.data ?? err.message);
-        res.status(500).json({ error: "Failed to fetch investments" });
-    }
-});
-
-// ── Ongoing: fetch account balances only (lighter call) ──
-router.get("/balances", async (_req, res) => {
-    const accessToken = process.env.PLAID_ACCESS_TOKEN;
-    if (!accessToken) return res.status(503).json({ error: "No access token configured" });
-    try {
-        const response = await plaidClient.accountsBalanceGet({ access_token: accessToken });
-        const accounts = response.data.accounts.map((a) => ({
-            name: a.name,
-            type: a.type,
-            subtype: a.subtype,
-            balance: a.balances.current,
-            currency: a.balances.iso_currency_code,
-        }));
-        res.json({ accounts });
-    } catch (err) {
-        console.error("[balances]", err.response?.data ?? err.message);
-        res.status(500).json({ error: "Failed to fetch balances" });
+        console.error("[holdings]", err.response?.data ?? err.message);
+        res.status(500).json({ error: "Failed to fetch holdings" });
     }
 });
 

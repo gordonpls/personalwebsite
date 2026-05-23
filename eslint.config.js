@@ -35,4 +35,15 @@ export default [
       ],
     },
   },
+  {
+    // The Express backend is CommonJS running on Node, not browser/React.
+    files: ['server/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: 'commonjs',
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ]

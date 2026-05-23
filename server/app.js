@@ -24,8 +24,11 @@ app.use(cors({
 
 app.use(express.json());
 
-// Serve the one-time setup page — only accessible locally
-app.use("/setup", express.static(__dirname + "/test-link.html"));
+// One-time Plaid Link setup page. Gated behind a flag so it's never reachable
+// in production — set PLAID_SETUP_ENABLED=true locally to connect an institution.
+if (process.env.PLAID_SETUP_ENABLED === "true") {
+    app.get("/setup", (_req, res) => res.sendFile(__dirname + "/test-link.html"));
+}
 
 app.use("/api", plaidRoutes);
 

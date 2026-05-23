@@ -3,6 +3,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Portfolio } from "./Portfolio";
 import { AllocationQuiz } from "./AllocationQuiz";
+import { Holdings } from "./Holdings";
 
 export default function Finance() {
     const [quizEquityPct, setQuizEquityPct] = useState<number | null>(null);
@@ -18,6 +19,10 @@ export default function Finance() {
                     <div className="divider divider-primary" />
                     <section>
                         <Portfolio appliedEquityPct={quizEquityPct} />
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section>
+                        <Holdings />
                     </section>
                 </div>
             </div>
