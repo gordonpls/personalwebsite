@@ -51,6 +51,18 @@ function cached(ttlMs) {
 const getHoldings = cached(6 * 60 * 60 * 1000); // 6h — Plaid is billed per call
 const getQuotes = cached(2 * 60 * 1000);        // 2 min — Finnhub free is 60/min
 
+// Plaid reports each security's name as the brokerage labels it, which is
+// sometimes cryptically abbreviated (VXUS -> "Vng Ttl Intl St Shs") or simply
+// wrong (META has come through as "National Access Cannabis Corp"). Override
+// the display name for tickers we know Plaid mislabels; every other ticker
+// falls back to Plaid's name, so newly-added holdings still work automatically.
+const NAME_OVERRIDES = {
+    VXUS: "Vanguard Total International Stock ETF",
+    BND: "Vanguard Total Bond Market ETF",
+    BNDX: "Vanguard Total International Bond ETF",
+    META: "Meta Platforms, Inc.",
+};
+
 // Map institution + account subtype to a display portfolio bucket.
 // Vanguard is the diversified "Core"; Robinhood splits by account type.
 function portfolioOf(institution, subtype) {
@@ -128,7 +140,7 @@ async function fetchHoldingsPayload() {
             const cur = agg.get(key) ?? {
                 portfolio,
                 ticker: sec.ticker_symbol ?? null,
-                name: sec.name ?? ticker,
+                name: NAME_OVERRIDES[tkr] ?? sec.name ?? ticker,
                 type: sec.type ?? null,
                 value: 0,
             };

@@ -189,7 +189,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             {!error && !loading && last && (
                 <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
                     <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
-                    Your portfolio
+                    My portfolio return
                     {coveragePct < 98 && <span className="text-base-content/40">· represents {coveragePct}% of holdings by weight</span>}
                 </div>
             )}

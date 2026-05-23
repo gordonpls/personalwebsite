@@ -20,7 +20,7 @@ export const Portfolios = () => {
 
     return (
         <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-base-content">Portfolio</h2>
+            <h2 className="text-lg font-semibold text-base-content">Personal Portfolio</h2>
 
             {/* Portfolio selector */}
             <div role="tablist" aria-label="Portfolios" className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-base-200">
