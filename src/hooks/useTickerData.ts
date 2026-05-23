@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import type { RangeKey } from "../components/Portfolio";
+import type { RangeKey } from "../components/HypotheticalPortfolio";
 import { getTickerSeries, type SeriesEntry } from "../services/tickerService";
 import staticCache from "../data/tickerCache.json";
 

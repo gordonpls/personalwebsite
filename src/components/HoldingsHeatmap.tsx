@@ -121,7 +121,7 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>
+                    {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>}
                     <p className="text-sm text-base-content/60 mt-0.5">
                         Sized by weight · shaded by today’s price change
                         {!quotesOk && <span className="text-base-content/40"> · live prices unavailable</span>}

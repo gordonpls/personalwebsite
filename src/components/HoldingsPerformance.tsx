@@ -20,6 +20,13 @@ type PriceMap = Record<string, Record<string, number>>; // ticker -> { "YYYY-MM-
 
 type Range = "1W" | "1M" | "3M" | "YTD" | "1Y";
 const RANGES: Range[] = ["1W", "1M", "3M", "YTD", "1Y"];
+const RANGE_LABEL: Record<Range, string> = {
+    "1W": "past week",
+    "1M": "past month",
+    "3M": "past 3 months",
+    YTD: "year to date",
+    "1Y": "past year",
+};
 
 function parseLocalDate(s: string): Date {
     const [y, m, d] = s.split("-").map(Number);
@@ -104,7 +111,6 @@ const CustomTooltip = ({ active, payload, label }: TipProps) => {
 
 export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
-    const [totalReturnPct, setTotalReturnPct] = useState<number | null>(null);
     const [prices, setPrices] = useState<PriceMap | null>(null);
     const [error, setError] = useState(false);
     const [range, setRange] = useState<Range>("YTD");
@@ -113,7 +119,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
         let cancelled = false;
         fetch("/api/holdings")
             .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-            .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
+            .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
             .catch(() => { if (!cancelled) setError(true); });
 
         fetch("/holdingsHistory.json")
@@ -140,11 +146,10 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                     <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         {error ? "Your holdings are currently unavailable."
-                            : totalReturnPct != null
-                                ? <>Total return since purchase{" "}
-                                    <span className={`font-semibold ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
-                                        {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
-                                    </span></>
+                            : last
+                                ? <><span className={`font-semibold ${last.value >= 0 ? "text-success" : "text-error"}`}>
+                                        {last.value > 0 ? "+" : ""}{last.value.toFixed(2)}%
+                                    </span>{" "}{RANGE_LABEL[range]}</>
                                 : "Performance of your actual holdings"}
                     </p>
                 </div>
@@ -184,16 +189,15 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             {!error && !loading && last && (
                 <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
                     <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
-                    Over {range}
-                    <span className="font-medium text-base-content">{last.value > 0 ? "+" : ""}{last.value.toFixed(1)}%</span>
-                    {coveragePct < 98 && <span className="text-base-content/40">· covers {coveragePct}% of holdings</span>}
+                    Your portfolio
+                    {coveragePct < 98 && <span className="text-base-content/40">· represents {coveragePct}% of holdings by weight</span>}
                 </div>
             )}
 
             <p className="text-[11px] text-base-content/40 leading-snug">
-                Your actual holdings, each rebased to the start of the selected range using its real daily price history,
-                blended by current weight. Total return is measured against your cost basis. Doesn’t account for trades or
-                contributions made within the range. Past performance doesn’t guarantee future results.
+                Your actual holdings, each rebased to the start of the selected range using its real daily price history
+                and blended by current weight. Doesn’t account for trades or contributions made within the range. Past
+                performance doesn’t guarantee future results.
             </p>
         </div>
     );

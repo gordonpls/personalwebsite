@@ -5,6 +5,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
 import { Resume } from "./Resume";
+import { Allocation } from "./Allocation";
 
 export const Home = () => {
     return (
@@ -22,6 +23,10 @@ export const Home = () => {
                     <div className="divider divider-primary" />
                     <section id="gallery" className="scroll-mt-24">
                         <Gallery />
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section id="allocation" className="scroll-mt-24">
+                        <Allocation />
                     </section>
 
                 </div>
