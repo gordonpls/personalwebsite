@@ -29,7 +29,7 @@ app.use("/setup", express.static(__dirname + "/test-link.html"));
 
 app.use("/api", plaidRoutes);
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 
 // Passenger on cPanel injects PORT; fall back to 3000 for local dev
 const PORT = process.env.PORT || 3000;
