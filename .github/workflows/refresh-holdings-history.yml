@@ -1,0 +1,66 @@
+name: Refresh holdings price history
+
+# Re-bakes public/holdingsHistory.json (the performance chart's price data) on a
+# schedule so it never goes stale and picks up any newly-bought tickers — no
+# local machine or manual step needed. Also runnable on demand from the Actions tab.
+on:
+  schedule:
+    - cron: "0 8 * * 6"   # Saturdays 08:00 UTC (after the week's closes)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write          # to commit the refreshed file back to the repo
+
+concurrency:
+  group: refresh-holdings
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: gordonzhong.com
+  SSH_USER: fmaovpetmf
+  SSH_PORT: "21098"
+  WEB_ROOT: /home/fmaovpetmf/gordonzhong.com/
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      # Pulls the live ticker list from prod /api/holdings, then fetches each
+      # ticker's daily history from Twelve Data (throttled to 8/min by the script).
+      - name: Bake holdings price history
+        run: node scripts/fetch-holdings-history.mjs
+        env:
+          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+          HOLDINGS_URL: https://gordonzhong.com/api/holdings
+
+      - name: Detect change
+        id: diff
+        run: git diff --quiet -- public/holdingsHistory.json && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Keep the repo in sync so the next normal deploy doesn't ship a stale file.
+      - name: Commit refreshed file
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/holdingsHistory.json
+          git commit -m "chore: refresh holdings price history (scheduled)"
+          git push
+
+      # Push just the static file to the live web root (no rebuild needed).
+      - name: Deploy refreshed file
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CPANEL_SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" public/holdingsHistory.json "$SSH_USER@$SSH_HOST:$WEB_ROOT"
+        env:
+          CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}
