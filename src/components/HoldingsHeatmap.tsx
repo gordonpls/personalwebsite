@@ -16,17 +16,21 @@ interface Node {
 }
 
 // A ±CLAMP% daily move is fully saturated; smaller moves shade toward neutral.
-const CLAMP = 3;
-const ZERO = [55, 65, 81];   // neutral gray
-const POS = [21, 128, 61];   // green
-const NEG = [185, 28, 28];   // red
+const CLAMP = 2; // a ±2% day reaches full color
+// TradingView/Finviz-style diverging ramp: flat dark gray -> deep -> vivid.
+const FLAT = [54, 57, 64];
+const MID_POS = [33, 110, 58]; const POS = [56, 204, 80];   // deep green -> bright green
+const MID_NEG = [110, 40, 40]; const NEG = [236, 56, 56];   // maroon -> bright red
+const GAP = "#0b0e14";          // near-black tile gaps / backdrop
 const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+const mix = (a: number[], b: number[], t: number) => a.map((v, i) => lerp(v, b[i], t));
 const toHex = (c: number[]) => "#" + c.map((x) => Math.max(0, Math.min(255, x)).toString(16).padStart(2, "0")).join("");
 function tileColor(cp: number | null): string {
     if (cp == null) return "#6b7280";
     const t = Math.min(1, Math.abs(cp) / CLAMP);
-    const tgt = cp >= 0 ? POS : NEG;
-    return toHex([0, 1, 2].map((i) => lerp(ZERO[i], tgt[i], t)));
+    const [mid, end] = cp >= 0 ? [MID_POS, POS] : [MID_NEG, NEG];
+    const rgb = t < 0.5 ? mix(FLAT, mid, t / 0.5) : mix(mid, end, (t - 0.5) / 0.5);
+    return toHex(rgb);
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -41,17 +45,19 @@ const Tile = (props: any) => {
         <g>
             <rect
                 x={x} y={y} width={width} height={height} rx={3}
-                style={{ fill: tileColor(cp), stroke: "var(--color-base-100)", strokeWidth: 2 }}
+                style={{ fill: tileColor(cp), stroke: GAP, strokeWidth: 2 }}
             />
             {showText && (
                 <text x={x + width / 2} y={y + height / 2 - (showChg ? 7 : 0)} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.min(13, Math.max(9, width / 4.5))} fontWeight={700} fill="#fff">
+                    fontSize={Math.min(13, Math.max(9, width / 4.5))} fontWeight={700} fill="#fff"
+                    stroke="rgba(0,0,0,0.55)" strokeWidth={2.6} paintOrder="stroke" strokeLinejoin="round">
                     {label}
                 </text>
             )}
             {showChg && (
                 <text x={x + width / 2} y={y + height / 2 + 9} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={10} fill="rgba(255,255,255,0.85)">
+                    fontSize={10} fill="#fff" fillOpacity={0.9}
+                    stroke="rgba(0,0,0,0.5)" strokeWidth={2} paintOrder="stroke" strokeLinejoin="round">
                     {cp > 0 ? "+" : ""}{cp.toFixed(2)}%
                 </text>
             )}
@@ -123,7 +129,7 @@ export const HoldingsHeatmap = () => {
                 {!error && data.length > 0 && (
                     <div className="flex items-center gap-2 text-[10px] text-base-content/50">
                         <span>−{CLAMP}%</span>
-                        <span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(to right, ${toHex(NEG)}, ${toHex(ZERO)}, ${toHex(POS)})` }} />
+                        <span className="h-2 w-28 rounded-full" style={{ background: `linear-gradient(to right, ${toHex(NEG)}, ${toHex(MID_NEG)}, ${toHex(FLAT)}, ${toHex(MID_POS)}, ${toHex(POS)})` }} />
                         <span>+{CLAMP}%</span>
                     </div>
                 )}
@@ -136,14 +142,14 @@ export const HoldingsHeatmap = () => {
             ) : data.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-10 text-center">No holdings to display.</p>
             ) : (
-                <div className="relative">
+                <div className="relative rounded-lg overflow-hidden" style={{ background: GAP }}>
                     {asOfLabel && (
-                        <span className="absolute top-1 right-1 text-[10px] text-base-content/30 z-10 pointer-events-none">
+                        <span className="absolute top-1.5 right-2 text-[10px] text-white/40 z-10 pointer-events-none">
                             As of {asOfLabel}
                         </span>
                     )}
                     <ResponsiveContainer width="100%" height={340}>
-                        <Treemap data={data} dataKey="size" content={<Tile />} isAnimationActive={false} stroke="var(--color-base-100)">
+                        <Treemap data={data} dataKey="size" content={<Tile />} isAnimationActive={false} stroke={GAP}>
                             <Tooltip content={<HeatTooltip />} />
                         </Treemap>
                     </ResponsiveContainer>
