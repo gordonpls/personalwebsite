@@ -43,7 +43,7 @@ export const Hero = () => {
                             onMouseLeave={() => setIsHovered(false)}
                             onTouchStart={() => setIsHovered(true)}
                             onTouchEnd={() => setIsHovered(false)}
-                            data-tip="Hover me!"
+                            data-tip="Hover me."
                         >
                             {/* HEADSHOT: Visible when not hovered */}
                             <img
