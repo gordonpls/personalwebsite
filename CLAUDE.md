@@ -28,6 +28,19 @@ Deployment is automated via **GitHub Actions** (`.github/workflows/deploy.yml`) 
 - Frontend build vars (`VITE_ALPHAVANTAGE_KEY`, `VITE_WEATHER_API_KEY`) and the deploy SSH key (`CPANEL_SSH_KEY`) live in GitHub Actions **secrets**. SSH host/user/paths are non-secret env in the workflow.
 - The old cPanel git-push flow (`.cpanel.yml`) has been removed; disable the cPanel-side Git Version Control repo so it doesn't also try to deploy.
 
+### Production `/api` routing (fragile — know this)
+The live backend is a cPanel/CloudLinux Node.js app (app root `~/server`, run by LiteSpeed `lsnode`, Application URL `gordonzhong.com/api`). LiteSpeed routes `/api/*` to it via a Passenger stub at **`~/gordonzhong.com/api/.htaccess`** — which lives *inside the SPA web root*. The frontend deploy therefore uses `rsync --delete --exclude 'api'` so it doesn't wipe that stub (it has before; that's the cause of past `/api` outages). The Express app handles the full `/api` prefix on purpose (`app.use('/api', …)` and a `["/health","/api/health"]` route) because Passenger passes the path through unchanged.
+
+If `/api/*` returns a **LiteSpeed 404** after a deploy, the stub was lost. Recreate `~/gordonzhong.com/api/.htaccess` with:
+```
+PassengerAppRoot "/home/fmaovpetmf/server"
+PassengerBaseURI "/api"
+PassengerNodejs "/home/fmaovpetmf/nodevenv/server/24/bin/node"
+PassengerAppType node
+PassengerStartupFile app.js
+```
+(or re-save the Application URL in cPanel → Setup Node.js App, which regenerates it). The server's `~/server/.env` and the CloudLinux app config both supply Plaid env vars; the deploy excludes `.env` so it's never overwritten.
+
 ## Architecture
 
 ### Frontend stack
