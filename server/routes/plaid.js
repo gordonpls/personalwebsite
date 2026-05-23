@@ -32,6 +32,10 @@ function getTokens() {
 const HOLDINGS_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 let holdingsCache = { at: 0, data: null };
 
+// Live quotes refresh far more often than holdings.
+const QUOTES_TTL_MS = 2 * 60 * 1000; // 2 min
+let quotesCache = { at: 0, data: null };
+
 // ── One-time setup: create a Link token so you can connect your brokerage ──
 // Call this once from your browser dev tools or Postman, then open the
 // returned link_token in Plaid Link to authorize your accounts.
@@ -130,6 +134,53 @@ router.get("/holdings", async (_req, res) => {
     } catch (err) {
         console.error("[holdings]", err.response?.data ?? err.message);
         res.status(500).json({ error: "Failed to fetch holdings" });
+    }
+});
+
+// ── Public: live daily % change per holding ticker (Finnhub), for the heatmap ──
+// Returns only ticker -> daily percent change (public market data; no dollars).
+router.get("/quotes", async (_req, res) => {
+    const key = process.env.FINNHUB_API_KEY;
+    if (!key) return res.status(503).json({ error: "No quote provider configured" });
+
+    if (quotesCache.data && Date.now() - quotesCache.at < QUOTES_TTL_MS) {
+        return res.json(quotesCache.data);
+    }
+
+    try {
+        // Determine which tickers to quote from holdings (reuse the holdings cache when warm).
+        let tickers = [];
+        if (holdingsCache.data) {
+            tickers = [...new Set(holdingsCache.data.holdings.map((h) => h.ticker).filter(Boolean))];
+        } else {
+            const set = new Set();
+            for (const { token } of getTokens()) {
+                const r = await plaidClient.investmentsHoldingsGet({ access_token: token });
+                const secMap = Object.fromEntries(r.data.securities.map((s) => [s.security_id, s]));
+                for (const h of r.data.holdings) {
+                    const t = secMap[h.security_id]?.ticker_symbol;
+                    if (t) set.add(t);
+                }
+            }
+            tickers = [...set];
+        }
+
+        const quotes = {};
+        await Promise.all(tickers.map(async (t) => {
+            try {
+                const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(t)}&token=${key}`);
+                const q = await r.json();
+                // dp = daily percent change; c = current price (0 for symbols Finnhub can't quote)
+                if (q && typeof q.dp === "number" && q.c) quotes[t] = Math.round(q.dp * 100) / 100;
+            } catch { /* skip unquotable ticker */ }
+        }));
+
+        const payload = { asOf: new Date().toISOString(), quotes };
+        quotesCache = { at: Date.now(), data: payload };
+        res.json(payload);
+    } catch (err) {
+        console.error("[quotes]", err.response?.data ?? err.message);
+        res.status(500).json({ error: "Failed to fetch quotes" });
     }
 });
 
