@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently -k -n web,api -c blue,magenta \"npm run dev\" \"cd server && npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -37,6 +38,7 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
     "daisyui": "^5.0.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
