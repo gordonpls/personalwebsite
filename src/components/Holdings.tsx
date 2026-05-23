@@ -40,9 +40,9 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
     }, [holdings, portfolio]);
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 space-y-4">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col h-full">
             {/* Header */}
-            <div>
+            <div className="shrink-0 mb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
                 <p className="text-sm text-base-content/60 mt-0.5">Live positions by weight</p>
             </div>
@@ -58,7 +58,7 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div className="max-h-[28rem] overflow-y-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto max-h-[28rem] lg:max-h-none pr-2" style={{ scrollbarGutter: "stable" }}>
                     <table className="table table-xs table-pin-rows">
                         <thead>
                             <tr className="text-base-content/50">

@@ -118,8 +118,8 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
         : null;
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
-            <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col h-full">
+            <div className="flex items-start justify-between flex-wrap gap-3 shrink-0 mb-4">
                 <div>
                     {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>}
                     <p className="text-sm text-base-content/60 mt-0.5">
@@ -137,19 +137,19 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
             </div>
 
             {error ? (
-                <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see the heatmap.</p>
+                <p className="text-sm text-base-content/50 flex-1 flex items-center justify-center text-center">Connect your brokerage to see the heatmap.</p>
             ) : !holdings ? (
-                <div className="h-[340px] rounded bg-base-200 animate-pulse" aria-hidden="true" />
+                <div className="rounded bg-base-200 animate-pulse h-[320px] lg:h-auto lg:flex-1 lg:min-h-0" aria-hidden="true" />
             ) : data.length === 0 ? (
-                <p className="text-sm text-base-content/50 py-10 text-center">No holdings to display.</p>
+                <p className="text-sm text-base-content/50 flex-1 flex items-center justify-center text-center">No holdings to display.</p>
             ) : (
-                <div className="relative rounded-lg overflow-hidden" style={{ background: GAP }}>
+                <div className="relative rounded-lg overflow-hidden h-[320px] lg:h-auto lg:flex-1 lg:min-h-0" style={{ background: GAP }}>
                     {asOfLabel && (
                         <span className="absolute top-1.5 right-2 text-[10px] text-white/40 z-10 pointer-events-none">
                             As of {asOfLabel}
                         </span>
                     )}
-                    <ResponsiveContainer width="100%" height={340}>
+                    <ResponsiveContainer width="100%" height="100%">
                         <Treemap data={data} dataKey="size" content={<Tile />} isAnimationActive={false} stroke={GAP}>
                             <Tooltip content={<HeatTooltip />} />
                         </Treemap>
@@ -157,7 +157,7 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
                 </div>
             )}
 
-            <p className="text-[11px] text-base-content/40 leading-snug">
+            <p className="text-[11px] text-base-content/40 leading-snug shrink-0 mt-4">
                 Each tile is a position, sized by its share of the portfolio and shaded by its live daily price change.
                 Cash and securities without a live quote show neutral.
             </p>

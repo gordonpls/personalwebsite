@@ -38,12 +38,13 @@ export const Portfolios = () => {
 
             <p className="text-sm text-base-content/60">{tab.desc}</p>
 
-            {/* Holdings (compact) beside the heatmap; weights renormalize within the active portfolio */}
-            <div className="flex flex-col lg:flex-row gap-4 items-start">
-                <div className="w-full lg:w-72 lg:shrink-0">
+            {/* Holdings (compact) beside the heatmap; both fill a shared height so they
+                align regardless of how many holdings a portfolio has. Stacks on mobile. */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[28rem]">
+                <div className="w-full lg:w-72 lg:shrink-0 lg:h-full">
                     <Holdings portfolio={active} title="" />
                 </div>
-                <div className="w-full lg:flex-1 lg:min-w-0">
+                <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
                     <HoldingsHeatmap portfolio={active} title="" />
                 </div>
             </div>
