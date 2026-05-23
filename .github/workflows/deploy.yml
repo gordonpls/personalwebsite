@@ -59,9 +59,11 @@ jobs:
           CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}
 
       # Frontend: mirror dist/ into the web root (the built .htaccess ships with it).
+      # Exclude api/ so --delete never removes the cPanel Node-app Passenger mount
+      # (cPanel creates ~/gordonzhong.com/api/.htaccess to route /api to Express).
       - name: Deploy frontend
         run: |
-          rsync -az --delete \
+          rsync -az --delete --exclude 'api' \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             dist/ "$SSH_USER@$SSH_HOST:$WEB_ROOT"
 
