@@ -36,6 +36,15 @@ let holdingsCache = { at: 0, data: null };
 const QUOTES_TTL_MS = 2 * 60 * 1000; // 2 min
 let quotesCache = { at: 0, data: null };
 
+// Map institution + account subtype to a display portfolio bucket.
+// Vanguard is the diversified "Core"; Robinhood splits by account type.
+function portfolioOf(institution, subtype) {
+    if (institution !== "Robinhood") return "Core";
+    return /ira|roth|401|403|457|pension|retire|sep|simple|keogh|tsp/.test(subtype || "")
+        ? "Retirement"
+        : "Tech & Speculation";
+}
+
 // ── One-time setup: create a Link token so you can connect your brokerage ──
 // Call this once from your browser dev tools or Postman, then open the
 // returned link_token in Plaid Link to authorize your accounts.
@@ -94,8 +103,9 @@ router.get("/holdings", async (_req, res) => {
 
         for (const { institution, token } of tokens) {
             const resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
-            const { holdings, securities } = resp.data;
+            const { holdings, securities, accounts } = resp.data;
             const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
+            const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
 
             for (const h of holdings) {
                 const value = h.institution_value ?? 0;
@@ -107,9 +117,11 @@ router.get("/holdings", async (_req, res) => {
                 if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
                 if (stype === "cryptocurrency") continue;
                 total += value;
+                const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
                 const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
-                const key = `${institution}|${ticker}`;
+                const key = `${portfolio}|${ticker}`;
                 const cur = agg.get(key) ?? {
+                    portfolio,
                     institution,
                     ticker: sec.ticker_symbol ?? null,
                     name: sec.name ?? ticker,
@@ -124,13 +136,13 @@ router.get("/holdings", async (_req, res) => {
         // Strip raw values; emit only rounded weights.
         const holdings = [...agg.values()]
             .map((h) => ({
-                institution: h.institution,
+                portfolio: h.portfolio,
                 ticker: h.ticker,
                 name: h.name,
                 type: h.type,
-                weightPct: total > 0 ? Math.round((h.value / total) * 1000) / 10 : 0,
+                weightPct: total > 0 ? Math.round((h.value / total) * 10000) / 100 : 0,
             }))
-            .filter((h) => h.weightPct >= 0.1) // keep the table neat
+            .filter((h) => h.weightPct > 0) // drop only true dust; renormalized per portfolio on the client
             .sort((a, b) => b.weightPct - a.weightPct);
 
         const payload = { asOf: new Date().toISOString(), holdings };

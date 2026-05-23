@@ -110,7 +110,7 @@ const CustomTooltip = ({ active, payload, label }: TipProps) => {
     );
 };
 
-export const HoldingsPerformance = () => {
+export const HoldingsPerformance = ({ institution, title }: { institution?: string; title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [error, setError] = useState(false);
     const [range, setRange] = useState<Range>("YTD");
@@ -128,12 +128,13 @@ export const HoldingsPerformance = () => {
     const equityFrac = useMemo(() => {
         let eq = 0, bd = 0;
         for (const h of holdings ?? []) {
+            if (institution && h.institution !== institution) continue;
             if (isCash(h)) continue;
             if (isBond(h)) bd += h.weightPct; else eq += h.weightPct;
         }
         const total = eq + bd;
         return total > 0 ? eq / total : 0;
-    }, [holdings]);
+    }, [holdings, institution]);
 
     const { data: chartData, asOf } = useMemo(() => buildSeries(range, equityFrac), [range, equityFrac]);
 
@@ -146,7 +147,7 @@ export const HoldingsPerformance = () => {
             {/* Header */}
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">My Portfolio Performance</h2>
+                    <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         {error
                             ? "Your holdings are currently unavailable."

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
 
 interface Holding {
-    institution: string;
+    portfolio: string;
     ticker: string | null;
     name: string;
     type: string | null;
@@ -81,7 +81,7 @@ const HeatTooltip = (props: any) => {
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export const HoldingsHeatmap = () => {
+export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [quotes, setQuotes] = useState<Record<string, number>>({});
     const [quotesAsOf, setQuotesAsOf] = useState<string | null>(null);
@@ -103,14 +103,15 @@ export const HoldingsHeatmap = () => {
         return () => { cancelled = true; };
     }, []);
 
-    const data: Node[] = (holdings ?? [])
-        .filter((h) => h.weightPct > 0)
-        .map((h) => ({
-            name: h.ticker ?? h.name,
-            size: h.weightPct,
-            changePct: h.ticker && h.ticker in quotes ? quotes[h.ticker] : null,
-            fullName: h.name,
-        }));
+    let list = (holdings ?? []).filter((h) => h.weightPct > 0);
+    if (portfolio) list = list.filter((h) => h.portfolio === portfolio);
+    const wsum = list.reduce((s, h) => s + h.weightPct, 0);
+    const data: Node[] = list.map((h) => ({
+        name: h.ticker ?? h.name,
+        size: wsum > 0 ? (h.weightPct / wsum) * 100 : 0,  // renormalize within the portfolio
+        changePct: h.ticker && h.ticker in quotes ? quotes[h.ticker] : null,
+        fullName: h.name,
+    }));
 
     const asOfLabel = quotesAsOf
         ? new Date(quotesAsOf).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
@@ -120,7 +121,7 @@ export const HoldingsHeatmap = () => {
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">My Portfolio Heatmap</h2>
+                    <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         Sized by weight · shaded by today’s price change
                         {!quotesOk && <span className="text-base-content/40"> · live prices unavailable</span>}

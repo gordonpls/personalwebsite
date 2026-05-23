@@ -194,7 +194,7 @@ export const Portfolio = ({ appliedEquityPct }: PortfolioProps = {}) => {
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-semibold text-base-content">Hypothetical Vanguard Portfolio</h2>
+                        <h2 className="text-lg font-semibold text-base-content">Hypothetical Diversified Portfolio</h2>
                         {isLoading ? (
                             <span className="w-2 h-2 rounded-full bg-base-content/20 animate-pulse" />
                         ) : isLive ? (
