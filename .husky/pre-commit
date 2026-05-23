@@ -1,0 +1,9 @@
+# Auto-fix lint on staged JS/JSX
+npx lint-staged
+
+# Block committing secrets. gitleaks scans the staged diff; install with `brew install gitleaks`.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner
+else
+  echo "⚠ gitleaks not installed (brew install gitleaks) — skipping local secret scan; CI still enforces it."
+fi

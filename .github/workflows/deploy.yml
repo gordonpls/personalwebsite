@@ -27,6 +27,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Gate 1: block the deploy if any secret is committed. Runs before deps are
+      # installed so node_modules isn't scanned; --no-git scans the working tree.
+      - name: Secret scan (gitleaks)
+        run: |
+          VER=$(curl -fsSL https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name | ltrimstr("v")')
+          echo "gitleaks v$VER"
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --no-git --redact --no-banner --verbose
+
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
@@ -34,6 +43,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Gate 2: block the deploy on lint errors.
+      - name: Lint
+        run: npm run lint
 
       - name: Build frontend
         # VITE_ vars are baked into the client bundle at build time. They're

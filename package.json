@@ -8,7 +8,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "fetch-cache": "node scripts/fetch-cache.mjs"
+    "fetch-cache": "node scripts/fetch-cache.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": "eslint --fix"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -39,6 +43,8 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "tailwindcss": "^4.0.6",
     "vanta": "^0.5.24",
     "vite": "^6.1.0"
