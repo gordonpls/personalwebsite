@@ -58,12 +58,12 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto max-h-[28rem] lg:max-h-none pr-2" style={{ scrollbarGutter: "stable" }}>
-                    <table className="table table-xs table-pin-rows">
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-2" style={{ scrollbarGutter: "stable" }}>
+                    <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50">
                                 <th className="pl-0">Holding</th>
-                                <th className="text-right pr-0">Weight</th>
+                                <th className="text-right pr-0 w-16">Weight</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,9 +71,9 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                                 <tr key={`${h.ticker ?? h.name}-${i}`} className="hover:bg-base-200/40">
                                     <td className="pl-0 pr-2">
                                         <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
-                                        <div className="text-xs text-base-content/50 truncate max-w-[11rem]">{h.name}</div>
+                                        <div className="text-xs text-base-content/50 truncate">{h.name}</div>
                                     </td>
-                                    <td className="text-right pr-0 align-middle">
+                                    <td className="text-right pr-0 w-16 align-middle">
                                         <span className="font-medium text-base-content tabular-nums">
                                             {h.weightPct.toFixed(1)}%
                                         </span>
