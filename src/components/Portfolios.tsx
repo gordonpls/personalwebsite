@@ -19,9 +19,9 @@ export const Portfolios = () => {
             <h2 className="text-lg font-semibold text-base-content">Personal Portfolio</h2>
 
             {/* Disclaimer */}
-            <div className="rounded-xl border border-base-300 bg-base-200/50 px-4 py-3">
-                <p className="text-xs text-base-content/60 leading-relaxed">
-                    <span className="font-semibold text-base-content/80">Not financial advice.</span>{" "}
+            <div>
+                <p className="text-xs text-base-content/50 leading-relaxed">
+                    <span className="font-semibold text-base-content/70">Not financial advice.</span>{" "}
                     The holdings, weights, and performance shown here are my own and are provided for
                     informational and illustrative purposes only. Nothing on this page is investment advice
                     or a recommendation to buy or sell any security. Past performance does not guarantee
