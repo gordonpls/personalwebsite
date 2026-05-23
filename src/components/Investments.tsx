@@ -5,7 +5,7 @@ import { Portfolio } from "./Portfolio";
 import { AllocationQuiz } from "./AllocationQuiz";
 import { Holdings } from "./Holdings";
 
-export default function Finance() {
+export default function Investments() {
     const [quizEquityPct, setQuizEquityPct] = useState<number | null>(null);
 
     return (

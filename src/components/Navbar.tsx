@@ -40,7 +40,7 @@ export const Navbar = () => {
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
-            <li><a className="link link-hover link-info" href="/finance" target="_blank" rel="noopener noreferrer">Finance ↗</a></li>
+            <li><a className="link link-hover link-info" href="/investments" target="_blank" rel="noopener noreferrer">Investments ↗</a></li>
             <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
           </ul>
         </div>
@@ -52,7 +52,7 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
-          <li><a className="link link-hover link-info" href="/finance" target="_blank" rel="noopener noreferrer">Finance ↗</a></li>
+          <li><a className="link link-hover link-info" href="/investments" target="_blank" rel="noopener noreferrer">Investments ↗</a></li>
           <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
         </ul>
       </div>
