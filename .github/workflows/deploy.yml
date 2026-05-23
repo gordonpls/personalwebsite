@@ -1,0 +1,83 @@
+name: Build & Deploy
+
+# Replaces the old cPanel git-push deploy (.cpanel.yml). Builds the frontend
+# in CI and ships the built output to cPanel over SSH/rsync, so dist/ no longer
+# needs to live in git.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # lets you trigger a deploy manually from the Actions tab
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+env:
+  # These were already public in .cpanel.yml, so they're not secrets.
+  SSH_HOST: gordonzhong.com          # if SSH refuses, try your server hostname/IP from cPanel
+  SSH_USER: fmaovpetmf
+  SSH_PORT: "21098"                  # Namecheap shared hosting uses 21098 (not 22) — verify in cPanel → SSH Access
+  WEB_ROOT: /home/fmaovpetmf/gordonzhong.com/
+  SERVER_ROOT: /home/fmaovpetmf/server/
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        # VITE_ vars are baked into the client bundle at build time. They're
+        # exposed in the browser anyway, but kept as secrets to avoid committing.
+        run: npm run build
+        env:
+          VITE_ALPHAVANTAGE_KEY: ${{ secrets.VITE_ALPHAVANTAGE_KEY }}
+          VITE_WEATHER_API_KEY: ${{ secrets.VITE_WEATHER_API_KEY }}
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$CPANEL_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+        env:
+          CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}
+
+      # Frontend: mirror dist/ into the web root (the built .htaccess ships with it).
+      - name: Deploy frontend
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
+            dist/ "$SSH_USER@$SSH_HOST:$WEB_ROOT"
+
+      # Backend: same excludes as the old .cpanel.yml — never overwrite the
+      # server's .env, .htaccess, or installed node_modules.
+      - name: Deploy backend
+        run: |
+          rsync -az --delete \
+            --exclude node_modules --exclude .env --exclude .htaccess \
+            -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
+            server/ "$SSH_USER@$SSH_HOST:$SERVER_ROOT"
+
+      # Install backend deps (no-op when unchanged) and restart the Passenger app.
+      # cPanel runs Node inside a virtualenv (nodevenv); source it if present so
+      # the right npm is used. Adjust the path if your app root isn't "server".
+      - name: Install backend deps & restart Passenger
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -s <<'EOSSH'
+          set -e
+          cd ~/server
+          ACT="$(ls ~/nodevenv/server/*/bin/activate 2>/dev/null | head -n1 || true)"
+          if [ -n "$ACT" ]; then . "$ACT"; fi
+          npm install --omit=dev
+          mkdir -p tmp && touch tmp/restart.txt
+          EOSSH

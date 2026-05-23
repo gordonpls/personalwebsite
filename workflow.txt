@@ -1,12 +1,14 @@
+# Deploys are automated via GitHub Actions (.github/workflows/deploy.yml).
+# Just push to main:
+
 # 1. Make your changes
-
-# 2. (Optional) Refresh the ticker cache before building
+# 2. (Optional) Refresh the ticker cache — run locally and commit the result,
+#    since CI does NOT run this (it's rate-limited and would mutate a tracked file):
 npm run fetch-cache
-
-# 3. Build
-npm run build
-
-# 4. Commit everything including dist/
+# 3. Commit source only — do NOT commit dist/ (it's gitignored and built in CI)
 git add .
 git commit -m "your message"
 git push
+
+# CI then: npm ci → npm run build → rsync dist/ to web root and server/ to the
+# Node app root over SSH, then restarts Passenger. Watch it in the Actions tab.
