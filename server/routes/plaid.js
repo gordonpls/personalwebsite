@@ -99,9 +99,14 @@ router.get("/holdings", async (_req, res) => {
 
             for (const h of holdings) {
                 const value = h.institution_value ?? 0;
-                if (value <= 0) continue; // skip cash-sweep dust / empty positions
-                total += value;
+                if (value <= 0) continue; // skip empty positions
                 const sec = secMap[h.security_id] ?? {};
+                const stype = (sec.type || "").toLowerCase();
+                const tkr = (sec.ticker_symbol || "").toUpperCase();
+                // exclude cash / money-market and crypto from the portfolio view
+                if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
+                if (stype === "cryptocurrency") continue;
+                total += value;
                 const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
                 const key = `${institution}|${ticker}`;
                 const cur = agg.get(key) ?? {
