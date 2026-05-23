@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "fetch-cache": "node scripts/fetch-cache.mjs",
     "fetch-daily-cache": "node scripts/fetch-daily-cache.mjs",
+    "fetch-holdings-history": "node scripts/fetch-holdings-history.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

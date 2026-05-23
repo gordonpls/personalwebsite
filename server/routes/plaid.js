@@ -28,13 +28,28 @@ function getTokens() {
     ].filter((t) => t.token);
 }
 
-// Cache holdings in-process so a public page doesn't hit Plaid (billed) per visit.
-const HOLDINGS_TTL_MS = 6 * 60 * 60 * 1000; // 6h
-let holdingsCache = { at: 0, data: null };
-
-// Live quotes refresh far more often than holdings.
-const QUOTES_TTL_MS = 2 * 60 * 1000; // 2 min
-let quotesCache = { at: 0, data: null };
+// Cached fetcher with two free-tier safeguards:
+//  1. in-flight dedup — concurrent requests on a cold cache share ONE upstream
+//     fetch instead of each firing their own (prevents a traffic stampede from
+//     multiplying Plaid/Finnhub calls).
+//  2. serve-stale-on-error — a failed/rate-limited refresh returns the last good
+//     data rather than erroring (which would invite immediate client retries).
+// Together with the TTLs, this bounds upstream calls to ~one batch per TTL.
+function cached(ttlMs) {
+    const s = { at: 0, data: null, inFlight: null };
+    return (fetcher) => {
+        if (s.data && Date.now() - s.at < ttlMs) return Promise.resolve(s.data);
+        if (s.inFlight) return s.inFlight;
+        s.inFlight = Promise.resolve()
+            .then(fetcher)
+            .then((data) => { s.at = Date.now(); s.data = data; return data; })
+            .catch((err) => { if (s.data) return s.data; throw err; })
+            .finally(() => { s.inFlight = null; });
+        return s.inFlight;
+    };
+}
+const getHoldings = cached(6 * 60 * 60 * 1000); // 6h — Plaid is billed per call
+const getQuotes = cached(2 * 60 * 1000);        // 2 min — Finnhub free is 60/min
 
 // Map institution + account subtype to a display portfolio bucket.
 // Vanguard is the diversified "Core"; Robinhood splits by account type.
@@ -85,69 +100,80 @@ router.post("/link/token/exchange", async (req, res) => {
     }
 });
 
-// ── Public, privacy-safe holdings: ticker + relative weight only ──
-// Aggregates every institution's holdings by (institution, ticker) and returns
-// each as a % of the total portfolio. Deliberately exposes NO dollar amounts,
-// account names, balances, or quantities — safe to serve on a public page.
-router.get("/holdings", async (_req, res) => {
-    const tokens = getTokens();
-    if (!tokens.length) return res.status(503).json({ error: "No access tokens configured" });
+// Build the privacy-safe holdings payload from Plaid (no $ amounts/account names).
+async function fetchHoldingsPayload() {
+    const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }
+    let total = 0, costSum = 0, costValueSum = 0;
 
-    if (holdingsCache.data && Date.now() - holdingsCache.at < HOLDINGS_TTL_MS) {
-        return res.json(holdingsCache.data);
+    for (const { institution, token } of getTokens()) {
+        const resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
+        const { holdings, securities, accounts } = resp.data;
+        const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
+        const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
+
+        for (const h of holdings) {
+            const value = h.institution_value ?? 0;
+            if (value <= 0) continue; // skip empty positions
+            const sec = secMap[h.security_id] ?? {};
+            const stype = (sec.type || "").toLowerCase();
+            const tkr = (sec.ticker_symbol || "").toUpperCase();
+            // exclude cash / money-market and crypto from the portfolio view
+            if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
+            if (stype === "cryptocurrency") continue;
+            total += value;
+            if (h.cost_basis != null && h.cost_basis > 0) { costSum += h.cost_basis; costValueSum += value; }
+            const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
+            const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
+            const key = `${portfolio}|${ticker}`;
+            const cur = agg.get(key) ?? {
+                portfolio,
+                ticker: sec.ticker_symbol ?? null,
+                name: sec.name ?? ticker,
+                type: sec.type ?? null,
+                value: 0,
+            };
+            cur.value += value;
+            agg.set(key, cur);
+        }
     }
 
+    const holdings = [...agg.values()]
+        .map((h) => ({
+            portfolio: h.portfolio,
+            ticker: h.ticker,
+            name: h.name,
+            type: h.type,
+            weightPct: total > 0 ? Math.round((h.value / total) * 10000) / 100 : 0,
+        }))
+        .filter((h) => h.weightPct > 0) // drop only true dust; renormalized per portfolio on the client
+        .sort((a, b) => b.weightPct - a.weightPct);
+
+    // Overall total return vs cost basis (% only — never a dollar amount).
+    const totalReturnPct = costSum > 0 ? Math.round(((costValueSum - costSum) / costSum) * 1000) / 10 : null;
+
+    return { asOf: new Date().toISOString(), totalReturnPct, holdings };
+}
+
+// Live daily % change per ticker from Finnhub (free tier: 60/min).
+async function fetchQuotesPayload(tickers) {
+    const key = process.env.FINNHUB_API_KEY;
+    const quotes = {};
+    await Promise.all(tickers.map(async (t) => {
+        try {
+            const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(t)}&token=${key}`);
+            const q = await r.json();
+            // dp = daily percent change; c = current price (0 for symbols Finnhub can't quote)
+            if (q && typeof q.dp === "number" && q.c) quotes[t] = Math.round(q.dp * 100) / 100;
+        } catch { /* skip unquotable ticker */ }
+    }));
+    return { asOf: new Date().toISOString(), quotes };
+}
+
+// ── Public, privacy-safe holdings: portfolio + ticker + relative weight only ──
+router.get("/holdings", async (_req, res) => {
+    if (!getTokens().length) return res.status(503).json({ error: "No access tokens configured" });
     try {
-        const agg = new Map(); // "Institution|TICKER" -> { ..., value }
-        let total = 0;
-
-        for (const { institution, token } of tokens) {
-            const resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
-            const { holdings, securities, accounts } = resp.data;
-            const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
-            const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
-
-            for (const h of holdings) {
-                const value = h.institution_value ?? 0;
-                if (value <= 0) continue; // skip empty positions
-                const sec = secMap[h.security_id] ?? {};
-                const stype = (sec.type || "").toLowerCase();
-                const tkr = (sec.ticker_symbol || "").toUpperCase();
-                // exclude cash / money-market and crypto from the portfolio view
-                if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
-                if (stype === "cryptocurrency") continue;
-                total += value;
-                const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
-                const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
-                const key = `${portfolio}|${ticker}`;
-                const cur = agg.get(key) ?? {
-                    portfolio,
-                    institution,
-                    ticker: sec.ticker_symbol ?? null,
-                    name: sec.name ?? ticker,
-                    type: sec.type ?? null,
-                    value: 0,
-                };
-                cur.value += value;
-                agg.set(key, cur);
-            }
-        }
-
-        // Strip raw values; emit only rounded weights.
-        const holdings = [...agg.values()]
-            .map((h) => ({
-                portfolio: h.portfolio,
-                ticker: h.ticker,
-                name: h.name,
-                type: h.type,
-                weightPct: total > 0 ? Math.round((h.value / total) * 10000) / 100 : 0,
-            }))
-            .filter((h) => h.weightPct > 0) // drop only true dust; renormalized per portfolio on the client
-            .sort((a, b) => b.weightPct - a.weightPct);
-
-        const payload = { asOf: new Date().toISOString(), holdings };
-        holdingsCache = { at: Date.now(), data: payload };
-        res.json(payload);
+        res.json(await getHoldings(fetchHoldingsPayload));
     } catch (err) {
         console.error("[holdings]", err.response?.data ?? err.message);
         res.status(500).json({ error: "Failed to fetch holdings" });
@@ -155,46 +181,12 @@ router.get("/holdings", async (_req, res) => {
 });
 
 // ── Public: live daily % change per holding ticker (Finnhub), for the heatmap ──
-// Returns only ticker -> daily percent change (public market data; no dollars).
 router.get("/quotes", async (_req, res) => {
-    const key = process.env.FINNHUB_API_KEY;
-    if (!key) return res.status(503).json({ error: "No quote provider configured" });
-
-    if (quotesCache.data && Date.now() - quotesCache.at < QUOTES_TTL_MS) {
-        return res.json(quotesCache.data);
-    }
-
+    if (!process.env.FINNHUB_API_KEY) return res.status(503).json({ error: "No quote provider configured" });
     try {
-        // Determine which tickers to quote from holdings (reuse the holdings cache when warm).
-        let tickers = [];
-        if (holdingsCache.data) {
-            tickers = [...new Set(holdingsCache.data.holdings.map((h) => h.ticker).filter(Boolean))];
-        } else {
-            const set = new Set();
-            for (const { token } of getTokens()) {
-                const r = await plaidClient.investmentsHoldingsGet({ access_token: token });
-                const secMap = Object.fromEntries(r.data.securities.map((s) => [s.security_id, s]));
-                for (const h of r.data.holdings) {
-                    const t = secMap[h.security_id]?.ticker_symbol;
-                    if (t) set.add(t);
-                }
-            }
-            tickers = [...set];
-        }
-
-        const quotes = {};
-        await Promise.all(tickers.map(async (t) => {
-            try {
-                const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(t)}&token=${key}`);
-                const q = await r.json();
-                // dp = daily percent change; c = current price (0 for symbols Finnhub can't quote)
-                if (q && typeof q.dp === "number" && q.c) quotes[t] = Math.round(q.dp * 100) / 100;
-            } catch { /* skip unquotable ticker */ }
-        }));
-
-        const payload = { asOf: new Date().toISOString(), quotes };
-        quotesCache = { at: Date.now(), data: payload };
-        res.json(payload);
+        const h = await getHoldings(fetchHoldingsPayload); // reuse cached holdings for the ticker list
+        const tickers = [...new Set((h.holdings || []).map((x) => x.ticker).filter(Boolean))];
+        res.json(await getQuotes(() => fetchQuotesPayload(tickers)));
     } catch (err) {
         console.error("[quotes]", err.response?.data ?? err.message);
         res.status(500).json({ error: "Failed to fetch quotes" });

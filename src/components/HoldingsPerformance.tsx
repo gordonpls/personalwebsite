@@ -8,36 +8,15 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
-import monthlyCache from "../data/tickerCache.json";
-import dailyCache from "../data/tickerDailyCache.json";
 
 interface Holding {
-    institution: string;
+    portfolio: string;
     ticker: string | null;
     name: string;
     type: string | null;
     weightPct: number;
 }
-
-interface RawEntry {
-    date: string;
-    VT: number | null;
-    VXUS: number | null;
-    BND: number | null;
-    BNDX: number | null;
-}
-
-// Tickers / names we treat as fixed income; everything else equity-like is equity.
-const BOND_TICKERS = new Set([
-    "BND", "BNDX", "BNDW", "AGG", "IAGG", "VGIT", "VCIT", "VGSH", "VGLT",
-    "VTEB", "MUB", "TLT", "IEF", "GOVT", "SCHZ", "VTIP", "SCHP",
-]);
-const isCash = (h: Holding) => h.type === "cash" || (h.ticker ?? "").toUpperCase() === "VMFXX";
-const isBond = (h: Holding) => {
-    const t = (h.ticker ?? "").toUpperCase();
-    if (BOND_TICKERS.has(t)) return true;
-    return /\b(bond|treasury|fixed income|aggregate|municipal)\b/i.test(h.name ?? "");
-};
+type PriceMap = Record<string, Record<string, number>>; // ticker -> { "YYYY-MM-DD": close }
 
 type Range = "1W" | "1M" | "3M" | "YTD" | "1Y";
 const RANGES: Range[] = ["1W", "1M", "3M", "YTD", "1Y"];
@@ -47,61 +26,74 @@ function parseLocalDate(s: string): Date {
     return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-// Earliest date to include for a range. 1Y compares against monthly "YYYY-MM"
-// keys; the daily ranges compare against "YYYY-MM-DD".
 function cutoffFor(range: Range): string {
     const d = new Date();
     if (range === "YTD") return `${d.getFullYear()}-01-01`;
-    if (range === "1Y") { d.setFullYear(d.getFullYear() - 1); return d.toISOString().slice(0, 7); }
-    if (range === "1W") d.setDate(d.getDate() - 7);
-    else if (range === "1M") d.setMonth(d.getMonth() - 1);
+    if (range === "1Y") d.setFullYear(d.getFullYear() - 1);
     else if (range === "3M") d.setMonth(d.getMonth() - 3);
+    else if (range === "1M") d.setMonth(d.getMonth() - 1);
+    else if (range === "1W") d.setDate(d.getDate() - 7);
     return d.toISOString().slice(0, 10);
 }
 
-interface ChartPoint { date: string; portfolio: number; }
+interface ChartPoint { date: string; value: number; }
 
-// Short ranges use the daily cache; 1Y uses the monthly cache. Each ticker is
-// rebased to percent-return-from-period-start, then blended by the equity/bond split.
-function buildSeries(range: Range, equityFrac: number): { data: ChartPoint[]; asOf: string | null } {
-    const monthly = range === "1Y";
-    const source = (monthly ? monthlyCache.series : dailyCache.series) as RawEntry[];
+// Blend each holding's real % return (rebased to the range start) by its weight.
+// Tickers without price history, or without a price at the range start, are
+// dropped and the remaining weights renormalized; coveragePct reports how much
+// of the portfolio (by weight) the curve represents.
+function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { data: ChartPoint[]; coveragePct: number; asOfLast: string | null } {
     const cutoff = cutoffFor(range);
+    const totalW = holdings.reduce((s, h) => s + h.weightPct, 0) || 1;
+    const items = holdings.filter((h) => h.ticker && prices[h.ticker as string]);
 
-    const clean = source
-        .filter((e) => e.date >= cutoff && e.VT != null && e.VXUS != null && e.BND != null && e.BNDX != null)
-        .sort((a, b) => a.date.localeCompare(b.date)) as Array<Required<RawEntry>>;
+    const dateSet = new Set<string>();
+    for (const h of items) for (const d in prices[h.ticker as string]) if (d >= cutoff) dateSet.add(d);
+    const axis = [...dateSet].sort();
+    if (axis.length < 2) return { data: [], coveragePct: 0, asOfLast: null };
 
-    if (clean.length < 2) return { data: [], asOf: null };
+    // Forward-fill each ticker's close along the shared date axis.
+    const series = items.map((h) => {
+        const map = prices[h.ticker as string];
+        const tdates = Object.keys(map).sort();
+        const aligned: (number | null)[] = [];
+        let pi = 0, last: number | null = null;
+        for (const d of axis) {
+            while (pi < tdates.length && tdates[pi] <= d) { last = map[tdates[pi]]; pi++; }
+            aligned.push(last);
+        }
+        return { w: h.weightPct, aligned, base: aligned[0] };
+    }).filter((s) => s.base != null && s.base > 0);
 
-    const base = clean[0];
-    const lbl: Intl.DateTimeFormatOptions = monthly ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" };
+    const repW = series.reduce((s, x) => s + x.w, 0);
+    if (repW <= 0) return { data: [], coveragePct: 0, asOfLast: null };
 
-    const data = clean.map((e) => {
-        const ret = (cur: number, b: number) => (cur / b - 1) * 100;
-        const equities = ret(e.VT, base.VT) * 0.6 + ret(e.VXUS, base.VXUS) * 0.4;
-        const bonds = ret(e.BND, base.BND) * 0.6 + ret(e.BNDX, base.BNDX) * 0.4;
-        const raw = parseLocalDate(e.date).toLocaleDateString("en-US", lbl);
-        return {
-            date: monthly ? raw.replace(/(\d{2})$/, "'$1") : raw,
-            portfolio: parseFloat((equityFrac * equities + (1 - equityFrac) * bonds).toFixed(2)),
-        };
+    const fmt: Intl.DateTimeFormatOptions = range === "1Y"
+        ? { month: "short", year: "2-digit" }
+        : { month: "short", day: "numeric" };
+
+    const data = axis.map((d, idx) => {
+        let r = 0;
+        for (const s of series) {
+            const p = s.aligned[idx];
+            if (p == null) continue;
+            r += (s.w / repW) * ((p / (s.base as number) - 1) * 100);
+        }
+        const raw = parseLocalDate(d).toLocaleDateString("en-US", fmt);
+        return { date: range === "1Y" ? raw.replace(/(\d{2})$/, "'$1") : raw, value: parseFloat(r.toFixed(2)) };
     });
 
-    const asOf = parseLocalDate(clean[clean.length - 1].date).toLocaleDateString("en-US",
-        monthly ? { month: "short", year: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
-    return { data, asOf };
+    return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
 }
 
 interface TipProps {
     active?: boolean;
-    payload?: Array<{ dataKey: string; value: number }>;
+    payload?: Array<{ value: number }>;
     label?: string;
 }
 const CustomTooltip = ({ active, payload, label }: TipProps) => {
     if (!active || !payload?.length) return null;
-    const v = payload.find((p) => p.dataKey === "portfolio")?.value;
-    if (v == null) return null;
+    const v = payload[0].value;
     return (
         <div className="bg-base-200 border border-base-300 rounded-xl px-4 py-3 text-sm shadow-lg">
             <p className="text-base-content/70 text-xs font-medium mb-1">{label}</p>
@@ -110,8 +102,10 @@ const CustomTooltip = ({ active, payload, label }: TipProps) => {
     );
 };
 
-export const HoldingsPerformance = ({ institution, title }: { institution?: string; title?: string } = {}) => {
+export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
+    const [totalReturnPct, setTotalReturnPct] = useState<number | null>(null);
+    const [prices, setPrices] = useState<PriceMap | null>(null);
     const [error, setError] = useState(false);
     const [range, setRange] = useState<Range>("YTD");
 
@@ -119,28 +113,24 @@ export const HoldingsPerformance = ({ institution, title }: { institution?: stri
         let cancelled = false;
         fetch("/api/holdings")
             .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-            .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
+            .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
             .catch(() => { if (!cancelled) setError(true); });
+
+        fetch("/holdingsHistory.json")
+            .then((r) => r.ok ? r.json() : Promise.reject())
+            .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
+            .catch(() => { if (!cancelled) setPrices({}); });
+
         return () => { cancelled = true; };
     }, []);
 
-    // Real equity/bond split from holdings (cash excluded, renormalized to 100%).
-    const equityFrac = useMemo(() => {
-        let eq = 0, bd = 0;
-        for (const h of holdings ?? []) {
-            if (institution && h.institution !== institution) continue;
-            if (isCash(h)) continue;
-            if (isBond(h)) bd += h.weightPct; else eq += h.weightPct;
-        }
-        const total = eq + bd;
-        return total > 0 ? eq / total : 0;
-    }, [holdings, institution]);
+    const { data, coveragePct } = useMemo(
+        () => (holdings && prices) ? buildSeries(range, holdings, prices) : { data: [], coveragePct: 0, asOfLast: null },
+        [range, holdings, prices],
+    );
 
-    const { data: chartData, asOf } = useMemo(() => buildSeries(range, equityFrac), [range, equityFrac]);
-
-    const last = chartData[chartData.length - 1];
-    const equityPct = Math.round(equityFrac * 100);
-    const loading = !holdings && !error;
+    const last = data[data.length - 1];
+    const loading = (!holdings || !prices) && !error;
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
@@ -149,9 +139,13 @@ export const HoldingsPerformance = ({ institution, title }: { institution?: stri
                 <div>
                     <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
-                        {error
-                            ? "Your holdings are currently unavailable."
-                            : `Your current mix: ${equityPct}% stocks · ${100 - equityPct}% bonds`}
+                        {error ? "Your holdings are currently unavailable."
+                            : totalReturnPct != null
+                                ? <>Total return since purchase{" "}
+                                    <span className={`font-semibold ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
+                                        {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
+                                    </span></>
+                                : "Performance of your actual holdings"}
                     </p>
                 </div>
                 <div className="flex gap-1">
@@ -169,44 +163,37 @@ export const HoldingsPerformance = ({ institution, title }: { institution?: stri
 
             {/* Chart */}
             {error ? (
-                <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see portfolio performance.</p>
+                <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see performance.</p>
             ) : loading ? (
                 <div className="h-[260px] rounded bg-base-200 animate-pulse" aria-hidden="true" />
-            ) : chartData.length < 2 ? (
+            ) : data.length < 2 ? (
                 <p className="text-sm text-base-content/50 py-10 text-center">Not enough price history for this range yet.</p>
             ) : (
-                <div className="relative">
-                    {asOf && (
-                        <span className="absolute top-1 right-1 text-[10px] text-base-content/30 z-10 pointer-events-none">
-                            As of {asOf}
-                        </span>
-                    )}
-                    <ResponsiveContainer width="100%" height={260}>
-                        <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-base-content/10" vertical={false} />
-                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={50} />
-                            <YAxis tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} width={48} />
-                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.1, strokeWidth: 1 }} />
-                            <Line type="monotone" dataKey="portfolio" stroke="#E8A020" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-base-content/10" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={50} />
+                        <YAxis tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} width={48} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.1, strokeWidth: 1 }} />
+                        <Line type="monotone" dataKey="value" stroke="#E8A020" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} />
+                    </LineChart>
+                </ResponsiveContainer>
             )}
 
-            {/* Legend + summary */}
+            {/* Summary */}
             {!error && !loading && last && (
-                <div className="flex gap-4 flex-wrap">
-                    <span className="flex items-center gap-2 text-xs text-base-content/60">
-                        <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
-                        Your portfolio
-                        <span className="font-medium text-base-content">{last.portfolio > 0 ? "+" : ""}{last.portfolio.toFixed(1)}%</span>
-                    </span>
+                <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
+                    <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
+                    Over {range}
+                    <span className="font-medium text-base-content">{last.value > 0 ? "+" : ""}{last.value.toFixed(1)}%</span>
+                    {coveragePct < 98 && <span className="text-base-content/40">· covers {coveragePct}% of holdings</span>}
                 </div>
             )}
 
             <p className="text-[11px] text-base-content/40 leading-snug">
-                Illustrative: your current stock/bond split applied to broad global index returns over the selected range,
-                not actual realized performance. Past performance doesn’t guarantee future results.
+                Your actual holdings, each rebased to the start of the selected range using its real daily price history,
+                blended by current weight. Total return is measured against your cost basis. Doesn’t account for trades or
+                contributions made within the range. Past performance doesn’t guarantee future results.
             </p>
         </div>
     );
