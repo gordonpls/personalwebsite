@@ -10,12 +10,8 @@ const TABS: { id: string; desc: string }[] = [
     { id: "Retirement", desc: "Traditional & Roth IRA." },
 ];
 
-type View = "Holdings" | "Heatmap";
-const VIEWS: View[] = ["Holdings", "Heatmap"];
-
 export const Portfolios = () => {
     const [active, setActive] = useState("Core");
-    const [view, setView] = useState<View>("Holdings");
     const tab = TABS.find((t) => t.id === active) ?? TABS[0];
 
     return (
@@ -42,28 +38,15 @@ export const Portfolios = () => {
 
             <p className="text-sm text-base-content/60">{tab.desc}</p>
 
-            {/* Holdings / Heatmap view switch (Holdings first) */}
-            <div role="tablist" aria-label="View" className="flex gap-5 border-b border-base-300">
-                {VIEWS.map((v) => (
-                    <button
-                        key={v}
-                        role="tab"
-                        aria-selected={view === v}
-                        onClick={() => setView(v)}
-                        className={`-mb-px pb-2 text-sm font-medium border-b-2 transition ${view === v
-                            ? "border-primary text-base-content"
-                            : "border-transparent text-base-content/50 hover:text-base-content/80"
-                            }`}
-                    >
-                        {v}
-                    </button>
-                ))}
+            {/* Holdings (compact) beside the heatmap; weights renormalize within the active portfolio */}
+            <div className="flex flex-col lg:flex-row gap-4 items-start">
+                <div className="w-full lg:w-72 lg:shrink-0">
+                    <Holdings portfolio={active} title="" />
+                </div>
+                <div className="w-full lg:flex-1 lg:min-w-0">
+                    <HoldingsHeatmap portfolio={active} title="" />
+                </div>
             </div>
-
-            {/* Selected view; weights renormalize within the active portfolio */}
-            {view === "Holdings"
-                ? <Holdings portfolio={active} title="" />
-                : <HoldingsHeatmap portfolio={active} title="" />}
 
             {/* Performance is always the whole portfolio, not tab-scoped */}
             <HoldingsPerformance title="Overall Performance" />

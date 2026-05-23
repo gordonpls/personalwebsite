@@ -61,6 +61,7 @@ const NAME_OVERRIDES = {
     BND: "Vanguard Total Bond Market ETF",
     BNDX: "Vanguard Total International Bond ETF",
     META: "Meta Platforms, Inc.",
+    LIFE: "Ethos Technologies Inc.",
 };
 
 // Map institution + account subtype to a display portfolio bucket.

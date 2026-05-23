@@ -39,10 +39,8 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             .sort((a, b) => b.weightPct - a.weightPct);
     }, [holdings, portfolio]);
 
-    const maxWeight = rows.reduce((m, h) => Math.max(m, h.weightPct), 0);
-
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 space-y-4">
             {/* Header */}
             <div>
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
@@ -60,33 +58,25 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div className="overflow-x-auto max-h-[28rem] overflow-y-auto">
-                    <table className="table table-sm table-pin-rows">
+                <div className="max-h-[28rem] overflow-y-auto">
+                    <table className="table table-xs table-pin-rows">
                         <thead>
                             <tr className="text-base-content/50">
-                                <th>Holding</th>
-                                <th className="text-right">Weight</th>
+                                <th className="pl-0">Holding</th>
+                                <th className="text-right pr-0">Weight</th>
                             </tr>
                         </thead>
                         <tbody>
                             {rows.map((h, i) => (
                                 <tr key={`${h.ticker ?? h.name}-${i}`} className="hover:bg-base-200/40">
-                                    <td>
-                                        <div className="font-semibold text-base-content">{h.ticker ?? "—"}</div>
-                                        <div className="text-xs text-base-content/50 truncate max-w-[14rem]">{h.name}</div>
+                                    <td className="pl-0 pr-2">
+                                        <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
+                                        <div className="text-xs text-base-content/50 truncate max-w-[11rem]">{h.name}</div>
                                     </td>
-                                    <td>
-                                        <div className="flex items-center justify-end gap-2">
-                                            <div className="w-24 h-1.5 rounded-full bg-base-300 overflow-hidden hidden sm:block">
-                                                <div
-                                                    className="h-full rounded-full"
-                                                    style={{ width: `${maxWeight ? (h.weightPct / maxWeight) * 100 : 0}%`, background: "var(--color-primary)" }}
-                                                />
-                                            </div>
-                                            <span className="font-medium text-base-content tabular-nums w-12 text-right">
-                                                {h.weightPct.toFixed(1)}%
-                                            </span>
-                                        </div>
+                                    <td className="text-right pr-0 align-middle">
+                                        <span className="font-medium text-base-content tabular-nums">
+                                            {h.weightPct.toFixed(1)}%
+                                        </span>
                                     </td>
                                 </tr>
                             ))}
