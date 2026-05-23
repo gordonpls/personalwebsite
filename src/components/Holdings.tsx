@@ -39,7 +39,7 @@ export const Holdings = () => {
             {/* Header */}
             <div className="flex items-start justify-between flex-wrap gap-3">
                 <div>
-                    <h2 className="text-lg font-semibold text-base-content">Holdings</h2>
+                    <h2 className="text-lg font-semibold text-base-content">My Portfolio Holdings</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         Live positions by weight{brokers.length ? ` · ${brokers.join(" + ")}` : ""}
                     </p>

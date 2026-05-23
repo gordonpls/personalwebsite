@@ -4,6 +4,7 @@ import { Footer } from "./Footer";
 import { Portfolio } from "./Portfolio";
 import { AllocationQuiz } from "./AllocationQuiz";
 import { Holdings } from "./Holdings";
+import { HoldingsPerformance } from "./HoldingsPerformance";
 
 export default function Investments() {
     const [quizEquityPct, setQuizEquityPct] = useState<number | null>(null);
@@ -23,6 +24,10 @@ export default function Investments() {
                     <div className="divider divider-primary" />
                     <section>
                         <Holdings />
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section>
+                        <HoldingsPerformance />
                     </section>
                 </div>
             </div>
