@@ -68,7 +68,7 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                             <tr className="text-base-content/50">
                                 <th className="pl-0">Holding</th>
                                 <th className="text-right w-14">Weight</th>
-                                <th className="text-right pr-0 w-20 whitespace-nowrap">Total Return</th>
+                                <th className="text-right pr-0 w-20 whitespace-normal leading-tight align-bottom">Total Return</th>
                             </tr>
                         </thead>
                         <tbody>
