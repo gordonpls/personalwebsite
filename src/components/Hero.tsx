@@ -72,7 +72,7 @@ export const Hero = () => {
                                     <div className="badge badge-secondary">MBA</div>
                                     <div className="badge badge-secondary">MSF</div>
                                     <div className="badge badge-secondary">ESTJ-A</div>
-                                    {/* <div className="badge badge-secondary">Foodie</div> */}
+                                    <div className="badge badge-secondary">Foodie</div>
                                 </div>
 
                                 <div className="flex flex-col lg:flex-row gap-2 pt-4 justify-center place-self-center">

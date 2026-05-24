@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { IMAGES } from "./GalleryImages";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const PER_PAGE = 12;
+const PER_PAGE = 15; // 3 full rows at the widest (5-col) breakpoint
 
-// Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 6), so the browser
+// Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 5), so the browser
 // can pick the smallest adequate thumbnail from srcset.
-const GRID_SIZES = "(min-width:1280px) 16vw, (min-width:1024px) 25vw, (min-width:768px) 33vw, 50vw";
+const GRID_SIZES = "(min-width:1280px) 20vw, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw";
 
 const CATEGORIES = ["All", "Denver", "Thailand", "Vegas"];
 
@@ -15,24 +15,27 @@ function Lightbox({ image, onClose, onPrev, onNext }) {
     if (!image) return null;
     return (
         <dialog className="modal modal-open">
-            <div className="modal-box max-w-3xl p-0 bg-base-100 overflow-hidden relative">
+            {/* Fixed-size box: the frame stays put while navigating, so swapping
+                images of different aspect ratios no longer makes the modal jump. */}
+            <div className="modal-box max-w-5xl w-[92vw] h-[82vh] p-0 bg-base-300 overflow-hidden relative flex items-center justify-center">
                 <button
-                    className="btn btn-sm btn-circle btn-ghost absolute top-3 right-3 z-10"
+                    className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-3 right-3 z-10"
                     onClick={onClose}
                     aria-label="Close"
                 >✕</button>
                 <button
-                    className="btn btn-sm btn-circle btn-ghost absolute left-3 top-1/2 -translate-y-1/2 z-10"
+                    className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute left-3 top-1/2 -translate-y-1/2 z-10"
                     onClick={onPrev}
                     aria-label="Previous"
                 >‹</button>
                 <img
                     src={image.src}
                     alt={image.alt}
-                    className="w-full h-auto object-contain max-h-[80vh]"
+                    decoding="async"
+                    className="max-h-full max-w-full object-contain"
                 />
                 <button
-                    className="btn btn-sm btn-circle btn-ghost absolute right-3 top-1/2 -translate-y-1/2 z-10"
+                    className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute right-3 top-1/2 -translate-y-1/2 z-10"
                     onClick={onNext}
                     aria-label="Next"
                 >›</button>
@@ -119,11 +122,13 @@ export const Gallery = () => {
             </div>
 
             {/* ── Image grid ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                 {paginated.map((img, i) => (
-                    <div
+                    <button
                         key={img.id}
-                        className="overflow-hidden rounded-box cursor-pointer group relative"
+                        type="button"
+                        aria-label={`View ${img.alt}`}
+                        className="group relative p-0 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         onClick={() => open(i)}
                     >
                         <img
@@ -133,11 +138,24 @@ export const Gallery = () => {
                             alt={img.alt}
                             loading="lazy"
                             decoding="async"
-                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                         />
-                        {/* hover overlay */}
-                        <div className="absolute inset-0 bg-base-content/0 group-hover:bg-base-content/15 transition-colors duration-300 rounded-box" />
-                    </div>
+                        {/* hover overlay + expand affordance */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-base-content/0 group-hover:bg-base-content/25 transition-colors duration-300">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="w-7 h-7 text-white drop-shadow opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300"
+                            >
+                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                            </svg>
+                        </div>
+                    </button>
                 ))}
             </div>
 
