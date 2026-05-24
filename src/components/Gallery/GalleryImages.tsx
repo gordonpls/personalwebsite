@@ -54,6 +54,11 @@ const ALL: GalleryImage[] = [
         import.meta.glob("../../assets/gallery/vegas/*.webp", { query: { w: "200;400;600", format: "webp", as: "srcset" }, import: "default", eager: true }),
         import.meta.glob("../../assets/gallery/vegas/*.webp", { import: "default", eager: true }),
     ),
+    ...build(
+        "New York",
+        import.meta.glob("../../assets/gallery/newyork/*.webp", { query: { w: "200;400;600", format: "webp", as: "srcset" }, import: "default", eager: true }),
+        import.meta.glob("../../assets/gallery/newyork/*.webp", { import: "default", eager: true }),
+    ),
 ];
 
 // Shuffle once per page load so each session sees a fresh order. Stable across

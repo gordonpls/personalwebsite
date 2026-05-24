@@ -8,43 +8,46 @@ const PER_PAGE = 15; // 3 full rows at the widest (5-col) breakpoint
 // can pick the smallest adequate thumbnail from srcset.
 const GRID_SIZES = "(min-width:1280px) 20vw, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw";
 
-const CATEGORIES = ["All", "Denver", "Thailand", "Vegas"];
+const CATEGORIES = ["All", "Denver", "Thailand", "Vegas", "New York"];
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 function Lightbox({ image, onClose, onPrev, onNext }) {
     if (!image) return null;
     return (
         <dialog className="modal modal-open">
-            {/* Fixed-size, transparent stage so the image floats on the backdrop
-                (no grey panels) and the frame never resizes between photos. */}
-            <div className="modal-box max-w-4xl w-[92vw] h-[85vh] p-0 bg-transparent shadow-none overflow-visible relative flex items-center justify-center">
-                <img
-                    src={image.src}
-                    alt={image.alt}
-                    decoding="async"
-                    className="max-h-full max-w-full object-contain rounded-lg"
-                />
+            {/* Transparent stage centered in the viewport; the inner wrapper shrinks
+                to the image so the controls hug the photo (no grey panels, no empty
+                floating space) for any aspect ratio. */}
+            <div className="modal-box bg-transparent shadow-none p-0 w-fit max-w-none h-fit max-h-none overflow-visible">
+                <div className="relative inline-block">
+                    <img
+                        src={image.src}
+                        alt={image.alt}
+                        decoding="async"
+                        className="block max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
+                    />
 
-                {/* Arrows are vertically centered by a flex wrapper (NOT a transform),
-                    so DaisyUI's :active press transform can't shift their position. */}
-                <button
-                    className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-2 right-2 z-10"
-                    onClick={onClose}
-                    aria-label="Close"
-                >✕</button>
-                <div className="absolute inset-y-0 left-2 z-10 flex items-center pointer-events-none">
+                    {/* Arrows are vertically centered by a flex wrapper (NOT a transform),
+                        so DaisyUI's :active press transform can't shift their position. */}
                     <button
-                        className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
-                        onClick={onPrev}
-                        aria-label="Previous"
-                    >‹</button>
-                </div>
-                <div className="absolute inset-y-0 right-2 z-10 flex items-center pointer-events-none">
-                    <button
-                        className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
-                        onClick={onNext}
-                        aria-label="Next"
-                    >›</button>
+                        className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-2 right-2 z-10"
+                        onClick={onClose}
+                        aria-label="Close"
+                    >✕</button>
+                    <div className="absolute inset-y-0 left-2 z-10 flex items-center pointer-events-none">
+                        <button
+                            className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                            onClick={onPrev}
+                            aria-label="Previous"
+                        >‹</button>
+                    </div>
+                    <div className="absolute inset-y-0 right-2 z-10 flex items-center pointer-events-none">
+                        <button
+                            className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                            onClick={onNext}
+                            aria-label="Next"
+                        >›</button>
+                    </div>
                 </div>
             </div>
 
