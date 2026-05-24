@@ -195,9 +195,9 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             )}
 
             <p className="text-[11px] text-base-content/40 leading-snug">
-                Your actual holdings, each rebased to the start of the selected range using its dividend-adjusted daily
-                price history (so distributions are included) and blended by current weight. Doesn’t account for trades
-                or contributions made within the range. Past performance doesn’t guarantee future results.
+                Performance reflects each holding’s dividend-adjusted total return over the selected range, blended by
+                current portfolio weight. It doesn’t account for trades or contributions made within the range. Past
+                performance doesn’t guarantee future results.
             </p>
         </div>
     );
