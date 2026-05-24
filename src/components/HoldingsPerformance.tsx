@@ -18,14 +18,15 @@ interface Holding {
 }
 type PriceMap = Record<string, Record<string, number>>; // ticker -> { "YYYY-MM-DD": close }
 
-type Range = "1W" | "1M" | "3M" | "YTD" | "1Y";
-const RANGES: Range[] = ["1W", "1M", "3M", "YTD", "1Y"];
+type Range = "1W" | "1M" | "3M" | "YTD" | "1Y" | "All";
+const RANGES: Range[] = ["1W", "1M", "3M", "YTD", "1Y", "All"];
 const RANGE_LABEL: Record<Range, string> = {
     "1W": "past week",
     "1M": "past month",
     "3M": "past 3 months",
     YTD: "year to date",
     "1Y": "past year",
+    All: "all time",
 };
 
 function parseLocalDate(s: string): Date {
@@ -111,6 +112,7 @@ const CustomTooltip = ({ active, payload, label }: TipProps) => {
 
 export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
+    const [totalReturnPct, setTotalReturnPct] = useState<number | null>(null); // cost-basis return since purchase (all-time)
     const [prices, setPrices] = useState<PriceMap | null>(null);
     const [error, setError] = useState(false);
     const [range, setRange] = useState<Range>("YTD");
@@ -119,7 +121,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
         let cancelled = false;
         fetch("/api/holdings")
             .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-            .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
+            .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
             .catch(() => { if (!cancelled) setError(true); });
 
         fetch("/holdingsHistory.json")
@@ -145,12 +147,14 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                 <div>
                     <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
-                        {error ? "Your holdings are currently unavailable."
-                            : last
-                                ? <><span className={`font-semibold ${last.value >= 0 ? "text-success" : "text-error"}`}>
-                                        {last.value > 0 ? "+" : ""}{last.value.toFixed(2)}%
-                                    </span>{" "}{RANGE_LABEL[range]}</>
-                                : "Performance of your actual holdings"}
+                        {error ? "Performance is currently unavailable."
+                            : range === "All"
+                                ? "Total return since inception"
+                                : last
+                                    ? <><span className={`font-semibold ${last.value >= 0 ? "text-success" : "text-error"}`}>
+                                            {last.value > 0 ? "+" : ""}{last.value.toFixed(2)}%
+                                        </span>{" "}{RANGE_LABEL[range]}</>
+                                    : "Performance over the selected range"}
                     </p>
                 </div>
                 <div className="flex gap-1">
@@ -171,6 +175,18 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                 <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see performance.</p>
             ) : loading ? (
                 <div className="h-[260px] rounded bg-base-200 animate-pulse" aria-hidden="true" />
+            ) : range === "All" ? (
+                <div className="h-[260px] flex flex-col items-center justify-center text-center gap-3 px-4">
+                    {totalReturnPct != null ? (
+                        <span className={`text-5xl font-bold tracking-tight ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
+                            {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
+                        </span>
+                    ) : null}
+                    <p className="text-sm text-base-content/60 max-w-md">
+                        Total return since inception, measured against cost basis — the all-time figure. A historical
+                        curve isn’t shown here because it predates the available daily price data.
+                    </p>
+                </div>
             ) : data.length < 2 ? (
                 <p className="text-sm text-base-content/50 py-10 text-center">Not enough price history for this range yet.</p>
             ) : (
@@ -186,7 +202,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             )}
 
             {/* Summary */}
-            {!error && !loading && last && (
+            {!error && !loading && range !== "All" && last && (
                 <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
                     <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
                     My portfolio return
@@ -196,7 +212,8 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
 
             <p className="text-[11px] text-base-content/40 leading-snug">
                 Performance reflects each holding’s dividend-adjusted total return over the selected range, blended by
-                current portfolio weight. It doesn’t account for trades or contributions made within the range. Past
+                current portfolio weight — a close estimate, not an exact account return, since it doesn’t account for
+                trades or contributions made within the range. All-time return is measured against cost basis. Past
                 performance doesn’t guarantee future results.
             </p>
         </div>
