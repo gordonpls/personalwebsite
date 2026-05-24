@@ -2,13 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import { IMAGES } from "./GalleryImages";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const PER_PAGE = 15; // 3 full rows at the widest (5-col) breakpoint
-
 // Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 5), so the browser
 // can pick the smallest adequate thumbnail from srcset.
 const GRID_SIZES = "(min-width:1280px) 20vw, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw";
 
 const CATEGORIES = ["All", "Denver", "Thailand", "Vegas", "New York"];
+
+// Page size per breakpoint: kept a multiple of that breakpoint's column count so
+// every row stays full (no lonely thumbnail), and smaller on mobile so the
+// gallery isn't so tall. Matches the grid's 2 / 3 / 4 / 5 columns.
+function pageSizeFor(width: number): number {
+    if (width >= 1280) return 15; // 5 cols × 3 rows
+    if (width >= 640) return 12;  // 3–4 cols × 3–4 rows
+    return 8;                     // 2 cols × 4 rows
+}
+function usePageSize(): number {
+    const [n, setN] = useState(() => (typeof window !== "undefined" ? pageSizeFor(window.innerWidth) : 15));
+    useEffect(() => {
+        const onResize = () => setN(pageSizeFor(window.innerWidth));
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+    return n;
+}
+
+// Compact page list with ellipses (e.g. 1 … 5 6 7 … 13) so the pager never
+// spans the whole width on small screens.
+function getPageItems(current: number, total: number): (number | "…")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const items: (number | "…")[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    if (start > 2) items.push("…");
+    for (let p = start; p <= end; p++) items.push(p);
+    if (end < total - 1) items.push("…");
+    items.push(total);
+    return items;
+}
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 function Lightbox({ image, onClose, onPrev, onNext }) {
@@ -63,17 +93,23 @@ export const Gallery = () => {
     const [active, setActive] = useState("All");
     const [lightbox, setLightbox] = useState<number | null>(null)
     const [page, setPage] = useState(1);
+    const perPage = usePageSize();
 
     const filtered = useMemo(
         () => (active === "All" ? IMAGES : IMAGES.filter((img) => img.category === active)),
         [active],
     );
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     const paginated = useMemo(
-        () => filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE),
-        [filtered, page],
+        () => filtered.slice((page - 1) * perPage, page * perPage),
+        [filtered, page, perPage],
     );
+
+    // Keep the current page valid when the page size shrinks (e.g. on resize).
+    useEffect(() => {
+        if (page > totalPages) setPage(totalPages);
+    }, [page, totalPages]);
 
     // Preload the neighbouring full-res images so lightbox arrow navigation is instant.
     useEffect(() => {
@@ -96,7 +132,7 @@ export const Gallery = () => {
         return () => window.removeEventListener("keydown", onKey);
     }, [lightbox, filtered.length]);
 
-    const open = (i) => setLightbox((page - 1) * PER_PAGE + i); // global index
+    const open = (i) => setLightbox((page - 1) * perPage + i); // global index
     const close = () => setLightbox(null);
     const prev = () => setLightbox((i) => i !== null ? (i - 1 + filtered.length) % filtered.length : 0);
     const next = () => setLightbox((i) => i !== null ? (i + 1) % filtered.length : 0);
@@ -170,7 +206,7 @@ export const Gallery = () => {
                 ))}
             </div>
 
-            {/* ── Pagination ── */}
+            {/* ── Pagination (windowed, stays compact on mobile) ── */}
             {totalPages > 1 && (
                 <div className="flex justify-center mt-8">
                     <div className="join">
@@ -178,22 +214,29 @@ export const Gallery = () => {
                             className="join-item btn btn-sm"
                             onClick={() => goToPage(page - 1)}
                             disabled={page === 1}
+                            aria-label="Previous page"
                         >«</button>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                            <button
-                                key={p}
-                                className={`join-item btn btn-sm ${p === page ? "btn-primary" : ""}`}
-                                onClick={() => goToPage(p)}
-                            >
-                                {p}
-                            </button>
-                        ))}
+                        {getPageItems(page, totalPages).map((p, idx) =>
+                            p === "…" ? (
+                                <button key={`gap-${idx}`} className="join-item btn btn-sm btn-disabled pointer-events-none" tabIndex={-1}>…</button>
+                            ) : (
+                                <button
+                                    key={p}
+                                    className={`join-item btn btn-sm ${p === page ? "btn-primary" : ""}`}
+                                    onClick={() => goToPage(p)}
+                                    aria-current={p === page ? "page" : undefined}
+                                >
+                                    {p}
+                                </button>
+                            ),
+                        )}
 
                         <button
                             className="join-item btn btn-sm"
                             onClick={() => goToPage(page + 1)}
                             disabled={page === totalPages}
+                            aria-label="Next page"
                         >»</button>
                     </div>
                 </div>
