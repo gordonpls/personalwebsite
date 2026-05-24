@@ -171,7 +171,9 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
             .catch(() => { if (!cancelled) setError(true); });
 
-        fetch("/holdingsHistory.json")
+        // no-cache: always revalidate so a redeploy/weekly refresh of this static
+        // file is picked up instead of serving a stale (shorter) cached copy.
+        fetch("/holdingsHistory.json", { cache: "no-cache" })
             .then((r) => r.ok ? r.json() : Promise.reject())
             .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
             .catch(() => { if (!cancelled) setPrices({}); });
