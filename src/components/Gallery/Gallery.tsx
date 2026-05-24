@@ -15,34 +15,38 @@ function Lightbox({ image, onClose, onPrev, onNext }) {
     if (!image) return null;
     return (
         <dialog className="modal modal-open">
-            {/* Fixed-size box so swapping images of different aspect ratios doesn't
-                resize/recenter the frame. */}
-            <div className="modal-box max-w-5xl w-[92vw] h-[82vh] p-0 bg-base-300 overflow-hidden flex items-center justify-center">
+            {/* Fixed-size, transparent stage so the image floats on the backdrop
+                (no grey panels) and the frame never resizes between photos. */}
+            <div className="modal-box max-w-4xl w-[92vw] h-[85vh] p-0 bg-transparent shadow-none overflow-visible relative flex items-center justify-center">
                 <img
                     src={image.src}
                     alt={image.alt}
                     decoding="async"
-                    className="max-h-full max-w-full object-contain"
+                    className="max-h-full max-w-full object-contain rounded-lg"
                 />
-            </div>
 
-            {/* Controls are anchored to the viewport (fixed), NOT the image box, so
-                they never shift as you navigate between photos. */}
-            <button
-                className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed top-4 right-4 z-10"
-                onClick={onClose}
-                aria-label="Close"
-            >✕</button>
-            <button
-                className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed left-4 top-1/2 -translate-y-1/2 z-10"
-                onClick={onPrev}
-                aria-label="Previous"
-            >‹</button>
-            <button
-                className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed right-4 top-1/2 -translate-y-1/2 z-10"
-                onClick={onNext}
-                aria-label="Next"
-            >›</button>
+                {/* Arrows are vertically centered by a flex wrapper (NOT a transform),
+                    so DaisyUI's :active press transform can't shift their position. */}
+                <button
+                    className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-2 right-2 z-10"
+                    onClick={onClose}
+                    aria-label="Close"
+                >✕</button>
+                <div className="absolute inset-y-0 left-2 z-10 flex items-center pointer-events-none">
+                    <button
+                        className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                        onClick={onPrev}
+                        aria-label="Previous"
+                    >‹</button>
+                </div>
+                <div className="absolute inset-y-0 right-2 z-10 flex items-center pointer-events-none">
+                    <button
+                        className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                        onClick={onNext}
+                        aria-label="Next"
+                    >›</button>
+                </div>
+            </div>
 
             <form method="dialog" className="modal-backdrop">
                 <button onClick={onClose}>close</button>
