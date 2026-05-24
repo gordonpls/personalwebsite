@@ -15,6 +15,7 @@ interface Holding {
     name: string;
     type: string | null;
     weightPct: number;
+    returnPct: number | null; // cost-basis return since purchase
 }
 type PriceMap = Record<string, Record<string, number>>; // ticker -> { "YYYY-MM-DD": close }
 
@@ -94,6 +95,52 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
     return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
 }
 
+// "All" / since-inception: a true holding-period-return curve. Each holding is
+// rebased to its cost price (current price ÷ (1 + its cost-basis return)) and
+// weighted by cost, so value(d) = Σcost·(price(d)/costPrice − 1) / Σcost is the
+// portfolio's return-vs-cost at each date, ending exactly at the all-time HPR.
+// Holdings without a cost-basis return are excluded.
+function buildAllSeries(holdings: Holding[], prices: PriceMap): { data: ChartPoint[]; coveragePct: number; asOfLast: string | null } {
+    const totalW = holdings.reduce((s, h) => s + h.weightPct, 0) || 1;
+    const items = holdings.filter((h) => h.ticker && prices[h.ticker as string] && h.returnPct != null);
+
+    const dateSet = new Set<string>();
+    for (const h of items) for (const d in prices[h.ticker as string]) dateSet.add(d);
+    const axis = [...dateSet].sort();
+    if (axis.length < 2) return { data: [], coveragePct: 0, asOfLast: null };
+
+    const series = items.map((h) => {
+        const map = prices[h.ticker as string];
+        const tdates = Object.keys(map).sort();
+        const aligned: (number | null)[] = [];
+        let pi = 0, last: number | null = null;
+        for (const d of axis) { while (pi < tdates.length && tdates[pi] <= d) { last = map[tdates[pi]]; pi++; } aligned.push(last); }
+        const lastPrice = aligned[aligned.length - 1];
+        const ret = h.returnPct as number;
+        if (lastPrice == null || 1 + ret / 100 <= 0) return null;
+        const costPrice = lastPrice / (1 + ret / 100);          // implied per-share cost
+        return { costWeight: h.weightPct / (1 + ret / 100), w: h.weightPct, aligned, costPrice };
+    }).filter((s): s is { costWeight: number; w: number; aligned: (number | null)[]; costPrice: number } => s != null && s.costPrice > 0);
+
+    const repW = series.reduce((s, x) => s + x.w, 0);
+    if (!series.length) return { data: [], coveragePct: 0, asOfLast: null };
+
+    const fmt: Intl.DateTimeFormatOptions = { month: "short", year: "2-digit" };
+    const data = axis.map((d, idx) => {
+        let r = 0, wsum = 0;
+        for (const s of series) {
+            const p = s.aligned[idx];
+            if (p == null) continue;
+            r += s.costWeight * ((p / s.costPrice - 1) * 100);
+            wsum += s.costWeight;
+        }
+        const raw = parseLocalDate(d).toLocaleDateString("en-US", fmt).replace(/(\d{2})$/, "'$1");
+        return { date: raw, value: parseFloat((wsum > 0 ? r / wsum : 0).toFixed(2)) };
+    });
+
+    return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
+}
+
 interface TipProps {
     active?: boolean;
     payload?: Array<{ value: number }>;
@@ -133,7 +180,10 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     }, []);
 
     const { data, coveragePct } = useMemo(
-        () => (holdings && prices) ? buildSeries(range, holdings, prices) : { data: [], coveragePct: 0, asOfLast: null },
+        () => {
+            if (!holdings || !prices) return { data: [], coveragePct: 0, asOfLast: null };
+            return range === "All" ? buildAllSeries(holdings, prices) : buildSeries(range, holdings, prices);
+        },
         [range, holdings, prices],
     );
 
@@ -148,8 +198,10 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                     <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         {error ? "Performance is currently unavailable."
-                            : range === "All"
-                                ? "Total return since inception"
+                            : range === "All" && totalReturnPct != null
+                                ? <><span className={`font-semibold ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
+                                        {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
+                                    </span>{" "}all time</>
                                 : last
                                     ? <><span className={`font-semibold ${last.value >= 0 ? "text-success" : "text-error"}`}>
                                             {last.value > 0 ? "+" : ""}{last.value.toFixed(2)}%
@@ -175,18 +227,6 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                 <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see performance.</p>
             ) : loading ? (
                 <div className="h-[260px] rounded bg-base-200 animate-pulse" aria-hidden="true" />
-            ) : range === "All" ? (
-                <div className="h-[260px] flex flex-col items-center justify-center text-center gap-3 px-4">
-                    {totalReturnPct != null ? (
-                        <span className={`text-5xl font-bold tracking-tight ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
-                            {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
-                        </span>
-                    ) : null}
-                    <p className="text-sm text-base-content/60 max-w-md">
-                        Total return since inception, measured against cost basis — the all-time figure. A historical
-                        curve isn’t shown here because it predates the available daily price data.
-                    </p>
-                </div>
             ) : data.length < 2 ? (
                 <p className="text-sm text-base-content/50 py-10 text-center">Not enough price history for this range yet.</p>
             ) : (
@@ -202,7 +242,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
             )}
 
             {/* Summary */}
-            {!error && !loading && range !== "All" && last && (
+            {!error && !loading && last && (
                 <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
                     <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
                     My portfolio return
