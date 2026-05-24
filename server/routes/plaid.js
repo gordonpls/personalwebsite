@@ -64,6 +64,11 @@ const NAME_OVERRIDES = {
     LIFE: "Ethos Technologies Inc.",
 };
 
+// Tickers whose brokerage-reported cost basis is bad data (e.g. a near-zero
+// cost basis that produces an absurd return). We keep the position's value and
+// weight, but treat its cost basis as unavailable so the Return column shows —.
+const COST_BASIS_IGNORE = new Set(["HL"]);
+
 // Map institution + account subtype to a display portfolio bucket.
 // Vanguard is the diversified "Core"; Robinhood splits by account type.
 function portfolioOf(institution, subtype) {
@@ -134,7 +139,7 @@ async function fetchHoldingsPayload() {
             if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
             if (stype === "cryptocurrency") continue;
             total += value;
-            const hasCost = h.cost_basis != null && h.cost_basis > 0;
+            const hasCost = h.cost_basis != null && h.cost_basis > 0 && !COST_BASIS_IGNORE.has(tkr);
             if (hasCost) { costSum += h.cost_basis; costValueSum += value; }
             const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
