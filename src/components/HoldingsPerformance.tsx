@@ -169,6 +169,18 @@ function evenTicks(data: ChartPoint[], count: number): string[] {
     return [...new Set(out)];
 }
 
+// Anchor the first tick to the start and the last to the end so neither label
+// overflows (and gets clipped) at the chart edges; the rest stay centered.
+interface XTickProps { x?: number; y?: number; payload?: { value: string }; index?: number; range: Range; lastIndex: number; }
+const XTick = ({ x = 0, y = 0, payload, index = 0, range, lastIndex }: XTickProps) => {
+    const anchor = index === 0 ? "start" : index >= lastIndex ? "end" : "middle";
+    return (
+        <text x={x} y={y} dy="0.71em" textAnchor={anchor} fill="currentColor" fillOpacity={0.4} fontSize={11}>
+            {payload ? formatTick(payload.value, range) : ""}
+        </text>
+    );
+};
+
 export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [totalReturnPct, setTotalReturnPct] = useState<number | null>(null); // cost-basis return since purchase (all-time)
@@ -203,6 +215,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
 
     const last = data[data.length - 1];
     const loading = (!holdings || !prices) && !error;
+    const xTicks = useMemo(() => evenTicks(data, 5), [data]);
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
@@ -247,7 +260,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                 <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-base-content/10" vertical={false} />
-                        <XAxis dataKey="date" tickFormatter={(d: string) => formatTick(d, range)} ticks={evenTicks(data, 7)} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} interval={0} minTickGap={20} />
+                        <XAxis dataKey="date" ticks={xTicks} tick={<XTick range={range} lastIndex={xTicks.length - 1} />} tickLine={false} axisLine={false} interval={0} minTickGap={0} />
                         <YAxis tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} width={48} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.1, strokeWidth: 1 }} />
                         <Line type="monotone" dataKey="value" stroke="#E8A020" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} />
