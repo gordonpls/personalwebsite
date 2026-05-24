@@ -1,29 +1,12 @@
-import { useState } from "react";
-import { ThailandImages, VegasImages, DenverImages } from "./GalleryImages";
+import { useEffect, useMemo, useState } from "react";
+import { IMAGES } from "./GalleryImages";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PER_PAGE = 12;
 
-// ─── Build image list from city image maps ────────────────────────────────────
-type GalleryImage = {
-    id: string;
-    category: string;
-    src: string;
-    alt: string;
-}
-
-const toImageList = (obj: Record<string, string>, city: string): GalleryImage[] =>
-    Object.entries(obj).map(([name, src], i) => ({
-        id: `${city}-${i}`,
-        category: city,
-        src,
-        alt: name.replace(/-/g, " "),
-    }));
-const IMAGES = [
-    ...toImageList(DenverImages, "Denver"),
-    ...toImageList(ThailandImages, "Thailand"),
-    ...toImageList(VegasImages, "Vegas"),
-];
+// Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 6), so the browser
+// can pick the smallest adequate thumbnail from srcset.
+const GRID_SIZES = "(min-width:1280px) 16vw, (min-width:1024px) 25vw, (min-width:768px) 33vw, 50vw";
 
 const CATEGORIES = ["All", "Denver", "Thailand", "Vegas"];
 
@@ -67,12 +50,25 @@ export const Gallery = () => {
     const [lightbox, setLightbox] = useState<number | null>(null)
     const [page, setPage] = useState(1);
 
-    const filtered = active === "All"
-        ? IMAGES
-        : IMAGES.filter((img) => img.category === active);
+    const filtered = useMemo(
+        () => (active === "All" ? IMAGES : IMAGES.filter((img) => img.category === active)),
+        [active],
+    );
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-    const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+    const paginated = useMemo(
+        () => filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+        [filtered, page],
+    );
+
+    // Preload the neighbouring full-res images so lightbox arrow navigation is instant.
+    useEffect(() => {
+        if (lightbox === null) return;
+        for (const j of [lightbox - 1, lightbox + 1]) {
+            const neighbor = filtered[(j + filtered.length) % filtered.length];
+            if (neighbor) new Image().src = neighbor.src;
+        }
+    }, [lightbox, filtered]);
 
     const open = (i) => setLightbox((page - 1) * PER_PAGE + i); // global index
     const close = () => setLightbox(null);
@@ -120,8 +116,11 @@ export const Gallery = () => {
                     >
                         <img
                             src={img.src}
+                            srcSet={img.srcset}
+                            sizes={GRID_SIZES}
                             alt={img.alt}
                             loading="lazy"
+                            decoding="async"
                             className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         {/* hover overlay */}

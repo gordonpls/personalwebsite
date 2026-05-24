@@ -51,6 +51,7 @@
     "lint-staged": "^17.0.5",
     "tailwindcss": "^4.0.6",
     "vanta": "^0.5.24",
-    "vite": "^6.1.0"
+    "vite": "^6.1.0",
+    "vite-imagetools": "^9.0.3"
   }
 }
