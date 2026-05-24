@@ -107,3 +107,29 @@
     color: var(--color-base-content);
   }
 }
+
+/* Always-visible scrollbar (when content overflows) — overrides macOS's
+   auto-hiding overlay scrollbar so it's obvious a region is scrollable. */
+.always-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-base-content) 40%, transparent)
+                   color-mix(in oklab, var(--color-base-content) 10%, transparent);
+}
+.always-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.always-scrollbar::-webkit-scrollbar-track {
+  background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  border-radius: 9999px;
+}
+.always-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.always-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  background-clip: padding-box;
+}

@@ -74,8 +74,8 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
                 <div
-                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-base-content/20 [&::-webkit-scrollbar-track]:bg-transparent"
-                    style={{ scrollbarGutter: "stable", scrollbarWidth: "thin" }}
+                    className="always-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-1"
+                    style={{ scrollbarGutter: "stable" }}
                 >
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
