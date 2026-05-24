@@ -134,7 +134,8 @@ async function fetchHoldingsPayload() {
             if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
             if (stype === "cryptocurrency") continue;
             total += value;
-            if (h.cost_basis != null && h.cost_basis > 0) { costSum += h.cost_basis; costValueSum += value; }
+            const hasCost = h.cost_basis != null && h.cost_basis > 0;
+            if (hasCost) { costSum += h.cost_basis; costValueSum += value; }
             const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
             const key = `${portfolio}|${ticker}`;
@@ -144,8 +145,11 @@ async function fetchHoldingsPayload() {
                 name: NAME_OVERRIDES[tkr] ?? sec.name ?? ticker,
                 type: sec.type ?? null,
                 value: 0,
+                cbCost: 0,   // summed cost basis of the lots that report it
+                cbValue: 0,  // current value of those same lots (so the % is consistent)
             };
             cur.value += value;
+            if (hasCost) { cur.cbCost += h.cost_basis; cur.cbValue += value; }
             agg.set(key, cur);
         }
     }
@@ -157,6 +161,9 @@ async function fetchHoldingsPayload() {
             name: h.name,
             type: h.type,
             weightPct: total > 0 ? Math.round((h.value / total) * 10000) / 100 : 0,
+            // total return since purchase for this position (% only); null when the
+            // brokerage didn't report cost basis for it.
+            returnPct: h.cbCost > 0 ? Math.round(((h.cbValue - h.cbCost) / h.cbCost) * 1000) / 10 : null,
         }))
         .filter((h) => h.weightPct > 0) // drop only true dust; renormalized per portfolio on the client
         .sort((a, b) => b.weightPct - a.weightPct);

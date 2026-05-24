@@ -6,6 +6,7 @@ interface Holding {
     name: string;
     type: string | null;
     weightPct: number;
+    returnPct: number | null;  // total return since purchase (cost basis); null if unavailable
 }
 
 interface HoldingsProps {
@@ -44,7 +45,7 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             {/* Header */}
             <div className="shrink-0 mb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
-                <p className="text-sm text-base-content/60 mt-0.5">Live positions by weight</p>
+                <p className="text-sm text-base-content/60 mt-0.5">Live Positions</p>
             </div>
 
             {error ? (
@@ -63,7 +64,8 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                         <thead>
                             <tr className="text-base-content/50">
                                 <th className="pl-0">Holding</th>
-                                <th className="text-right pr-0 w-16">Weight</th>
+                                <th className="text-right w-14">Weight</th>
+                                <th className="text-right pr-0 w-[4.5rem]" title="Total return since purchase">Return</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -73,10 +75,19 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                                         <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
                                         <div className="text-xs text-base-content/50 truncate">{h.name}</div>
                                     </td>
-                                    <td className="text-right pr-0 w-16 align-middle">
+                                    <td className="text-right w-14 align-middle">
                                         <span className="font-medium text-base-content tabular-nums">
                                             {h.weightPct.toFixed(1)}%
                                         </span>
+                                    </td>
+                                    <td className="text-right pr-0 w-[4.5rem] align-middle">
+                                        {h.returnPct == null ? (
+                                            <span className="text-base-content/30" title="Cost basis unavailable">—</span>
+                                        ) : (
+                                            <span className={`font-medium tabular-nums ${h.returnPct > 0 ? "text-success" : h.returnPct < 0 ? "text-error" : "text-base-content/60"}`}>
+                                                {h.returnPct > 0 ? "+" : ""}{h.returnPct.toFixed(1)}%
+                                            </span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
