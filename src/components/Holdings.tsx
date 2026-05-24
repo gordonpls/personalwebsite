@@ -59,13 +59,16 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-2" style={{ scrollbarGutter: "stable" }}>
+                <div
+                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-base-content/20 [&::-webkit-scrollbar-track]:bg-transparent"
+                    style={{ scrollbarGutter: "stable", scrollbarWidth: "thin" }}
+                >
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50">
                                 <th className="pl-0">Holding</th>
                                 <th className="text-right w-14">Weight</th>
-                                <th className="text-right pr-0 w-[4.5rem]" title="Total return since purchase">Return</th>
+                                <th className="text-right pr-0 w-20 whitespace-nowrap">Total Return</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -80,7 +83,7 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                                             {h.weightPct.toFixed(1)}%
                                         </span>
                                     </td>
-                                    <td className="text-right pr-0 w-[4.5rem] align-middle">
+                                    <td className="text-right pr-0 w-20 align-middle">
                                         {h.returnPct == null ? (
                                             <span className="text-base-content/30" title="Cost basis unavailable">—</span>
                                         ) : (
