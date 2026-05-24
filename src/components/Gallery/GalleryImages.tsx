@@ -14,6 +14,16 @@ export type GalleryImage = {
 
 type GlobMap = Record<string, unknown>;
 
+// Fisher–Yates shuffle (returns a new array).
+function shuffle<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 function build(city: string, thumbs: GlobMap, full: GlobMap): GalleryImage[] {
     return Object.keys(full)
         .sort()
@@ -28,7 +38,7 @@ function build(city: string, thumbs: GlobMap, full: GlobMap): GalleryImage[] {
 
 // NOTE: import.meta.glob requires literal patterns AND literal options objects
 // (Vite analyzes them statically), so the options can't be hoisted into a const.
-export const IMAGES: GalleryImage[] = [
+const ALL: GalleryImage[] = [
     ...build(
         "Denver",
         import.meta.glob("../../assets/gallery/denver/*.webp", { query: { w: "200;400;600", format: "webp", as: "srcset" }, import: "default", eager: true }),
@@ -45,3 +55,7 @@ export const IMAGES: GalleryImage[] = [
         import.meta.glob("../../assets/gallery/vegas/*.webp", { import: "default", eager: true }),
     ),
 ];
+
+// Shuffle once per page load so each session sees a fresh order. Stable across
+// re-renders, filtering, and pagination within the session.
+export const IMAGES: GalleryImage[] = shuffle(ALL);
