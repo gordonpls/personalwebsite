@@ -15,31 +15,35 @@ function Lightbox({ image, onClose, onPrev, onNext }) {
     if (!image) return null;
     return (
         <dialog className="modal modal-open">
-            {/* Fixed-size box: the frame stays put while navigating, so swapping
-                images of different aspect ratios no longer makes the modal jump. */}
-            <div className="modal-box max-w-5xl w-[92vw] h-[82vh] p-0 bg-base-300 overflow-hidden relative flex items-center justify-center">
-                <button
-                    className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-3 right-3 z-10"
-                    onClick={onClose}
-                    aria-label="Close"
-                >✕</button>
-                <button
-                    className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute left-3 top-1/2 -translate-y-1/2 z-10"
-                    onClick={onPrev}
-                    aria-label="Previous"
-                >‹</button>
+            {/* Fixed-size box so swapping images of different aspect ratios doesn't
+                resize/recenter the frame. */}
+            <div className="modal-box max-w-5xl w-[92vw] h-[82vh] p-0 bg-base-300 overflow-hidden flex items-center justify-center">
                 <img
                     src={image.src}
                     alt={image.alt}
                     decoding="async"
                     className="max-h-full max-w-full object-contain"
                 />
-                <button
-                    className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute right-3 top-1/2 -translate-y-1/2 z-10"
-                    onClick={onNext}
-                    aria-label="Next"
-                >›</button>
             </div>
+
+            {/* Controls are anchored to the viewport (fixed), NOT the image box, so
+                they never shift as you navigate between photos. */}
+            <button
+                className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed top-4 right-4 z-10"
+                onClick={onClose}
+                aria-label="Close"
+            >✕</button>
+            <button
+                className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed left-4 top-1/2 -translate-y-1/2 z-10"
+                onClick={onPrev}
+                aria-label="Previous"
+            >‹</button>
+            <button
+                className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow fixed right-4 top-1/2 -translate-y-1/2 z-10"
+                onClick={onNext}
+                aria-label="Next"
+            >›</button>
+
             <form method="dialog" className="modal-backdrop">
                 <button onClick={onClose}>close</button>
             </form>
