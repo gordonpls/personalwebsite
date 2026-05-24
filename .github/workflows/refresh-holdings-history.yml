@@ -32,11 +32,10 @@ jobs:
           node-version: "22"
 
       # Pulls the live ticker list from prod /api/holdings, then fetches each
-      # ticker's daily history from Twelve Data (throttled to 8/min by the script).
+      # ticker's dividend-adjusted daily history from Yahoo Finance (no key needed).
       - name: Bake holdings price history
         run: node scripts/fetch-holdings-history.mjs
         env:
-          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
           HOLDINGS_URL: https://gordonzhong.com/api/holdings
 
       - name: Detect change

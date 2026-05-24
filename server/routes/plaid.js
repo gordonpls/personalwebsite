@@ -69,6 +69,15 @@ const NAME_OVERRIDES = {
 // When set, the Return calc uses avgCost * quantity instead of Plaid's value.
 const COST_BASIS_OVERRIDE = { HL: 6.17 };
 
+// Force specific tickers into a display portfolio regardless of which account
+// holds them (e.g. semiconductor ADRs held in a Vanguard account that belong in
+// the speculative bucket). Checked before the institution/subtype mapping.
+const PORTFOLIO_OVERRIDE = {
+    ASMIY: "Tech & Speculation",
+    DSCSY: "Tech & Speculation",
+    RNECY: "Tech & Speculation",
+};
+
 // Map institution + account subtype to a display portfolio bucket.
 // Vanguard is the diversified "Core"; Robinhood splits by account type.
 function portfolioOf(institution, subtype) {
@@ -143,7 +152,7 @@ async function fetchHoldingsPayload() {
             const lotCost = override != null ? override * (h.quantity ?? 0) : h.cost_basis;
             const hasCost = lotCost != null && lotCost > 0;
             if (hasCost) { costSum += lotCost; costValueSum += value; }
-            const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
+            const portfolio = PORTFOLIO_OVERRIDE[tkr] ?? portfolioOf(institution, acctSubtype[h.account_id]);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
             const key = `${portfolio}|${ticker}`;
             const cur = agg.get(key) ?? {

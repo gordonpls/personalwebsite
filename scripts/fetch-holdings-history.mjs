@@ -4,29 +4,15 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Build-time only. Reads TWELVE_DATA_KEY from .env; never used at runtime.
-let API_KEY = process.env.TWELVE_DATA_KEY ?? "";
-if (!API_KEY) {
-    try {
-        const env = readFileSync(resolve(__dirname, "../.env"), "utf-8");
-        const m = env.match(/TWELVE_DATA_KEY=(.+)/);
-        if (m) API_KEY = m[1].trim();
-    } catch { }
-}
-if (!API_KEY) {
-    console.error("No TWELVE_DATA_KEY in .env or environment");
-    process.exit(1);
-}
-
+// Build-time only. Bakes dividend- & split-adjusted daily closes (total-return
+// basis) into public/holdingsHistory.json, which the performance chart reads.
+// Source: Yahoo Finance chart API — free, no key, and its `adjclose` reflects
+// reinvested distributions, so the 1Y figure matches brokerage returns far more
+// closely than raw closing prices (which omit dividends).
 const HOLDINGS_URL = process.env.HOLDINGS_URL || "http://localhost:3000/api/holdings";
 const CACHE_PATH = resolve(__dirname, "../public/holdingsHistory.json");
-const OUTPUTSIZE = 300; // ~1.2y of trading days — covers up to the 1Y range
-
-// SAFEGUARD: Twelve Data free tier is 8 API credits/min, 800/day. Each symbol in
-// a /time_series call costs 1 credit, so we send <=8 symbols per request and wait
-// a minute between requests. ~50 tickers => ~7 requests => ~6 min, ~50 credits/day.
-const BATCH = 8;
-const WAIT_MS = 62_000;
+const DAYS = 400; // ~13 months of calendar days — covers the chart's 1Y range with buffer
+const DELAY_MS = 350; // be polite to Yahoo between symbols
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function getTickers() {
@@ -36,47 +22,69 @@ async function getTickers() {
     return [...new Set((d.holdings || []).map((h) => h.ticker).filter(Boolean))];
 }
 
-async function fetchBatch(symbols) {
-    const url = new URL("https://api.twelvedata.com/time_series");
-    url.searchParams.set("symbol", symbols.join(","));
-    url.searchParams.set("interval", "1day");
-    url.searchParams.set("outputsize", String(OUTPUTSIZE));
-    url.searchParams.set("apikey", API_KEY);
-    const json = await (await fetch(url)).json();
+async function fetchAdjusted(symbol) {
+    const period2 = Math.floor(Date.now() / 1000);
+    const period1 = period2 - DAYS * 86400;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
+    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const r = json?.chart?.result?.[0];
+    const ts = r?.timestamp;
+    const adj = r?.indicators?.adjclose?.[0]?.adjclose;
+    if (!ts || !adj) throw new Error("no adjclose in response");
     const out = {};
-    // A single-symbol response isn't keyed by symbol; multi-symbol is.
-    if (symbols.length === 1) {
-        if (json.values) out[symbols[0]] = json.values;
-    } else {
-        for (const s of symbols) if (json[s]?.values) out[s] = json[s].values;
+    for (let i = 0; i < ts.length; i++) {
+        if (adj[i] == null) continue;
+        const date = new Date(ts[i] * 1000).toISOString().slice(0, 10);
+        out[date] = Math.round(adj[i] * 10000) / 10000;
     }
+    if (!Object.keys(out).length) throw new Error("empty series");
     return out;
+}
+
+async function fetchWithRetry(symbol) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try { return await fetchAdjusted(symbol); }
+        catch (e) { if (attempt === 3) throw e; await sleep(1500 * attempt); }
+    }
+}
+
+function readExisting() {
+    try { return JSON.parse(readFileSync(CACHE_PATH, "utf-8")).prices || {}; }
+    catch { return {}; }
 }
 
 async function main() {
     const tickers = await getTickers();
-    console.log(`Fetching daily history for ${tickers.length} tickers (<=${BATCH}/min)...`);
+    const old = readExisting();
+    console.log(`Fetching dividend-adjusted history for ${tickers.length} tickers from Yahoo...`);
     const prices = {};
-    const missing = [];
-    for (let i = 0; i < tickers.length; i += BATCH) {
-        const chunk = tickers.slice(i, i + BATCH);
-        console.log(`  [${i + 1}-${i + chunk.length}/${tickers.length}] ${chunk.join(", ")}`);
-        let res = {};
-        try { res = await fetchBatch(chunk); } catch (e) { console.warn("   batch error:", e.message); }
-        for (const t of chunk) {
-            const vals = res[t];
-            if (!vals) { missing.push(t); continue; }
-            prices[t] = Object.fromEntries(vals.map((v) => [v.datetime, parseFloat(v.close)]));
+    const issues = [];
+    let fetched = 0;
+    for (const t of tickers) {
+        try {
+            prices[t] = await fetchWithRetry(t);
+            fetched++;
+        } catch (e) {
+            // SAFEGUARD: keep the last good series for this ticker rather than dropping it.
+            if (old[t]) { prices[t] = old[t]; issues.push(`${t} (kept previous: ${e.message})`); }
+            else issues.push(`${t} (no data: ${e.message})`);
         }
-        if (i + BATCH < tickers.length) {
-            console.log(`   waiting ${WAIT_MS / 1000}s (rate limit)...`);
-            await sleep(WAIT_MS);
-        }
+        await sleep(DELAY_MS);
     }
+
+    // SAFEGUARD: never overwrite a good cache with a wholesale failure (e.g. Yahoo
+    // rate-limiting the CI runner) — bail and leave the committed file untouched.
+    if (fetched === 0 && Object.keys(old).length) {
+        console.error("All fetches failed; leaving existing cache untouched.");
+        process.exit(1);
+    }
+
     const cache = { fetchedAt: new Date().toISOString(), prices };
     mkdirSync(dirname(CACHE_PATH), { recursive: true });
     writeFileSync(CACHE_PATH, JSON.stringify(cache));
-    console.log(`Done. ${Object.keys(prices).length} tickers cached, ${missing.length} missing${missing.length ? ": " + missing.join(", ") : ""}.`);
+    console.log(`Done. ${fetched}/${tickers.length} fetched fresh${issues.length ? "; issues: " + issues.join(", ") : ""}.`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
