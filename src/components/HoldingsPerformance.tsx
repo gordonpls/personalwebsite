@@ -77,10 +77,6 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
     const repW = series.reduce((s, x) => s + x.w, 0);
     if (repW <= 0) return { data: [], coveragePct: 0, asOfLast: null };
 
-    const fmt: Intl.DateTimeFormatOptions = range === "1Y"
-        ? { month: "short", year: "2-digit" }
-        : { month: "short", day: "numeric" };
-
     const data = axis.map((d, idx) => {
         let r = 0;
         for (const s of series) {
@@ -88,8 +84,7 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
             if (p == null) continue;
             r += (s.w / repW) * ((p / (s.base as number) - 1) * 100);
         }
-        const raw = parseLocalDate(d).toLocaleDateString("en-US", fmt);
-        return { date: range === "1Y" ? raw.replace(/(\d{2})$/, "'$1") : raw, value: parseFloat(r.toFixed(2)) };
+        return { date: d, value: parseFloat(r.toFixed(2)) }; // raw YYYY-MM-DD; formatted at render
     });
 
     return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
@@ -125,7 +120,6 @@ function buildAllSeries(holdings: Holding[], prices: PriceMap): { data: ChartPoi
     const repW = series.reduce((s, x) => s + x.w, 0);
     if (!series.length) return { data: [], coveragePct: 0, asOfLast: null };
 
-    const fmt: Intl.DateTimeFormatOptions = { month: "short", year: "2-digit" };
     const data = axis.map((d, idx) => {
         let r = 0, wsum = 0;
         for (const s of series) {
@@ -134,8 +128,7 @@ function buildAllSeries(holdings: Holding[], prices: PriceMap): { data: ChartPoi
             r += s.costWeight * ((p / s.costPrice - 1) * 100);
             wsum += s.costWeight;
         }
-        const raw = parseLocalDate(d).toLocaleDateString("en-US", fmt).replace(/(\d{2})$/, "'$1");
-        return { date: raw, value: parseFloat((wsum > 0 ? r / wsum : 0).toFixed(2)) };
+        return { date: d, value: parseFloat((wsum > 0 ? r / wsum : 0).toFixed(2)) }; // raw YYYY-MM-DD
     });
 
     return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
@@ -149,13 +142,32 @@ interface TipProps {
 const CustomTooltip = ({ active, payload, label }: TipProps) => {
     if (!active || !payload?.length) return null;
     const v = payload[0].value;
+    const when = label ? parseLocalDate(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
     return (
         <div className="bg-base-200 border border-base-300 rounded-xl px-4 py-3 text-sm shadow-lg">
-            <p className="text-base-content/70 text-xs font-medium mb-1">{label}</p>
+            <p className="text-base-content/70 text-xs font-medium mb-1">{when}</p>
             <p className="font-medium text-base-content">{v > 0 ? "+" : ""}{v.toFixed(2)}%</p>
         </div>
     );
 };
+
+// Display label for an x-axis tick (raw YYYY-MM-DD → "May 22" or "May '26").
+function formatTick(d: string, range: Range): string {
+    const dt = parseLocalDate(d);
+    return range === "1Y" || range === "All"
+        ? dt.toLocaleDateString("en-US", { month: "short", year: "2-digit" }).replace(/(\d{2})$/, "'$1")
+        : dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Evenly-spaced tick dates (by index), always including the first and last point,
+// so x-axis gaps are uniform — no oversized gap before a forced final label.
+function evenTicks(data: ChartPoint[], count: number): string[] {
+    const n = data.length;
+    if (n <= count) return data.map((p) => p.date);
+    const out: string[] = [];
+    for (let i = 0; i < count; i++) out.push(data[Math.round((i * (n - 1)) / (count - 1))].date);
+    return [...new Set(out)];
+}
 
 export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
@@ -235,7 +247,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                 <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-base-content/10" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={50} />
+                        <XAxis dataKey="date" tickFormatter={(d: string) => formatTick(d, range)} ticks={evenTicks(data, 7)} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} interval={0} minTickGap={20} />
                         <YAxis tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} width={48} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.1, strokeWidth: 1 }} />
                         <Line type="monotone" dataKey="value" stroke="#E8A020" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} />
