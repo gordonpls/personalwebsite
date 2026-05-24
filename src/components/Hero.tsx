@@ -71,7 +71,7 @@ export const Hero = () => {
                                     <div className="badge badge-secondary">BSCS</div>
                                     <div className="badge badge-secondary">MBA</div>
                                     <div className="badge badge-secondary">MSF</div>
-                                    <div className="badge badge-secondary">ENTJ-A</div>
+                                    <div className="badge badge-secondary">ESTJ-A</div>
                                     {/* <div className="badge badge-secondary">Foodie</div> */}
                                 </div>
 

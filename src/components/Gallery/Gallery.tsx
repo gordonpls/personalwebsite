@@ -70,6 +70,18 @@ export const Gallery = () => {
         }
     }, [lightbox, filtered]);
 
+    // Keyboard controls while the lightbox is open: Esc closes, arrows navigate.
+    useEffect(() => {
+        if (lightbox === null) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setLightbox(null);
+            else if (e.key === "ArrowLeft") setLightbox((i) => i !== null ? (i - 1 + filtered.length) % filtered.length : 0);
+            else if (e.key === "ArrowRight") setLightbox((i) => i !== null ? (i + 1) % filtered.length : 0);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [lightbox, filtered.length]);
+
     const open = (i) => setLightbox((page - 1) * PER_PAGE + i); // global index
     const close = () => setLightbox(null);
     const prev = () => setLightbox((i) => i !== null ? (i - 1 + filtered.length) % filtered.length : 0);
