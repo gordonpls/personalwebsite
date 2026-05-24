@@ -64,10 +64,10 @@ const NAME_OVERRIDES = {
     LIFE: "Ethos Technologies Inc.",
 };
 
-// Tickers whose brokerage-reported cost basis is bad data (e.g. a near-zero
-// cost basis that produces an absurd return). We keep the position's value and
-// weight, but treat its cost basis as unavailable so the Return column shows —.
-const COST_BASIS_IGNORE = new Set(["HL"]);
+// Per-share average cost overrides for tickers whose brokerage-reported cost
+// basis is bad data (e.g. a near-zero cost basis that yields an absurd return).
+// When set, the Return calc uses avgCost * quantity instead of Plaid's value.
+const COST_BASIS_OVERRIDE = { HL: 6.17 };
 
 // Map institution + account subtype to a display portfolio bucket.
 // Vanguard is the diversified "Core"; Robinhood splits by account type.
@@ -139,8 +139,10 @@ async function fetchHoldingsPayload() {
             if (sec.is_cash_equivalent === true || stype === "cash" || tkr.startsWith("CUR:")) continue;
             if (stype === "cryptocurrency") continue;
             total += value;
-            const hasCost = h.cost_basis != null && h.cost_basis > 0 && !COST_BASIS_IGNORE.has(tkr);
-            if (hasCost) { costSum += h.cost_basis; costValueSum += value; }
+            const override = COST_BASIS_OVERRIDE[tkr];
+            const lotCost = override != null ? override * (h.quantity ?? 0) : h.cost_basis;
+            const hasCost = lotCost != null && lotCost > 0;
+            if (hasCost) { costSum += lotCost; costValueSum += value; }
             const portfolio = portfolioOf(institution, acctSubtype[h.account_id]);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
             const key = `${portfolio}|${ticker}`;
@@ -154,7 +156,7 @@ async function fetchHoldingsPayload() {
                 cbValue: 0,  // current value of those same lots (so the % is consistent)
             };
             cur.value += value;
-            if (hasCost) { cur.cbCost += h.cost_basis; cur.cbValue += value; }
+            if (hasCost) { cur.cbCost += lotCost; cur.cbValue += value; }
             agg.set(key, cur);
         }
     }
