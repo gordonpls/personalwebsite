@@ -45,7 +45,13 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             {/* Header */}
             <div className="shrink-0 mb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
-                <p className="text-sm text-base-content/60 mt-0.5">Live Positions</p>
+                <p className="text-sm text-base-content/60 mt-0.5 flex items-center gap-2">
+                    <span className="relative flex h-2 w-2" aria-hidden="true">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                    </span>
+                    Live Positions
+                </p>
             </div>
 
             {error ? (
@@ -65,9 +71,9 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                 >
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
-                            <tr className="text-base-content/50">
-                                <th className="pl-0">Holding</th>
-                                <th className="text-right w-14">Weight</th>
+                            <tr className="text-base-content/50 align-bottom">
+                                <th className="pl-0 align-bottom">Holding</th>
+                                <th className="text-right w-14 align-bottom">Weight</th>
                                 <th className="text-right pr-0 w-20 whitespace-normal leading-tight align-bottom">Total Return</th>
                             </tr>
                         </thead>
