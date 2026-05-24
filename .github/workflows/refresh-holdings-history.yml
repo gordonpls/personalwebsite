@@ -1,8 +1,9 @@
 name: Refresh holdings price history
 
-# Re-bakes public/holdingsHistory.json (the performance chart's price data) on a
-# schedule so it never goes stale and picks up any newly-bought tickers — no
-# local machine or manual step needed. Also runnable on demand from the Actions tab.
+# Re-bakes public/holdingsHistory.json (performance chart prices) and
+# public/holdingsMeta.json (per-holding metadata) on a schedule so they never go
+# stale and pick up newly-bought tickers — no local machine or manual step needed.
+# Also runnable on demand from the Actions tab.
 on:
   schedule:
     - cron: "0 8 * * 6"   # Saturdays 08:00 UTC (after the week's closes)
@@ -32,34 +33,36 @@ jobs:
           node-version: "22"
 
       # Pulls the live ticker list from prod /api/holdings, then fetches each
-      # ticker's dividend-adjusted daily history from Yahoo Finance (no key needed).
-      - name: Bake holdings price history
+      # ticker's dividend-adjusted daily history + metadata from Yahoo (no key),
+      # enriched with Finnhub company profiles for stocks.
+      - name: Bake holdings price history + metadata
         run: node scripts/fetch-holdings-history.mjs
         env:
           HOLDINGS_URL: https://gordonzhong.com/api/holdings
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
 
       - name: Detect change
         id: diff
-        run: git diff --quiet -- public/holdingsHistory.json && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+        run: git diff --quiet -- public/holdingsHistory.json public/holdingsMeta.json && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      # Keep the repo in sync so the next normal deploy doesn't ship a stale file.
-      - name: Commit refreshed file
+      # Keep the repo in sync so the next normal deploy doesn't ship stale files.
+      - name: Commit refreshed files
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/holdingsHistory.json
-          git commit -m "chore: refresh holdings price history (scheduled)"
+          git add public/holdingsHistory.json public/holdingsMeta.json
+          git commit -m "chore: refresh holdings price history + metadata (scheduled)"
           git push
 
-      # Push just the static file to the live web root (no rebuild needed).
-      - name: Deploy refreshed file
+      # Push just the static files to the live web root (no rebuild needed).
+      - name: Deploy refreshed files
         if: steps.diff.outputs.changed == 'true'
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$CPANEL_SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          rsync -az -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" public/holdingsHistory.json "$SSH_USER@$SSH_HOST:$WEB_ROOT"
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" public/holdingsHistory.json public/holdingsMeta.json "$SSH_USER@$SSH_HOST:$WEB_ROOT"
         env:
           CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}

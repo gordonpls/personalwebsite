@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-interface Holding {
+export interface Holding {
     portfolio: string;
     ticker: string | null;
     name: string;
@@ -12,9 +12,11 @@ interface Holding {
 interface HoldingsProps {
     portfolio?: string;  // when set, show only this portfolio (weights renormalized within it)
     title?: string;
+    selectedTicker?: string | null;     // highlighted row
+    onSelect?: (h: Holding) => void;    // row click; also auto-selects the first row
 }
 
-export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
+export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [error, setError] = useState(false);
 
@@ -39,6 +41,12 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
             .map((h) => ({ ...h, weightPct: sum > 0 ? (h.weightPct / sum) * 100 : 0 }))
             .sort((a, b) => b.weightPct - a.weightPct);
     }, [holdings, portfolio]);
+
+    // Default to (and keep a valid) selection — the first row of the active portfolio.
+    useEffect(() => {
+        if (!onSelect || rows.length === 0) return;
+        if (!selectedTicker || !rows.some((r) => r.ticker === selectedTicker)) onSelect(rows[0]);
+    }, [rows, selectedTicker, onSelect]);
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col h-full">
@@ -79,7 +87,12 @@ export const Holdings = ({ portfolio, title }: HoldingsProps = {}) => {
                         </thead>
                         <tbody>
                             {rows.map((h, i) => (
-                                <tr key={`${h.ticker ?? h.name}-${i}`} className="hover:bg-base-200/40">
+                                <tr
+                                    key={`${h.ticker ?? h.name}-${i}`}
+                                    onClick={() => onSelect?.(h)}
+                                    aria-selected={selectedTicker === h.ticker}
+                                    className={`cursor-pointer transition-colors ${selectedTicker === h.ticker ? "bg-primary/10" : "hover:bg-base-200/40"}`}
+                                >
                                     <td className="pl-0 pr-2">
                                         <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
                                         <div className="text-xs text-base-content/50 truncate">{h.name}</div>

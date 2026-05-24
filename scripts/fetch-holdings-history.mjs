@@ -4,17 +4,29 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Build-time only. Bakes dividend- & split-adjusted daily closes (total-return
-// basis) into public/holdingsHistory.json, which the performance chart reads.
-// Source: Yahoo Finance chart API — free, no key, and its `adjclose` reflects
-// reinvested distributions, so the 1Y figure matches brokerage returns far more
-// closely than raw closing prices (which omit dividends).
+// Build-time only. Bakes two static files the finance UI reads at runtime (so
+// there are zero per-visit API calls):
+//   • public/holdingsHistory.json — dividend/split-adjusted daily closes
+//     (total-return basis) from Yahoo Finance; powers the performance chart.
+//   • public/holdingsMeta.json — per-holding metadata: name/type/exchange/52wk
+//     from the same Yahoo response (free), plus logo/industry/market-cap/site
+//     from Finnhub for stocks. Powers the holding detail panel.
 const HOLDINGS_URL = process.env.HOLDINGS_URL || "http://localhost:3000/api/holdings";
-const CACHE_PATH = resolve(__dirname, "../public/holdingsHistory.json");
+const HISTORY_PATH = resolve(__dirname, "../public/holdingsHistory.json");
+const META_PATH = resolve(__dirname, "../public/holdingsMeta.json");
 const HISTORY_DAYS = 365 * 6 + 14;   // ~6 years — covers the "All" (since-inception) view
 const RECENT_DAILY_DAYS = 400;       // keep daily granularity within ~13 months; thin older to weekly
-const DELAY_MS = 350;                // be polite to Yahoo between symbols
+const DELAY_MS = 1100;               // ~1 req/s keeps Finnhub under its 60/min free limit
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Finnhub key (CI: env from secret; local: fall back to server/.env).
+let FINNHUB_KEY = process.env.FINNHUB_API_KEY || "";
+if (!FINNHUB_KEY) {
+    try {
+        const m = readFileSync(resolve(__dirname, "../server/.env"), "utf-8").match(/FINNHUB_API_KEY=(.+)/);
+        if (m) FINNHUB_KEY = m[1].trim();
+    } catch { /* none */ }
+}
 
 // Keep every day inside the recent window, but only ~one point per week before
 // that — keeps the committed file small while the long "All" curve stays smooth.
@@ -36,68 +48,100 @@ async function getTickers() {
     return [...new Set((d.holdings || []).map((h) => h.ticker).filter(Boolean))];
 }
 
-async function fetchAdjusted(symbol) {
+// One Yahoo chart call yields both the price series AND the metadata block.
+async function fetchYahoo(symbol) {
     const period2 = Math.floor(Date.now() / 1000);
     const period1 = period2 - HISTORY_DAYS * 86400;
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    const r = json?.chart?.result?.[0];
+    const r = (await res.json())?.chart?.result?.[0];
     const ts = r?.timestamp;
     const adj = r?.indicators?.adjclose?.[0]?.adjclose;
     if (!ts || !adj) throw new Error("no adjclose in response");
-    const out = {};
+    const series = {};
     for (let i = 0; i < ts.length; i++) {
         if (adj[i] == null) continue;
-        const date = new Date(ts[i] * 1000).toISOString().slice(0, 10);
-        out[date] = Math.round(adj[i] * 10000) / 10000;
+        series[new Date(ts[i] * 1000).toISOString().slice(0, 10)] = Math.round(adj[i] * 10000) / 10000;
     }
-    if (!Object.keys(out).length) throw new Error("empty series");
-    return thin(out);
+    if (!Object.keys(series).length) throw new Error("empty series");
+    const m = r.meta || {};
+    return {
+        prices: thin(series),
+        meta: {
+            name: m.longName || m.shortName || null,
+            type: m.instrumentType || null,           // EQUITY / ETF
+            exchange: m.fullExchangeName || null,
+            currency: m.currency || null,
+            week52High: m.fiftyTwoWeekHigh ?? null,
+            week52Low: m.fiftyTwoWeekLow ?? null,
+            price: m.regularMarketPrice ?? null,
+        },
+    };
 }
 
 async function fetchWithRetry(symbol) {
     for (let attempt = 1; attempt <= 3; attempt++) {
-        try { return await fetchAdjusted(symbol); }
+        try { return await fetchYahoo(symbol); }
         catch (e) { if (attempt === 3) throw e; await sleep(1500 * attempt); }
     }
 }
 
-function readExisting() {
-    try { return JSON.parse(readFileSync(CACHE_PATH, "utf-8")).prices || {}; }
+// Finnhub company profile (stocks only; ETFs return {}). Enriches the metadata.
+async function finnhubProfile(symbol) {
+    const r = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`);
+    if (!r.ok) return {};
+    const p = await r.json();
+    const out = {};
+    if (p.finnhubIndustry) out.industry = p.finnhubIndustry;
+    if (p.logo) out.logo = p.logo;
+    if (p.marketCapitalization) out.marketCap = Math.round(p.marketCapitalization); // USD millions
+    if (p.weburl) out.website = p.weburl;
+    if (p.country) out.country = p.country;
+    if (p.ipo) out.ipo = p.ipo;
+    return out;
+}
+
+function readJson(path, key) {
+    try { return JSON.parse(readFileSync(path, "utf-8"))[key] || {}; }
     catch { return {}; }
 }
 
 async function main() {
     const tickers = await getTickers();
-    const old = readExisting();
-    console.log(`Fetching dividend-adjusted history for ${tickers.length} tickers from Yahoo...`);
-    const prices = {};
+    const oldPrices = readJson(HISTORY_PATH, "prices");
+    const oldMeta = readJson(META_PATH, "meta");
+    console.log(`Fetching history + metadata for ${tickers.length} tickers...`);
+    const prices = {}, meta = {};
     const issues = [];
     let fetched = 0;
     for (const t of tickers) {
         try {
-            prices[t] = await fetchWithRetry(t);
+            const { prices: p, meta: m } = await fetchWithRetry(t);
+            prices[t] = p;
+            meta[t] = m;
             fetched++;
+            if (FINNHUB_KEY && m.type === "EQUITY") {
+                try { Object.assign(meta[t], await finnhubProfile(t)); } catch { /* keep Yahoo-only meta */ }
+            }
         } catch (e) {
-            // SAFEGUARD: keep the last good series for this ticker rather than dropping it.
-            if (old[t]) { prices[t] = old[t]; issues.push(`${t} (kept previous: ${e.message})`); }
-            else issues.push(`${t} (no data: ${e.message})`);
+            // SAFEGUARD: keep last-good data for this ticker rather than dropping it.
+            if (oldPrices[t]) prices[t] = oldPrices[t];
+            if (oldMeta[t]) meta[t] = oldMeta[t];
+            issues.push(`${t} (${oldPrices[t] ? "kept previous" : "no data"}: ${e.message})`);
         }
         await sleep(DELAY_MS);
     }
 
-    // SAFEGUARD: never overwrite a good cache with a wholesale failure (e.g. Yahoo
-    // rate-limiting the CI runner) — bail and leave the committed file untouched.
-    if (fetched === 0 && Object.keys(old).length) {
-        console.error("All fetches failed; leaving existing cache untouched.");
+    // SAFEGUARD: never overwrite good caches with a wholesale failure.
+    if (fetched === 0 && Object.keys(oldPrices).length) {
+        console.error("All fetches failed; leaving existing caches untouched.");
         process.exit(1);
     }
 
-    const cache = { fetchedAt: new Date().toISOString(), prices };
-    mkdirSync(dirname(CACHE_PATH), { recursive: true });
-    writeFileSync(CACHE_PATH, JSON.stringify(cache));
+    mkdirSync(dirname(HISTORY_PATH), { recursive: true });
+    writeFileSync(HISTORY_PATH, JSON.stringify({ fetchedAt: new Date().toISOString(), prices }));
+    writeFileSync(META_PATH, JSON.stringify({ fetchedAt: new Date().toISOString(), meta }));
     console.log(`Done. ${fetched}/${tickers.length} fetched fresh${issues.length ? "; issues: " + issues.join(", ") : ""}.`);
 }
 

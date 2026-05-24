@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Holdings } from "./Holdings";
+import { Holdings, type Holding } from "./Holdings";
 import { HoldingsHeatmap } from "./HoldingsHeatmap";
 import { HoldingsPerformance } from "./HoldingsPerformance";
+import { HoldingsMeta } from "./HoldingsMeta";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 const TABS: { id: string; desc: string }[] = [
@@ -12,7 +13,11 @@ const TABS: { id: string; desc: string }[] = [
 
 export const Portfolios = () => {
     const [active, setActive] = useState("Core");
+    const [selected, setSelected] = useState<Holding | null>(null);
     const tab = TABS.find((t) => t.id === active) ?? TABS[0];
+
+    // Switching portfolios clears the selection; Holdings re-selects its first row.
+    const changeTab = (id: string) => { setActive(id); setSelected(null); };
 
     return (
         <div className="space-y-5">
@@ -37,7 +42,7 @@ export const Portfolios = () => {
                         key={t.id}
                         role="tab"
                         aria-selected={active === t.id}
-                        onClick={() => setActive(t.id)}
+                        onClick={() => changeTab(t.id)}
                         className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${active === t.id
                             ? "bg-base-100 text-base-content shadow-sm"
                             : "text-base-content/50 hover:text-base-content/80"
@@ -50,19 +55,24 @@ export const Portfolios = () => {
 
             <p className="text-sm text-base-content/60">{tab.desc}</p>
 
-            {/* Holdings (compact) beside the heatmap; both fill a shared height so they
-                align regardless of how many holdings a portfolio has. Stacks on mobile. */}
+            {/* Live holdings (left) beside the selected holding's detail (right).
+                Click a holding to populate the detail panel. Stacks on mobile. */}
             <div className="flex flex-col lg:flex-row gap-4 lg:h-[28rem]">
                 <div className="w-full lg:w-80 lg:shrink-0 lg:h-full">
-                    <Holdings portfolio={active} title="" />
+                    <Holdings portfolio={active} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
                 </div>
                 <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
-                    <HoldingsHeatmap portfolio={active} title="" />
+                    <HoldingsMeta holding={selected} />
                 </div>
             </div>
 
-            {/* Performance is always the whole portfolio, not tab-scoped */}
+            {/* Overall performance (whole portfolio, not tab-scoped) */}
             <HoldingsPerformance title="Overall Performance" />
+
+            {/* Heatmap last, full width */}
+            <div className="w-full lg:h-[26rem]">
+                <HoldingsHeatmap portfolio={active} title="Heatmap" />
+            </div>
         </div>
     );
 };
