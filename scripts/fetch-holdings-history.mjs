@@ -16,7 +16,7 @@ const HISTORY_PATH = resolve(__dirname, "../public/holdingsHistory.json");
 const META_PATH = resolve(__dirname, "../public/holdingsMeta.json");
 const HISTORY_DAYS = 365 * 6 + 14;   // ~6 years — covers the "All" (since-inception) view
 const RECENT_DAILY_DAYS = 400;       // keep daily granularity within ~13 months; thin older to weekly
-const DELAY_MS = 1100;               // ~1 req/s keeps Finnhub under its 60/min free limit
+const DELAY_MS = 250;                // light pacing for Yahoo (Finnhub is throttled separately)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Finnhub key (CI: env from secret; local: fall back to server/.env).
@@ -26,6 +26,17 @@ if (!FINNHUB_KEY) {
         const m = readFileSync(resolve(__dirname, "../server/.env"), "utf-8").match(/FINNHUB_API_KEY=(.+)/);
         if (m) FINNHUB_KEY = m[1].trim();
     } catch { /* none */ }
+}
+
+// Throttle every Finnhub call to ~1/sec so we stay well under the 60/min free limit.
+let lastFinnhub = 0;
+async function finnhubGet(pathWithQuery) {
+    const wait = lastFinnhub + 1100 - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastFinnhub = Date.now();
+    const r = await fetch(`https://finnhub.io/api/v1${pathWithQuery}&token=${FINNHUB_KEY}`);
+    if (!r.ok) throw new Error(`finnhub ${r.status}`);
+    return r.json();
 }
 
 // Keep every day inside the recent window, but only ~one point per week before
@@ -89,9 +100,7 @@ async function fetchWithRetry(symbol) {
 
 // Finnhub company profile (stocks only; ETFs return {}). Enriches the metadata.
 async function finnhubProfile(symbol) {
-    const r = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`);
-    if (!r.ok) return {};
-    const p = await r.json();
+    const p = await finnhubGet(`/stock/profile2?symbol=${encodeURIComponent(symbol)}`);
     const out = {};
     if (p.finnhubIndustry) out.industry = p.finnhubIndustry;
     if (p.logo) out.logo = p.logo;
@@ -100,6 +109,29 @@ async function finnhubProfile(symbol) {
     if (p.country) out.country = p.country;
     if (p.ipo) out.ipo = p.ipo;
     return out;
+}
+
+// Valuation/return/quality metrics (works for stocks; ETFs give returns/volatility only).
+async function finnhubMetric(symbol) {
+    const d = (await finnhubGet(`/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`)).metric || {};
+    const s = {};
+    const set = (k, v) => { if (v != null && isFinite(v)) s[k] = Math.round(v * 100) / 100; };
+    set("pe", d.peTTM); set("pb", d.pbAnnual); set("beta", d.beta);
+    set("divYield", d.dividendYieldIndicatedAnnual); set("eps", d.epsTTM);
+    set("roe", d.roeTTM); set("profitMargin", d.netProfitMarginTTM); set("revGrowth", d.revenueGrowthTTMYoy);
+    set("return13w", d["13WeekPriceReturnDaily"]); set("return26w", d["26WeekPriceReturnDaily"]);
+    set("return52w", d["52WeekPriceReturnDaily"]); set("volatility", d["3MonthADReturnStd"]);
+    return Object.keys(s).length ? s : undefined;
+}
+
+// Latest analyst recommendation breakdown (stocks).
+async function finnhubRec(symbol) {
+    const arr = await finnhubGet(`/stock/recommendation?symbol=${encodeURIComponent(symbol)}`);
+    if (!Array.isArray(arr) || !arr.length) return undefined;
+    const a = arr[0];
+    const total = (a.strongBuy || 0) + (a.buy || 0) + (a.hold || 0) + (a.sell || 0) + (a.strongSell || 0);
+    if (!total) return undefined;
+    return { strongBuy: a.strongBuy || 0, buy: a.buy || 0, hold: a.hold || 0, sell: a.sell || 0, strongSell: a.strongSell || 0, period: a.period };
 }
 
 function readJson(path, key) {
@@ -121,8 +153,12 @@ async function main() {
             prices[t] = p;
             meta[t] = m;
             fetched++;
-            if (FINNHUB_KEY && m.type === "EQUITY") {
-                try { Object.assign(meta[t], await finnhubProfile(t)); } catch { /* keep Yahoo-only meta */ }
+            if (FINNHUB_KEY) {
+                try { const st = await finnhubMetric(t); if (st) meta[t].stats = st; } catch { /* skip */ }
+                if (m.type === "EQUITY") {
+                    try { Object.assign(meta[t], await finnhubProfile(t)); } catch { /* keep Yahoo-only meta */ }
+                    try { const an = await finnhubRec(t); if (an) meta[t].analysts = an; } catch { /* skip */ }
+                }
             }
         } catch (e) {
             // SAFEGUARD: keep last-good data for this ticker rather than dropping it.
