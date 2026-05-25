@@ -72,7 +72,7 @@ export const Portfolios = () => {
             <HoldingsPerformance title="Overall Performance" />
 
             {/* Allocation donut + risk stats (left) beside the all-holdings heatmap (right) */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:h-[30rem]">
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[32rem]">
                 <div className="w-full lg:w-80 lg:shrink-0 flex flex-col gap-4 lg:h-full">
                     <PortfolioAnalytics />
                 </div>

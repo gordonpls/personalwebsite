@@ -76,9 +76,9 @@ export const PortfolioAnalytics = () => {
             if (st?.dividendYield != null) { dSum += h.weightPct * st.dividendYield; dW += h.weightPct; } // 0 = non-payer, still counted
         }
         let arr: Slice[] = [...catW.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-        if (arr.length > 8) {
-            const other = arr.slice(7).reduce((s, x) => s + x.value, 0);
-            arr = [...arr.slice(0, 7), { name: "Other", value: other }];
+        if (arr.length > 7) {
+            const other = arr.slice(6).reduce((s, x) => s + x.value, 0);
+            arr = [...arr.slice(0, 6), { name: "Other", value: other }];
         }
         return {
             slices: arr,
@@ -121,7 +121,7 @@ export const PortfolioAnalytics = () => {
                     <div className="flex-1 min-h-[12rem] rounded bg-base-200 animate-pulse mt-3" />
                 ) : (
                     <div className="flex-1 min-h-0 flex flex-col mt-2">
-                        <div className="flex-1 min-h-[9rem]">
+                        <div className="flex-1 min-h-[5rem]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={slices} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="58%" outerRadius="82%" paddingAngle={1} stroke="none">
@@ -131,7 +131,7 @@ export const PortfolioAnalytics = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-xs">
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs shrink-0">
                             {slices.map((s, i) => (
                                 <div key={s.name} className="flex items-center gap-1.5 min-w-0">
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
