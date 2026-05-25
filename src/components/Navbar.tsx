@@ -41,7 +41,6 @@ export const Navbar = () => {
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
             <li><a className="link link-hover link-info" href="/#allocation">Allocation</a></li>
-            <li><a className="link link-hover link-info" href="/now">Now</a></li>
             <li><a className="link link-hover link-info" href="/portfolio" target="_blank" rel="noopener noreferrer">Portfolio ↗</a></li>
             <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
           </ul>
@@ -55,7 +54,6 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           <li><a className="link link-hover link-info" href="/#allocation">Allocation</a></li>
-          <li><a className="link link-hover link-info" href="/now">Now</a></li>
           <li><a className="link link-hover link-info" href="/portfolio" target="_blank" rel="noopener noreferrer">Portfolio ↗</a></li>
           <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
         </ul>

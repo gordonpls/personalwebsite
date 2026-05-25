@@ -23,7 +23,6 @@ export const CommandPalette = () => {
         { label: "Résumé", anchor: "resume" },
         { label: "Gallery", anchor: "gallery" },
         { label: "Allocation", hint: "Risk quiz & simulator", anchor: "allocation" },
-        { label: "Now", hint: "What I'm up to", path: "/now" },
         { label: "Portfolio", hint: "Live holdings & performance", path: "/portfolio" },
         { label: "Stablecoin dashboard", path: "/stablecoin" },
         { label: "Toggle light / dark", action: toggleTheme },
