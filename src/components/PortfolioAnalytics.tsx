@@ -113,18 +113,20 @@ export const PortfolioAnalytics = () => {
 
             {/* Allocation donut */}
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col lg:flex-1 lg:min-h-0">
-                <h3 className="text-sm font-semibold text-base-content shrink-0">Allocation</h3>
-                <p className="text-xs text-base-content/50 mt-0.5 shrink-0">By sector &amp; fund</p>
+                <div className="flex items-baseline gap-2 shrink-0">
+                    <h3 className="text-sm font-semibold text-base-content">Allocation</h3>
+                    <p className="text-xs text-base-content/50">By sector &amp; fund</p>
+                </div>
                 {error ? (
                     <p className="text-xs text-base-content/50 py-8 text-center">Unavailable.</p>
                 ) : loading ? (
                     <div className="flex-1 min-h-[12rem] rounded bg-base-200 animate-pulse mt-3" />
                 ) : (
                     <div className="flex-1 min-h-0 flex flex-col mt-2">
-                        <div className="flex-1 min-h-[5rem]">
+                        <div className="flex-1 min-h-[8rem]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={slices} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="58%" outerRadius="82%" paddingAngle={1} stroke="none">
+                                    <Pie data={slices} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="56%" outerRadius="94%" paddingAngle={1} stroke="none">
                                         {slices.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip content={<DonutTip />} />

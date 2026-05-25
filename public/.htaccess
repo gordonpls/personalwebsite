@@ -1,3 +1,10 @@
+# LiteSpeed's server-level cache ignores the origin Cache-Control below and was
+# serving a stale index.html (old hashed bundles) after deploys. Disable its
+# public page cache for this site so freshly deployed HTML is always served.
+<IfModule LiteSpeed>
+CacheDisable public /
+</IfModule>
+
 Options -MultiViews
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
