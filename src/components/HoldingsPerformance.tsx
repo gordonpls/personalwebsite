@@ -45,7 +45,24 @@ function cutoffFor(range: Range): string {
     return d.toISOString().slice(0, 10);
 }
 
-interface ChartPoint { date: string; value: number; }
+interface ChartPoint { date: string; value: number; benchmark?: number; }
+const BENCHMARK_TICKER = "SPY"; // S&P 500 proxy, baked even though it isn't a holding
+
+// Forward-fill a ticker's closes along the given date axis, then rebase to the
+// first point as a percent return. Used for the S&P 500 benchmark line.
+function rebasedSeries(map: Record<string, number> | undefined, axis: string[]): (number | null)[] | null {
+    if (!map) return null;
+    const tdates = Object.keys(map).sort();
+    const aligned: (number | null)[] = [];
+    let pi = 0, last: number | null = null;
+    for (const d of axis) {
+        while (pi < tdates.length && tdates[pi] <= d) { last = map[tdates[pi]]; pi++; }
+        aligned.push(last);
+    }
+    const base = aligned[0];
+    if (base == null || base <= 0) return null;
+    return aligned.map((p) => (p == null ? null : (p / base - 1) * 100));
+}
 
 // Blend each holding's real % return (rebased to the range start) by its weight.
 // Tickers without price history, or without a price at the range start, are
@@ -77,6 +94,8 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
     const repW = series.reduce((s, x) => s + x.w, 0);
     if (repW <= 0) return { data: [], coveragePct: 0, asOfLast: null };
 
+    const bench = rebasedSeries(prices[BENCHMARK_TICKER], axis); // S&P 500, rebased to range start
+
     const data = axis.map((d, idx) => {
         let r = 0;
         for (const s of series) {
@@ -84,7 +103,10 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
             if (p == null) continue;
             r += (s.w / repW) * ((p / (s.base as number) - 1) * 100);
         }
-        return { date: d, value: parseFloat(r.toFixed(2)) }; // raw YYYY-MM-DD; formatted at render
+        const point: ChartPoint = { date: d, value: parseFloat(r.toFixed(2)) }; // raw YYYY-MM-DD; formatted at render
+        const b = bench?.[idx];
+        if (b != null) point.benchmark = parseFloat(b.toFixed(2));
+        return point;
     });
 
     return { data, coveragePct: Math.round((repW / totalW) * 100), asOfLast: axis[axis.length - 1] };
@@ -136,17 +158,31 @@ function buildAllSeries(holdings: Holding[], prices: PriceMap): { data: ChartPoi
 
 interface TipProps {
     active?: boolean;
-    payload?: Array<{ value: number }>;
+    payload?: Array<{ value: number; dataKey?: string | number; name?: string; color?: string }>;
     label?: string;
 }
+const SERIES_META: Record<string, { label: string; color: string }> = {
+    value: { label: "Portfolio", color: "#E8A020" },
+    benchmark: { label: "S&P 500", color: "#7F77DD" },
+};
 const CustomTooltip = ({ active, payload, label }: TipProps) => {
     if (!active || !payload?.length) return null;
-    const v = payload[0].value;
     const when = label ? parseLocalDate(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
     return (
-        <div className="bg-base-200 border border-base-300 rounded-xl px-4 py-3 text-sm shadow-lg">
+        <div className="bg-base-200 border border-base-300 rounded-xl px-4 py-3 text-sm shadow-lg space-y-1">
             <p className="text-base-content/70 text-xs font-medium mb-1">{when}</p>
-            <p className="font-medium text-base-content">{v > 0 ? "+" : ""}{v.toFixed(2)}%</p>
+            {payload.map((p) => {
+                const m = SERIES_META[String(p.dataKey)] ?? { label: String(p.dataKey), color: "currentColor" };
+                return (
+                    <div key={String(p.dataKey)} className="flex items-center justify-between gap-6">
+                        <span className="flex items-center gap-1.5 text-base-content/70">
+                            <span className="w-2 h-2 rounded-full inline-block" style={{ background: m.color }} />
+                            {m.label}
+                        </span>
+                        <span className="font-medium text-base-content tabular-nums">{p.value > 0 ? "+" : ""}{p.value.toFixed(2)}%</span>
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -216,6 +252,8 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
     const last = data[data.length - 1];
     const loading = (!holdings || !prices) && !error;
     const xTicks = useMemo(() => evenTicks(data, 5), [data]);
+    const hasBenchmark = data.some((d) => d.benchmark != null);
+    const benchLast = hasBenchmark ? [...data].reverse().find((d) => d.benchmark != null)?.benchmark : undefined;
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
@@ -263,17 +301,28 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
                         <XAxis dataKey="date" ticks={xTicks} tick={<XTick range={range} lastIndex={xTicks.length - 1} />} tickLine={false} axisLine={false} interval={0} minTickGap={0} />
                         <YAxis tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.4 }} tickLine={false} axisLine={false} width={48} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.1, strokeWidth: 1 }} />
+                        {hasBenchmark && (
+                            <Line type="monotone" dataKey="benchmark" stroke="#7F77DD" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 4 }} connectNulls />
+                        )}
                         <Line type="monotone" dataKey="value" stroke="#E8A020" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }} />
                     </LineChart>
                 </ResponsiveContainer>
             )}
 
-            {/* Summary */}
+            {/* Summary / legend */}
             {!error && !loading && last && (
-                <div className="flex items-center gap-2 flex-wrap text-xs text-base-content/60">
-                    <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
-                    My portfolio return
-                    {coveragePct < 98 && <span className="text-base-content/40">· represents {coveragePct}% of holdings by weight</span>}
+                <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs text-base-content/60">
+                    <span className="flex items-center gap-2">
+                        <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#E8A020" }} />
+                        My portfolio
+                    </span>
+                    {hasBenchmark && (
+                        <span className="flex items-center gap-2">
+                            <span className="w-3 h-0.5 rounded-full inline-block" style={{ background: "#7F77DD" }} />
+                            S&P 500{benchLast != null && <span className="text-base-content/40">({benchLast > 0 ? "+" : ""}{benchLast.toFixed(1)}%)</span>}
+                        </span>
+                    )}
+                    {coveragePct < 98 && <span className="text-base-content/40">· covers {coveragePct}% of holdings by weight</span>}
                 </div>
             )}
 

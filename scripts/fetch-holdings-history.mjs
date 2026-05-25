@@ -56,7 +56,9 @@ async function getTickers() {
     const res = await fetch(HOLDINGS_URL);
     if (!res.ok) throw new Error(`holdings ${res.status} — is the backend running? (npm run dev:all)`);
     const d = await res.json();
-    return [...new Set((d.holdings || []).map((h) => h.ticker).filter(Boolean))];
+    // SPY is always included as the S&P 500 benchmark for the performance chart,
+    // even though it isn't a holding.
+    return [...new Set([...(d.holdings || []).map((h) => h.ticker).filter(Boolean), "SPY"])];
 }
 
 // One Yahoo chart call yields both the price series AND the metadata block.

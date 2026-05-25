@@ -3,6 +3,7 @@ import { Holdings, type Holding } from "./Holdings";
 import { HoldingsHeatmap } from "./HoldingsHeatmap";
 import { HoldingsPerformance } from "./HoldingsPerformance";
 import { HoldingsMeta } from "./HoldingsMeta";
+import { PortfolioAnalytics } from "./PortfolioAnalytics";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 const TABS: { id: string; desc: string }[] = [
@@ -70,9 +71,14 @@ export const Portfolios = () => {
             {/* Overall performance (whole portfolio, not tab-scoped) */}
             <HoldingsPerformance title="Overall Performance" />
 
-            {/* Heatmap last, full width — every holding across all portfolios */}
-            <div className="w-full lg:h-[26rem]">
-                <HoldingsHeatmap title="Heatmap" />
+            {/* Allocation donut + risk stats (left) beside the all-holdings heatmap (right) */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[30rem]">
+                <div className="w-full lg:w-80 lg:shrink-0 flex flex-col gap-4 lg:h-full">
+                    <PortfolioAnalytics />
+                </div>
+                <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
+                    <HoldingsHeatmap title="Heatmap" />
+                </div>
             </div>
         </div>
     );
