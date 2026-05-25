@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 const ONE_LINER =
     "A cost-conscious Streamlit dashboard that tracks ~320 stablecoins — circulating supply, peg deviation, liquidity depth, reserve freshness — and rolls them into an explainable weighted risk score, stored as daily time-series snapshots.";
 
@@ -38,66 +40,101 @@ const DECISIONS: { title: string; body: string }[] = [
 
 const METRICS = ["~320 stablecoins", "243 with supply history", "~22k supply snapshots", "~17k risk scores", "213 reserve reports", "30–300s UI cache", "456 tests / 27 files"];
 
-const H3 = "text-sm font-semibold uppercase tracking-widest text-base-content/50";
+const H3 = "text-xs font-semibold uppercase tracking-widest text-base-content/50";
 
-export const StablecoinArchitecture = () => (
-    <section className="bg-base-200 border-t border-base-300">
-        <div className="max-w-5xl mx-auto px-6 py-16 space-y-12">
-            <header>
-                <p className="text-xs uppercase tracking-widest text-primary font-semibold">Under the hood</p>
-                <h2 className="text-2xl font-bold text-base-content mt-1">How this dashboard is built</h2>
-                <p className="text-base-content/70 mt-3 max-w-3xl leading-relaxed">{ONE_LINER}</p>
-            </header>
+// Slide-out "Under the hood" drawer (opens from the right) documenting the
+// dashboard's architecture, with an edge tab to open it.
+export const StablecoinArchitecture = () => {
+    const [open, setOpen] = useState(false);
 
-            {/* Stack */}
-            <div className="space-y-4">
-                <h3 className={H3}>Stack</h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {STACK.map((c) => (
-                        <div key={c.label} className="bg-base-100 border border-base-300 rounded-xl p-4">
-                            <p className="text-sm font-semibold text-base-content mb-2">{c.label}</p>
-                            <ul className="space-y-1">
-                                {c.items.map((it) => (
-                                    <li key={it} className="text-sm text-base-content/70 flex gap-2">
-                                        <span className="text-primary/60">›</span>{it}
-                                    </li>
-                                ))}
-                            </ul>
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
+    return (
+        <>
+            {/* Edge tab */}
+            <button
+                onClick={() => setOpen(true)}
+                aria-label="Open: how this dashboard is built"
+                className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-primary text-primary-content py-4 px-2 rounded-l-xl shadow-lg text-sm font-semibold tracking-wide [writing-mode:vertical-rl] rotate-180 transition-all hover:px-2.5 ${open ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+            >
+                Under the hood
+            </button>
+
+            {/* Backdrop */}
+            <div
+                onClick={() => setOpen(false)}
+                className={`fixed inset-0 z-40 bg-base-content/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            />
+
+            {/* Drawer */}
+            <aside
+                className={`fixed top-0 right-0 z-50 h-full w-full max-w-xl bg-base-200 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+                aria-hidden={!open}
+            >
+                <header className="flex items-start justify-between gap-3 p-5 border-b border-base-300 shrink-0">
+                    <div>
+                        <p className="text-xs uppercase tracking-widest text-primary font-semibold">Under the hood</p>
+                        <h2 className="text-xl font-bold text-base-content mt-0.5">How this dashboard is built</h2>
+                    </div>
+                    <button onClick={() => setOpen(false)} className="btn btn-sm btn-circle btn-ghost shrink-0" aria-label="Close">✕</button>
+                </header>
+
+                <div className="overflow-y-auto px-5 py-6 space-y-9">
+                    <p className="text-base-content/70 leading-relaxed">{ONE_LINER}</p>
+
+                    {/* Stack */}
+                    <div className="space-y-3">
+                        <h3 className={H3}>Stack</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {STACK.map((c) => (
+                                <div key={c.label} className="bg-base-100 border border-base-300 rounded-xl p-4">
+                                    <p className="text-sm font-semibold text-base-content mb-2">{c.label}</p>
+                                    <ul className="space-y-1">
+                                        {c.items.map((it) => (
+                                            <li key={it} className="text-sm text-base-content/70 flex gap-2"><span className="text-primary/60">›</span>{it}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </div>
 
-            {/* Architecture */}
-            <div className="space-y-4">
-                <h3 className={H3}>Architecture</h3>
-                <p className="text-base-content/70 leading-relaxed max-w-3xl">{DATA_FLOW}</p>
-                <pre className="bg-neutral text-neutral-content/90 rounded-xl p-5 text-[11px] sm:text-xs leading-relaxed overflow-x-auto font-mono">{DIAGRAM}</pre>
-            </div>
+                    {/* Architecture */}
+                    <div className="space-y-3">
+                        <h3 className={H3}>Architecture</h3>
+                        <p className="text-base-content/70 leading-relaxed">{DATA_FLOW}</p>
+                        <pre className="bg-neutral text-neutral-content/90 rounded-xl p-4 text-[10px] sm:text-xs leading-relaxed overflow-x-auto font-mono">{DIAGRAM}</pre>
+                    </div>
 
-            {/* Key decisions */}
-            <div className="space-y-4">
-                <h3 className={H3}>Key decisions &amp; challenges</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                    {DECISIONS.map((d) => (
-                        <div key={d.title} className="bg-base-100 border border-base-300 rounded-xl p-4">
-                            <p className="font-semibold text-base-content mb-1">{d.title}</p>
-                            <p className="text-sm text-base-content/70 leading-relaxed">{d.body}</p>
+                    {/* Key decisions */}
+                    <div className="space-y-3">
+                        <h3 className={H3}>Key decisions &amp; challenges</h3>
+                        <div className="space-y-3">
+                            {DECISIONS.map((d) => (
+                                <div key={d.title} className="bg-base-100 border border-base-300 rounded-xl p-4">
+                                    <p className="font-semibold text-base-content mb-1">{d.title}</p>
+                                    <p className="text-sm text-base-content/70 leading-relaxed">{d.body}</p>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </div>
 
-            {/* Metrics */}
-            <div className="space-y-4">
-                <h3 className={H3}>By the numbers</h3>
-                <div className="flex flex-wrap gap-2">
-                    {METRICS.map((m) => (
-                        <span key={m} className="px-3 py-1.5 rounded-lg bg-base-100 border border-base-300 text-sm text-base-content/80 font-medium tabular-nums">{m}</span>
-                    ))}
+                    {/* Metrics */}
+                    <div className="space-y-3">
+                        <h3 className={H3}>By the numbers</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {METRICS.map((m) => (
+                                <span key={m} className="px-3 py-1.5 rounded-lg bg-base-100 border border-base-300 text-sm text-base-content/80 font-medium tabular-nums">{m}</span>
+                            ))}
+                        </div>
+                        <p className="text-[11px] text-base-content/40">Bundle size / Lighthouse: N/A for Streamlit; coverage % not measured.</p>
+                    </div>
                 </div>
-                <p className="text-[11px] text-base-content/40">Bundle size / Lighthouse: N/A for Streamlit; coverage % not measured.</p>
-            </div>
-        </div>
-    </section>
-);
+            </aside>
+        </>
+    );
+};

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Navbar } from "./Navbar";
-import { Footer } from "./Footer";
 import { StablecoinArchitecture } from "./StablecoinArchitecture";
 
 function DashboardSkeleton() {
@@ -62,6 +61,11 @@ export default function Stablecoin() {
     const [showContent, setShowContent] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => { document.body.style.overflow = ""; };
+    }, []);
+
     const handleLoad = () => {
         // onLoad fires when the iframe HTML arrives; Streamlit still needs ~2.5s
         // to boot its React app, open a WebSocket, and render before content is visible
@@ -71,9 +75,9 @@ export default function Stablecoin() {
     useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
     return (
-        <div className="w-full bg-base-100 pt-16">
+        <div className="w-full h-screen overflow-hidden bg-base-100 pt-16">
             <Navbar />
-            <div className="px-4 pt-4 relative" style={{ height: "calc(100vh - 5rem)" }}>
+            <div className="px-4 pt-4 relative" style={{ height: "calc(100vh - 4rem)" }}>
                 {!showContent && (
                     <div className="absolute inset-0">
                         <DashboardSkeleton />
@@ -95,7 +99,6 @@ export default function Stablecoin() {
                 />
             </div>
             <StablecoinArchitecture />
-            <Footer />
         </div>
     );
 }
