@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ScrollArea } from "./ScrollArea";
 
 interface Holding {
     portfolio: string;
@@ -146,7 +147,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                 </div>
             ) : (
                 <>
-                    <div className="always-scrollbar flex-1 min-h-0 overflow-y-scroll pr-1 space-y-5">
+                    <ScrollArea className="flex-1 min-h-0" contentClassName="pr-2 space-y-5">
                         {/* Header */}
                         <div className="flex items-center gap-3">
                             {meta.logo ? (
@@ -204,7 +205,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                         {meta.website && (
                             <a href={meta.website} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline w-fit">Visit website ↗</a>
                         )}
-                    </div>
+                    </ScrollArea>
 
                     {/* Hint */}
                     <p className="text-[11px] text-base-content/40 pt-4 shrink-0">

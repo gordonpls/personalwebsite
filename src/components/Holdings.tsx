@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ScrollArea } from "./ScrollArea";
 
 export interface Holding {
     portfolio: string;
@@ -73,7 +74,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div className="always-scrollbar flex-1 min-h-0 overflow-y-scroll overflow-x-hidden max-h-[28rem] lg:max-h-none pr-1">
+                <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[28rem] lg:max-h-none" contentClassName="pr-2">
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50 align-bottom">
@@ -112,7 +113,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                             ))}
                         </tbody>
                     </table>
-                </div>
+                </ScrollArea>
             )}
         </div>
     );
