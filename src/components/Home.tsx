@@ -6,6 +6,7 @@ import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
 import { Resume } from "./Resume";
 import { Allocation } from "./Allocation";
+import { Reveal } from "./Reveal";
 
 export const Home = () => {
     return (
@@ -18,15 +19,15 @@ export const Home = () => {
                     </section>
                     <div className="divider divider-primary" />
                     <section id="resume" className="scroll-mt-24">
-                        <Resume />
+                        <Reveal><Resume /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
                     <section id="gallery" className="scroll-mt-24">
-                        <Gallery />
+                        <Reveal><Gallery /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
                     <section id="allocation" className="scroll-mt-24">
-                        <Allocation />
+                        <Reveal><Allocation /></Reveal>
                     </section>
 
                 </div>

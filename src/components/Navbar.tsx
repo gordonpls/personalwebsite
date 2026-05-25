@@ -41,6 +41,7 @@ export const Navbar = () => {
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
             <li><a className="link link-hover link-info" href="/#allocation">Allocation</a></li>
+            <li><a className="link link-hover link-info" href="/now">Now</a></li>
             <li><a className="link link-hover link-info" href="/portfolio" target="_blank" rel="noopener noreferrer">Portfolio ↗</a></li>
             <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
           </ul>
@@ -54,13 +55,22 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           <li><a className="link link-hover link-info" href="/#allocation">Allocation</a></li>
+          <li><a className="link link-hover link-info" href="/now">Now</a></li>
           <li><a className="link link-hover link-info" href="/portfolio" target="_blank" rel="noopener noreferrer">Portfolio ↗</a></li>
           <li><a className="link link-hover link-info" href="/stablecoin" target="_blank" rel="noopener noreferrer">Stablecoin ↗</a></li>
         </ul>
       </div>
 
       {/* ThemeChanger on the Right */}
-      <div className="navbar-end flex flex-row gap-4">
+      <div className="navbar-end flex flex-row gap-4 items-center">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("toggle-command-palette"))}
+          className="btn btn-sm btn-ghost gap-1 hidden sm:inline-flex text-base-content/60"
+          aria-label="Open command palette"
+        >
+          <kbd className="kbd kbd-sm">⌘</kbd><kbd className="kbd kbd-sm">K</kbd>
+        </button>
         <JumpToTop />
         <ThemeChanger />
       </div>

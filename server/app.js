@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const plaidRoutes = require("./routes/plaid");
+const spotifyRoutes = require("./routes/spotify");
 
 const app = express();
 
@@ -31,6 +32,7 @@ if (process.env.PLAID_SETUP_ENABLED === "true") {
 }
 
 app.use("/api", plaidRoutes);
+app.use("/api", spotifyRoutes);
 
 app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 
