@@ -109,12 +109,11 @@
 }
 
 /* Always-visible scrollbar (when content overflows) — overrides macOS's
-   auto-hiding overlay scrollbar so it's obvious a region is scrollable. */
-.always-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--color-base-content) 40%, transparent)
-                   color-mix(in oklab, var(--color-base-content) 10%, transparent);
-}
+   auto-hiding overlay scrollbar so it's obvious a region is scrollable.
+   IMPORTANT: do NOT set `scrollbar-width` on this selector. In Chrome 121+,
+   any `scrollbar-width` value makes the browser ignore ::-webkit-scrollbar and
+   fall back to the auto-hiding overlay bar. Firefox gets thin styling via the
+   @supports block at the bottom (it has no ::-webkit-scrollbar). */
 .always-scrollbar::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -132,4 +131,12 @@
 .always-scrollbar::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--color-base-content) 60%, transparent);
   background-clip: padding-box;
+}
+/* Firefox only (no ::-webkit-scrollbar support). */
+@supports (-moz-appearance: none) {
+  .always-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-base-content) 40%, transparent)
+                     color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  }
 }
