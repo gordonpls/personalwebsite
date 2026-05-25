@@ -1,6 +1,7 @@
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Portfolios } from "./Portfolios";
+import { PortfolioArchitecture } from "./PortfolioArchitecture";
 
 export default function Portfolio() {
     return (
@@ -14,6 +15,7 @@ export default function Portfolio() {
                 </div>
             </div>
             <Footer />
+            <PortfolioArchitecture />
         </div>
     );
 }
