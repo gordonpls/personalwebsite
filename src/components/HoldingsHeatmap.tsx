@@ -39,8 +39,13 @@ const Tile = (props: any) => {
     if (depth === 0 || width <= 0 || height <= 0) return null;
     const cp: number | null = props.changePct ?? props.payload?.changePct ?? null;
     const label: string = props.name ?? props.payload?.name ?? "";
-    const showText = width > 40 && height > 26;
-    const showChg = width > 50 && height > 40 && cp != null;
+    // Label as many tiles as can legibly fit the ticker; show the % only when
+    // there's room for a second line. Font scales to the tile so small tiles
+    // still get their ticker instead of rendering blank.
+    const showChg = width > 48 && height > 40 && cp != null;
+    const showText = width > 22 && height > 13;
+    const fs = Math.max(6.5, Math.min(13, width / 4.4, height / (showChg ? 3 : 1.8)));
+    const stroke = Math.max(1.4, fs / 4);
     return (
         <g>
             <rect
@@ -48,16 +53,16 @@ const Tile = (props: any) => {
                 style={{ fill: tileColor(cp), stroke: GAP, strokeWidth: 2 }}
             />
             {showText && (
-                <text x={x + width / 2} y={y + height / 2 - (showChg ? 7 : 0)} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={Math.min(13, Math.max(9, width / 4.5))} fontWeight={700} fill="#fff"
-                    stroke="rgba(0,0,0,0.55)" strokeWidth={2.6} paintOrder="stroke" strokeLinejoin="round">
+                <text x={x + width / 2} y={y + height / 2 - (showChg ? fs * 0.7 : 0)} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={fs} fontWeight={700} fill="#fff"
+                    stroke="rgba(0,0,0,0.55)" strokeWidth={stroke} paintOrder="stroke" strokeLinejoin="round">
                     {label}
                 </text>
             )}
             {showChg && (
-                <text x={x + width / 2} y={y + height / 2 + 9} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={10} fill="#fff" fillOpacity={0.9}
-                    stroke="rgba(0,0,0,0.5)" strokeWidth={2} paintOrder="stroke" strokeLinejoin="round">
+                <text x={x + width / 2} y={y + height / 2 + fs * 0.85} textAnchor="middle" dominantBaseline="middle"
+                    fontSize={Math.min(10, fs * 0.85)} fill="#fff" fillOpacity={0.9}
+                    stroke="rgba(0,0,0,0.5)" strokeWidth={1.8} paintOrder="stroke" strokeLinejoin="round">
                     {cp > 0 ? "+" : ""}{cp.toFixed(2)}%
                 </text>
             )}
