@@ -50,7 +50,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
     }, [rows, selectedTicker, onSelect]);
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col h-full">
             {/* Header */}
             <div className="shrink-0 mb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
@@ -75,13 +75,13 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <ScrollArea className="min-h-0" viewportClassName="max-h-[30rem]" contentClassName="pr-2">
+                <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="pr-4">
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50 align-bottom">
                                 <th className="pl-0 align-bottom">Holding</th>
                                 <th className="text-right w-14 align-bottom">Weight</th>
-                                <th className="text-right pr-0 w-20 whitespace-normal leading-tight align-bottom">Total Return</th>
+                                <th className="text-right pr-0 w-28 whitespace-nowrap align-bottom">Total Return</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -101,7 +101,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                                             {h.weightPct.toFixed(1)}%
                                         </span>
                                     </td>
-                                    <td className="text-right pr-0 w-20 align-middle">
+                                    <td className="text-right pr-0 w-28 align-middle">
                                         {h.returnPct == null ? (
                                             <span className="text-base-content/30" title="Cost basis unavailable">—</span>
                                         ) : (

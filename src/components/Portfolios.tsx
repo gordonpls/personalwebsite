@@ -36,16 +36,16 @@ export const Portfolios = () => {
             </div>
 
             {/* Portfolio selector */}
-            <div role="tablist" aria-label="Portfolios" className="flex flex-wrap gap-2">
+            <div role="tablist" aria-label="Portfolios" className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-base-200">
                 {TABS.map((t) => (
                     <button
                         key={t.id}
                         role="tab"
                         aria-selected={active === t.id}
                         onClick={() => changeTab(t.id)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${active === t.id
-                            ? "bg-primary text-primary-content border-primary shadow-sm"
-                            : "bg-base-100 text-base-content/70 border-base-300 hover:bg-base-200 hover:text-base-content"
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${active === t.id
+                            ? "bg-primary text-primary-content shadow-sm"
+                            : "text-base-content/50 hover:text-base-content/80"
                             }`}
                     >
                         {t.id}
@@ -55,14 +55,14 @@ export const Portfolios = () => {
 
             <p className="text-sm text-base-content/60">{tab.desc}</p>
 
-            {/* Live holdings (left) beside the selected holding's detail (right).
-                Cards size to their content (top-aligned) so ETFs don't leave a
-                big empty panel; tall stocks scroll. Stacks on mobile. */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
-                <div className="w-full lg:w-80 lg:shrink-0">
+            {/* Live holdings (left) beside the selected holding's detail (right),
+                lined up at equal height; the detail content spreads to fill.
+                Stacks on mobile. */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[34rem]">
+                <div className="w-full lg:w-80 lg:shrink-0 lg:h-full">
                     <Holdings portfolio={active} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
                 </div>
-                <div className="w-full lg:flex-1 lg:min-w-0">
+                <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
                     <HoldingsMeta holding={selected} />
                 </div>
             </div>
