@@ -9,7 +9,7 @@ interface Holding {
     weightPct: number;
     returnPct: number | null;
 }
-interface Meta { type?: string; industry?: string; stats?: { beta?: number; volatility?: number; return52w?: number } }
+interface Meta { type?: string; industry?: string; stats?: { beta?: number; volatility?: number; return52w?: number; dividendYield?: number } }
 type MetaMap = Record<string, Meta>;
 
 const COLORS = ["#E8A020", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30", "#56CC5A", "#E0556B", "#5AA9C9", "#9C8B3E", "#A35ABF"];
@@ -60,10 +60,10 @@ export const PortfolioAnalytics = () => {
         return () => { cancelled = true; };
     }, []);
 
-    const { slices, beta, vol, ret1y } = useMemo(() => {
+    const { slices, beta, vol, ret1y, divYield } = useMemo(() => {
         const hs = holdings ?? [];
         const catW = new Map<string, number>();
-        let bSum = 0, bW = 0, vSum = 0, vW = 0, rSum = 0, rW = 0;
+        let bSum = 0, bW = 0, vSum = 0, vW = 0, rSum = 0, rW = 0, dSum = 0, dW = 0;
         for (const h of hs) {
             if (!h.ticker || h.weightPct <= 0) continue;
             const m = meta[h.ticker];
@@ -73,6 +73,7 @@ export const PortfolioAnalytics = () => {
             if (st?.beta != null) { bSum += h.weightPct * st.beta; bW += h.weightPct; }
             if (st?.volatility != null) { vSum += h.weightPct * st.volatility; vW += h.weightPct; }
             if (st?.return52w != null) { rSum += h.weightPct * st.return52w; rW += h.weightPct; }
+            if (st?.dividendYield != null) { dSum += h.weightPct * st.dividendYield; dW += h.weightPct; } // 0 = non-payer, still counted
         }
         let arr: Slice[] = [...catW.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
         if (arr.length > 8) {
@@ -84,6 +85,7 @@ export const PortfolioAnalytics = () => {
             beta: bW > 0 ? bSum / bW : null,
             vol: vW > 0 ? vSum / vW : null,
             ret1y: rW > 0 ? rSum / rW : null,
+            divYield: dW > 0 ? dSum / dW : null,
         };
     }, [holdings, meta]);
 
@@ -93,19 +95,20 @@ export const PortfolioAnalytics = () => {
         <>
             {/* Risk & income */}
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 shrink-0">
-                <h3 className="text-sm font-semibold text-base-content mb-3">Risk &amp; return</h3>
+                <h3 className="text-sm font-semibold text-base-content mb-3">Risk, return &amp; income</h3>
                 {error ? (
                     <p className="text-xs text-base-content/50">Unavailable.</p>
                 ) : loading ? (
                     <div className="h-12 rounded bg-base-200 animate-pulse" />
                 ) : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4">
                         <Stat label="Beta" value={beta != null ? beta.toFixed(2) : "—"} />
                         <Stat label="Avg volatility" value={vol != null ? `${vol.toFixed(1)}%` : "—"} />
                         <Stat label="1Y return" value={ret1y != null ? `${ret1y > 0 ? "+" : ""}${ret1y.toFixed(1)}%` : "—"} valueClass={ret1y != null ? (ret1y >= 0 ? "text-success" : "text-error") : undefined} />
+                        <Stat label="Div yield" value={divYield != null ? `${divYield.toFixed(2)}%` : "—"} />
                     </div>
                 )}
-                <p className="text-[10px] text-base-content/30 mt-2 leading-snug">Weighted by holding; volatility is a weighted average (not correlation-adjusted).</p>
+                <p className="text-[10px] text-base-content/30 mt-2 leading-snug">Weighted by holding · volatility is a weighted average · yield is trailing-12-month.</p>
             </div>
 
             {/* Allocation donut */}

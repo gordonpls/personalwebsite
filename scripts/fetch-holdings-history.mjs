@@ -65,7 +65,7 @@ async function getTickers() {
 async function fetchYahoo(symbol) {
     const period2 = Math.floor(Date.now() / 1000);
     const period1 = period2 - HISTORY_DAYS * 86400;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=div`;
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const r = (await res.json())?.chart?.result?.[0];
@@ -79,8 +79,15 @@ async function fetchYahoo(symbol) {
     }
     if (!Object.keys(series).length) throw new Error("empty series");
     const m = r.meta || {};
+    // Trailing-12-month dividend yield from actual distributions (works for ETFs
+    // too, unlike Finnhub). 0 = non-dividend payer.
+    const price = m.regularMarketPrice ?? null;
+    const cut = period2 - 365 * 86400;
+    const ttm = Object.values(r.events?.dividends || {}).filter((d) => d.date >= cut).reduce((s, d) => s + (d.amount || 0), 0);
+    const dividendYield = price && ttm ? Math.round((ttm / price) * 10000) / 100 : 0;
     return {
         prices: thin(series),
+        dividendYield,
         meta: {
             name: m.longName || m.shortName || null,
             type: m.instrumentType || null,           // EQUITY / ETF
@@ -151,7 +158,7 @@ async function main() {
     let fetched = 0;
     for (const t of tickers) {
         try {
-            const { prices: p, meta: m } = await fetchWithRetry(t);
+            const { prices: p, meta: m, dividendYield } = await fetchWithRetry(t);
             prices[t] = p;
             meta[t] = m;
             fetched++;
@@ -162,6 +169,8 @@ async function main() {
                     try { const an = await finnhubRec(t); if (an) meta[t].analysts = an; } catch { /* skip */ }
                 }
             }
+            // Yahoo TTM dividend yield — covers ETFs (Finnhub doesn't). Always set (0 = none).
+            meta[t].stats = { ...(meta[t].stats || {}), dividendYield };
         } catch (e) {
             // SAFEGUARD: keep last-good data for this ticker rather than dropping it.
             if (oldPrices[t]) prices[t] = oldPrices[t];
