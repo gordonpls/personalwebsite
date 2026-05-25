@@ -105,12 +105,21 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
 
     let list = (holdings ?? []).filter((h) => h.weightPct > 0);
     if (portfolio) list = list.filter((h) => h.portfolio === portfolio);
-    const wsum = list.reduce((s, h) => s + h.weightPct, 0);
-    const data: Node[] = list.map((h) => ({
-        name: h.ticker ?? h.name,
-        size: wsum > 0 ? (h.weightPct / wsum) * 100 : 0,  // renormalize within the portfolio
+    // Aggregate by ticker so a holding owned across multiple portfolios is one tile.
+    const byKey = new Map<string, { name: string; fullName: string; ticker: string | null; weight: number }>();
+    for (const h of list) {
+        const key = h.ticker ?? h.name;
+        const cur = byKey.get(key) ?? { name: h.ticker ?? h.name, fullName: h.name, ticker: h.ticker, weight: 0 };
+        cur.weight += h.weightPct;
+        byKey.set(key, cur);
+    }
+    const agg = [...byKey.values()];
+    const wsum = agg.reduce((s, h) => s + h.weight, 0);
+    const data: Node[] = agg.map((h) => ({
+        name: h.name,
+        size: wsum > 0 ? (h.weight / wsum) * 100 : 0,  // renormalize across all shown holdings
         changePct: h.ticker && h.ticker in quotes ? quotes[h.ticker] : null,
-        fullName: h.name,
+        fullName: h.fullName,
     }));
 
     const asOfLabel = quotesAsOf

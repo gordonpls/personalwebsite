@@ -140,14 +140,14 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
     if (holding?.returnPct != null) facts.push({ label: "Total return", value: pct(holding.returnPct), cls: holding.returnPct >= 0 ? "text-success" : "text-error" });
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 h-full flex flex-col">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col min-h-[18rem]">
             {!holding ? (
                 <div className="flex-1 flex items-center justify-center text-sm text-base-content/40 text-center">
                     {metaMap ? "Click any holding to view its details." : "Loading…"}
                 </div>
             ) : (
                 <>
-                    <ScrollArea className="flex-1 min-h-0" contentClassName="pr-2 space-y-5">
+                    <ScrollArea className="min-h-0" viewportClassName="max-h-[34rem]" contentClassName="pr-2 space-y-5">
                         {/* Header */}
                         <div className="flex items-center gap-3">
                             {meta.logo ? (
@@ -207,10 +207,9 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                         )}
                     </ScrollArea>
 
-                    {/* Hint */}
-                    <p className="text-[11px] text-base-content/40 pt-4 shrink-0">
-                        Click any holding to switch.{error ? " · live metadata unavailable, showing basics" : ""}
-                    </p>
+                    {error && (
+                        <p className="text-[11px] text-base-content/40 pt-3 shrink-0">Live metadata unavailable — showing basics.</p>
+                    )}
                 </>
             )}
         </div>

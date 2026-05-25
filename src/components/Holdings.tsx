@@ -50,7 +50,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
     }, [rows, selectedTicker, onSelect]);
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col h-full">
+        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col">
             {/* Header */}
             <div className="shrink-0 mb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
@@ -61,6 +61,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                     </span>
                     Live Positions
                 </p>
+                {onSelect && <p className="text-xs text-base-content/70 mt-1.5">👇 Click any holding to view its details</p>}
             </div>
 
             {error ? (
@@ -74,7 +75,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[28rem] lg:max-h-none" contentClassName="pr-2">
+                <ScrollArea className="min-h-0" viewportClassName="max-h-[30rem]" contentClassName="pr-2">
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50 align-bottom">
