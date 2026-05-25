@@ -73,10 +73,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             ) : rows.length === 0 ? (
                 <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
             ) : (
-                <div
-                    className="always-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-h-[28rem] lg:max-h-none pr-1"
-                    style={{ scrollbarGutter: "stable" }}
-                >
+                <div className="always-scrollbar flex-1 min-h-0 overflow-y-scroll overflow-x-hidden max-h-[28rem] lg:max-h-none pr-1">
                     <table className="table table-xs table-pin-rows w-full table-fixed">
                         <thead>
                             <tr className="text-base-content/50 align-bottom">

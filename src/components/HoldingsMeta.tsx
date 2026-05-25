@@ -146,10 +146,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                 </div>
             ) : (
                 <>
-                    <div
-                        className="always-scrollbar flex-1 min-h-0 overflow-y-auto pr-1 space-y-5"
-                        style={{ scrollbarGutter: "stable" }}
-                    >
+                    <div className="always-scrollbar flex-1 min-h-0 overflow-y-scroll pr-1 space-y-5">
                         {/* Header */}
                         <div className="flex items-center gap-3">
                             {meta.logo ? (
