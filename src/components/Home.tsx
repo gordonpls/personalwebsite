@@ -7,7 +7,6 @@ import { Gallery } from "./Gallery/Gallery";
 import { Resume } from "./Resume";
 import { Allocation } from "./Allocation";
 import { Reveal } from "./Reveal";
-import { NowPlaying } from "./NowPlaying";
 
 export const Home = () => {
     return (
@@ -15,7 +14,6 @@ export const Home = () => {
             <Navbar></Navbar>
             <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
                 <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md space-y-6">
-                    <NowPlaying />
                     <section>
                         <Hero />
                     </section>
