@@ -40,7 +40,7 @@ export const NowPlaying = () => {
             href={track.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group hidden lg:flex items-center gap-2 max-w-[15rem] px-2.5 py-1 rounded-full bg-base-200/70 border border-base-300 hover:bg-base-200 transition-colors"
+            className="group hidden lg:flex items-center gap-2 max-w-md px-2.5 py-1 rounded-full bg-base-200/70 border border-base-300 hover:bg-base-200 transition-colors"
             title={`${track.isPlaying ? "Now playing" : "Last played"} on Spotify · ${track.title} — ${track.artist}`}
         >
             {track.albumArt && <img src={track.albumArt} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
