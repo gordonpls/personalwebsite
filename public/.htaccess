@@ -7,6 +7,10 @@ CacheDisable public /
 
 Options -MultiViews
 RewriteEngine On
+
+# /stablecoin → the live dashboard (kept reachable via gordonzhong.com/stablecoin)
+RewriteRule ^stablecoin/?$ https://stablecoin-dashboard-gz.streamlit.app/ [R=302,L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_URI} !^/api/
 RewriteRule ^ index.html [QSA,L]
