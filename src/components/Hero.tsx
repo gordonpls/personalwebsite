@@ -4,6 +4,7 @@ import InfoItem from "./ProfileCard/InfoItem";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";
 import avatar2 from "../assets/avatar2.webp";
+import { NowPlaying } from "./NowPlaying";
 
 import CLOUDS from "vanta/dist/vanta.clouds.min";
 
@@ -35,8 +36,8 @@ export const Hero = () => {
             <div className="flex flex-col items-center gap-4 md:gap-8 sm:py-4 md:py-8 lg:py-16">
                 {/* Top row: Component + Picture side-by-side */}
                 <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:space-x-6 lg:space-x-12">
-                    {/* Picture (left) */}
-                    <div className="w-fit flex justify-center self-center pt-8 md:pt-0">
+                    {/* Picture (left) + now-playing under it */}
+                    <div className="flex flex-col items-center gap-4 self-center pt-8 md:pt-0">
                         <div
                             className="relative cursor-pointer tooltip tooltip-success tooltip-open tooltip-top"
                             onMouseEnter={() => setIsHovered(true)}
@@ -59,6 +60,7 @@ export const Hero = () => {
                                 className={`max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl absolute top-0 left-0 transition-opacity duration-300 ring-4 ring-primary ${isHovered ? "opacity-100" : "opacity-0"}`}
                             />
                         </div>
+                        <NowPlaying />
                     </div>
                     {/* Component (right) */}
                     <div className="w-full self-center">

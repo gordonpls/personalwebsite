@@ -1,7 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { JumpToTop } from "./JumpToTop";
 import { ThemeChanger } from "./ThemeChanger";
-import { NowPlaying } from "./NowPlaying";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -61,8 +60,7 @@ export const Navbar = () => {
       </div>
 
       {/* ThemeChanger on the Right */}
-      <div className="navbar-end flex flex-row gap-3 items-center">
-        <NowPlaying />
+      <div className="navbar-end flex flex-row gap-4 items-center">
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("toggle-command-palette"))}

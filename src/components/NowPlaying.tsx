@@ -40,10 +40,10 @@ export const NowPlaying = () => {
             href={track.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group hidden lg:flex items-center gap-2 max-w-md px-2.5 py-1 rounded-full bg-base-200/70 border border-base-300 hover:bg-base-200 transition-colors"
+            className="group flex items-center gap-2 max-w-[16rem] px-3 py-1.5 rounded-full bg-base-100/80 border border-base-300 shadow-sm hover:bg-base-100 transition-colors"
             title={`${track.isPlaying ? "Now playing" : "Last played"} on Spotify · ${track.title} — ${track.artist}`}
         >
-            {track.albumArt && <img src={track.albumArt} alt="" className="w-4 h-4 rounded object-cover shrink-0" />}
+            {track.albumArt && <img src={track.albumArt} alt="" className="w-5 h-5 rounded object-cover shrink-0" />}
             {track.isPlaying ? <Equalizer /> : <span className="text-base-content/40 shrink-0 text-[10px]">♪</span>}
             <span className="truncate min-w-0 text-xs">
                 <span className="font-medium text-base-content">{track.title}</span>
