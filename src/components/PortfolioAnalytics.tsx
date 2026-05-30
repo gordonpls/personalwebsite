@@ -9,8 +9,10 @@ interface Holding {
     weightPct: number;
     returnPct: number | null;
 }
-interface Meta { type?: string; industry?: string; stats?: { beta?: number; volatility?: number; return52w?: number; dividendYield?: number } }
+interface Meta { type?: string; industry?: string; stats?: { beta?: number; volatility?: number; dividendYield?: number } }
 type MetaMap = Record<string, Meta>;
+type PriceMap = Record<string, Record<string, number>>;
+const parseLocalDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, (m ?? 1) - 1, d ?? 1); };
 
 const COLORS = ["#E8A020", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30", "#56CC5A", "#E0556B", "#5AA9C9", "#9C8B3E", "#A35ABF"];
 
@@ -45,6 +47,7 @@ const Stat = ({ label, value, valueClass }: { label: string; value: string; valu
 export const PortfolioAnalytics = () => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [meta, setMeta] = useState<MetaMap>({});
+    const [prices, setPrices] = useState<PriceMap>({});
     const [error, setError] = useState(false);
 
     useEffect(() => {
@@ -57,6 +60,10 @@ export const PortfolioAnalytics = () => {
             .then((r) => r.ok ? r.json() : Promise.reject())
             .then((d) => { if (!cancelled) setMeta(d.meta ?? {}); })
             .catch(() => { /* sector labels just fall back to type */ });
+        fetch("/holdingsHistory.json", { cache: "no-cache" })
+            .then((r) => r.ok ? r.json() : Promise.reject())
+            .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
+            .catch(() => { /* 1Y return falls back to "—" */ });
         return () => { cancelled = true; };
     }, []);
 
@@ -64,6 +71,16 @@ export const PortfolioAnalytics = () => {
         const hs = holdings ?? [];
         const catW = new Map<string, number>();
         let bSum = 0, bW = 0, vSum = 0, vW = 0, rSum = 0, rW = 0, dSum = 0, dW = 0;
+
+        // 1Y return is computed from the same baked Yahoo dividend-adjusted closes
+        // as the performance chart, so the two never disagree. Cutoff is anchored
+        // to the latest data point we have (not "today") to survive weekend lag.
+        let latestStr = "";
+        for (const t in prices) for (const d in prices[t]) if (d > latestStr) latestStr = d;
+        const cutoff1y = latestStr
+            ? new Date(parseLocalDate(latestStr).getTime() - 365 * 86400000).toISOString().slice(0, 10)
+            : "";
+
         for (const h of hs) {
             if (!h.ticker || h.weightPct <= 0) continue;
             const m = meta[h.ticker];
@@ -72,8 +89,22 @@ export const PortfolioAnalytics = () => {
             const st = m?.stats;
             if (st?.beta != null) { bSum += h.weightPct * st.beta; bW += h.weightPct; }
             if (st?.volatility != null) { vSum += h.weightPct * st.volatility; vW += h.weightPct; }
-            if (st?.return52w != null) { rSum += h.weightPct * st.return52w; rW += h.weightPct; }
             if (st?.dividendYield != null) { dSum += h.weightPct * st.dividendYield; dW += h.weightPct; } // 0 = non-payer, still counted
+
+            // Dividend-adjusted 1Y total return from prices.
+            const s = prices[h.ticker];
+            if (s && cutoff1y) {
+                const dates = Object.keys(s).sort();
+                const last = s[dates[dates.length - 1]];
+                const baseIdx = dates.findIndex((d) => d >= cutoff1y);
+                if (baseIdx >= 0 && baseIdx < dates.length - 1) {
+                    const base = s[dates[baseIdx]];
+                    if (base > 0 && last > 0) {
+                        rSum += h.weightPct * ((last / base - 1) * 100);
+                        rW += h.weightPct;
+                    }
+                }
+            }
         }
         let arr: Slice[] = [...catW.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
         if (arr.length > 7) {
@@ -108,7 +139,7 @@ export const PortfolioAnalytics = () => {
                         <Stat label="Div yield" value={divYield != null ? `${divYield.toFixed(2)}%` : "—"} />
                     </div>
                 )}
-                <p className="text-[10px] text-base-content/30 mt-2 leading-snug">Weighted by holding · volatility is a weighted average · yield is trailing-12-month.</p>
+                <p className="text-[11px] text-base-content/60 mt-2 leading-snug">Weighted by holding · 1Y return and yield are dividend-adjusted · volatility is a weighted average.</p>
             </div>
 
             {/* Allocation donut */}

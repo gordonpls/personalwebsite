@@ -171,7 +171,7 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
                 </div>
             )}
 
-            <p className="text-[11px] text-base-content/40 leading-snug shrink-0 mt-4">
+            <p className="text-xs text-base-content/60 leading-snug shrink-0 mt-4">
                 Each tile is a position, sized by its share of the portfolio and shaded by its live daily price change.
                 Cash and securities without a live quote show neutral.
             </p>
