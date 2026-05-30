@@ -35,8 +35,10 @@ function parseLocalDate(s: string): Date {
     return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-function cutoffFor(range: Range): string {
-    const d = new Date();
+// Anchor the cutoff to the most recent data point we have (not "today"), so a
+// stale bake on a weekend doesn't leave shorter ranges with an empty window.
+function cutoffFor(range: Range, latest: Date): string {
+    const d = new Date(latest);
     if (range === "YTD") return `${d.getFullYear()}-01-01`;
     if (range === "1Y") d.setFullYear(d.getFullYear() - 1);
     else if (range === "3M") d.setMonth(d.getMonth() - 3);
@@ -69,7 +71,14 @@ function rebasedSeries(map: Record<string, number> | undefined, axis: string[]):
 // dropped and the remaining weights renormalized; coveragePct reports how much
 // of the portfolio (by weight) the curve represents.
 function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { data: ChartPoint[]; coveragePct: number; asOfLast: string | null } {
-    const cutoff = cutoffFor(range);
+    // Latest date across all tickers — anchor for the cutoff (handles weekend lag).
+    let latestStr = "";
+    for (const h of holdings) {
+        if (!h.ticker || !prices[h.ticker as string]) continue;
+        for (const d in prices[h.ticker as string]) if (d > latestStr) latestStr = d;
+    }
+    if (!latestStr) return { data: [], coveragePct: 0, asOfLast: null };
+    const cutoff = cutoffFor(range, parseLocalDate(latestStr));
     const totalW = holdings.reduce((s, h) => s + h.weightPct, 0) || 1;
     const items = holdings.filter((h) => h.ticker && prices[h.ticker as string]);
 

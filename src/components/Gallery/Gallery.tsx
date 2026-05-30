@@ -26,15 +26,18 @@ function usePageSize(): number {
     return n;
 }
 
-// Compact page list with ellipses (e.g. 1 … 5 6 7 … 13) so the pager never
-// spans the whole width on small screens.
+// Compact page list with ellipses (e.g. 1 … 5 6 7 … 13). The block containing
+// the current page always shows at least 3 numbers — so on page 1 you get
+// "1 2 3 … 14", not "1 2 … 14".
 function getPageItems(current: number, total: number): (number | "…")[] {
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    let start = Math.max(1, current - 1);
+    let end = Math.min(total, current + 1);
+    if (start === 1) end = Math.max(end, 3);             // extend at the start
+    if (end === total) start = Math.min(start, total - 2); // extend at the end
     const items: (number | "…")[] = [1];
-    const start = Math.max(2, current - 1);
-    const end = Math.min(total - 1, current + 1);
     if (start > 2) items.push("…");
-    for (let p = start; p <= end; p++) items.push(p);
+    for (let p = Math.max(2, start); p <= Math.min(total - 1, end); p++) items.push(p);
     if (end < total - 1) items.push("…");
     items.push(total);
     return items;
