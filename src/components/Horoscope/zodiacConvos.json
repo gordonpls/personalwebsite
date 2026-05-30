@@ -2,7 +2,7 @@
     "Aries": {
       "saying": "Life is too short to hesitate. If you want something, you go after it with everything you've got. I’d rather crash and burn than sit around waiting for a chance that may never come.",
       "responses": {
-        "Taurus": "You might want to slow down a bit—sometimes the best things take time.",
+        "Taurus": "You might want to slow down a bit; sometimes the best things take time.",
         "Gemini": "Your energy is contagious! Let’s start something exciting together.",
         "Cancer": "That’s a lot of passion, but sometimes it’s okay to pause and reflect.",
         "Leo": "Now that's the confidence I admire! A true trailblazer.",
@@ -16,16 +16,16 @@
       }
     },
     "Taurus": {
-      "saying": "I take my time because I know that anything worth having is worth the wait. There’s no need to rush—true success comes from patience, persistence, and a strong foundation.",
+      "saying": "I take my time because I know that anything worth having is worth the wait. There’s no need to rush; true success comes from patience, persistence, and a strong foundation.",
       "responses": {
         "Aries": "Come on, don’t overthink it! Sometimes, you just have to leap.",
         "Gemini": "That’s great and all, but doesn’t it get boring?",
-        "Cancer": "You understand the importance of stability—something I deeply value.",
+        "Cancer": "You understand the importance of stability; something I deeply value.",
         "Leo": "As long as you don’t let hesitation stop you from greatness.",
         "Virgo": "That’s the kind of mindset that leads to true success.",
         "Libra": "Balance is everything, and patience is a big part of that.",
         "Scorpio": "You play the long game well. I respect that.",
-        "Sagittarius": "That’s too slow for me—I want adventure now!",
+        "Sagittarius": "That’s too slow for me; I want adventure now!",
         "Capricorn": "That’s exactly how you build an empire.",
         "Aquarius": "Logical, sure, but where’s the excitement in that?",
         "Pisces": "There’s beauty in slow moments. I can appreciate that."
@@ -37,11 +37,11 @@
         "Aries": "Finally, someone who keeps up with my energy!",
         "Taurus": "Sounds exhausting. Have you ever tried slowing down?",
         "Cancer": "I love your curiosity, but sometimes, depth is more important than variety.",
-        "Leo": "You bring excitement to any room—no wonder people are drawn to you!",
+        "Leo": "You bring excitement to any room; no wonder people are drawn to you!",
         "Virgo": "You need to focus if you ever want to achieve mastery in something.",
         "Libra": "I get it! There are too many great choices in the world.",
         "Scorpio": "Do you ever stop to think about what truly matters?",
-        "Sagittarius": "Now this is my kind of conversation—let’s go explore!",
+        "Sagittarius": "Now this is my kind of conversation; let’s go explore!",
         "Capricorn": "You should consider where this constant movement is taking you.",
         "Aquarius": "So many ideas, so little time! Let’s collaborate.",
         "Pisces": "You’re always on the move, but do you ever stop to feel?"
@@ -53,18 +53,18 @@
         "Aries": "Feelings are great, but sometimes you just have to act.",
         "Taurus": "You understand the value of deep roots. That’s important.",
         "Gemini": "I admire your depth, but doesn’t it get overwhelming?",
-        "Leo": "Emotions are powerful—use them to inspire!",
+        "Leo": "Emotions are powerful; use them to inspire!",
         "Virgo": "Just be careful not to let emotions cloud judgment.",
         "Libra": "That’s a beautiful way to see the world.",
         "Scorpio": "Emotions are a weapon when used wisely.",
-        "Sagittarius": "I like to keep things light—why dwell on the heavy stuff?",
+        "Sagittarius": "I like to keep things light; why dwell on the heavy stuff?",
         "Capricorn": "Control over emotions is key to success.",
         "Aquarius": "You’re deeply in tune, but logic has its place too.",
         "Pisces": "You and I both know how deep the ocean of feeling runs."
       }
     },
     "Leo": {
-      "saying": "Life is a stage, and I plan to own it. If you don’t shine, no one will notice you. Confidence isn’t arrogance—it’s knowing your worth.",
+      "saying": "Life is a stage, and I plan to own it. If you don’t shine, no one will notice you. Confidence isn’t arrogance; it’s knowing your worth.",
       "responses": {
         "Aries": "That’s the energy I love! Keep pushing forward.",
         "Taurus": "As long as you don’t get lost in the spotlight.",
@@ -75,24 +75,24 @@
         "Scorpio": "Just don’t mistake admiration for loyalty.",
         "Sagittarius": "Yes! Life’s about making bold moves!",
         "Capricorn": "Leadership is earned, not just claimed.",
-        "Aquarius": "Individuality is power—keep shining.",
+        "Aquarius": "Individuality is power; keep shining.",
         "Pisces": "True light comes from within, not just from being seen."
       }
     },
     "Virgo": {
-      "saying": "I believe perfection isn’t a goal—it’s a process. Every detail matters, and if you’re going to do something, do it right. Chaos makes me anxious, and I thrive when there’s order in my life.",
+      "saying": "I believe perfection isn’t a goal; it’s a process. Every detail matters, and if you’re going to do something, do it right. Chaos makes me anxious, and I thrive when there’s order in my life.",
       "responses": {
         "Aries": "Perfection is great, but sometimes you just have to dive in and adjust as you go.",
-        "Taurus": "That’s a mindset I respect—structure leads to success.",
+        "Taurus": "That’s a mindset I respect; structure leads to success.",
         "Gemini": "Details are cool, but what about spontaneity? You need some fun!",
         "Cancer": "Your organization keeps things steady, and I appreciate that.",
         "Leo": "Great leadership comes from knowing when to delegate, not control everything.",
         "Libra": "Finding balance between perfection and flexibility is key.",
         "Scorpio": "I admire your sharpness, but don’t let details blind you to the bigger picture.",
-        "Sagittarius": "Too much structure feels restrictive—where’s the adventure?",
+        "Sagittarius": "Too much structure feels restrictive; where’s the adventure?",
         "Capricorn": "A methodical approach is the best approach. Keep going.",
         "Aquarius": "I respect the precision, but sometimes you need to embrace the unknown.",
-        "Pisces": "Perfection is an illusion—sometimes, the beauty is in the imperfection."
+        "Pisces": "Perfection is an illusion; sometimes, the beauty is in the imperfection."
       }
     },
     "Libra": {
@@ -104,27 +104,27 @@
         "Cancer": "Your ability to mediate is refreshing in a world full of conflict.",
         "Leo": "A great leader knows when to listen, but also when to take action.",
         "Virgo": "Balance is important, but efficiency matters too.",
-        "Scorpio": "Not everything needs to be fair—sometimes, the strongest win.",
-        "Sagittarius": "Don’t overthink it—trust your instincts and go for it!",
+        "Scorpio": "Not everything needs to be fair; sometimes, the strongest win.",
+        "Sagittarius": "Don’t overthink it; trust your instincts and go for it!",
         "Capricorn": "Peace is good, but sometimes you need to take a hard stance.",
-        "Aquarius": "Seeing all perspectives is admirable—just don’t lose your own voice.",
+        "Aquarius": "Seeing all perspectives is admirable; just don’t lose your own voice.",
         "Pisces": "Your energy is calming, but don’t let people take advantage of your kindness."
       }
     },
     "Scorpio": {
       "saying": "I don’t trust easily, but when I do, I’m loyal to the end. I value honesty, depth, and intensity in all aspects of life. Surface-level conversations don’t interest me.",
       "responses": {
-        "Aries": "Your intensity is something I respect—it means you don’t play games.",
+        "Aries": "Your intensity is something I respect; it means you don’t play games.",
         "Taurus": "Loyalty is important to me too, and trust takes time to build.",
         "Gemini": "You’re deep, I’ll give you that, but why so serious all the time?",
-        "Cancer": "I understand—connection means everything.",
+        "Cancer": "I understand; connection means everything.",
         "Leo": "Powerful presence. I like it, but don’t mistake admiration for loyalty.",
         "Virgo": "Your focus is sharp, and I appreciate that attention to detail.",
         "Libra": "Balance is key, but I admire your unwavering dedication.",
         "Sagittarius": "You might be too intense for me, but I respect the passion!",
         "Capricorn": "You understand that trust is earned, and I value that.",
         "Aquarius": "I like your depth, but emotions can be irrational.",
-        "Pisces": "Some connections run deeper than words—you and I both know that."
+        "Pisces": "Some connections run deeper than words; you and I both know that."
       }
     },
     "Sagittarius": {
@@ -134,12 +134,12 @@
         "Taurus": "That sounds exhausting. Have you tried just… enjoying the moment?",
         "Gemini": "Finally, someone who gets my restless nature!",
         "Cancer": "I admire your spirit, but don’t forget that home matters too.",
-        "Leo": "A bold heart and fearless nature—I like that!",
+        "Leo": "A bold heart and fearless nature; I like that!",
         "Virgo": "A little planning wouldn’t hurt before you leap into the unknown.",
         "Libra": "I love the idea of adventure, but what about stability?",
         "Scorpio": "Excitement is great, but do you ever stop to process what you’ve learned?",
         "Capricorn": "Spontaneity is great, but success requires discipline.",
-        "Aquarius": "The open road, endless possibilities—I’m right there with you!",
+        "Aquarius": "The open road, endless possibilities; I’m right there with you!",
         "Pisces": "I get lost in my dreams too, but sometimes grounding is necessary."
       }
     },
@@ -151,28 +151,28 @@
         "Gemini": "All work and no play? Sounds boring!",
         "Cancer": "Hard work is important, but so is emotional connection.",
         "Leo": "A strong leader knows when to push and when to celebrate.",
-        "Virgo": "Methodical, precise, and efficient—exactly how things should be.",
-        "Libra": "A little balance would help—success isn’t everything.",
-        "Scorpio": "You don’t just talk about success—you build it.",
+        "Virgo": "Methodical, precise, and efficient; exactly how things should be.",
+        "Libra": "A little balance would help; success isn’t everything.",
+        "Scorpio": "You don’t just talk about success; you build it.",
         "Sagittarius": "Where’s the fun in a life of constant work?",
         "Aquarius": "Structure is important, but so is innovation.",
         "Pisces": "Make sure you’re not losing yourself in the process."
       }
     },
     "Aquarius": {
-      "saying": "I don’t follow trends—I create them. Thinking differently is what sets true innovators apart. The world needs rebels, and I’m happy to be one.",
+      "saying": "I don’t follow trends; I create them. Thinking differently is what sets true innovators apart. The world needs rebels, and I’m happy to be one.",
       "responses": {
         "Aries": "I love the boldness! Let’s shake things up!",
         "Taurus": "That’s nice, but practicality matters too.",
-        "Gemini": "Your ideas fascinate me—tell me more!",
+        "Gemini": "Your ideas fascinate me; tell me more!",
         "Cancer": "It’s great to be different, but don’t forget human connection.",
         "Leo": "You stand out, and I respect that.",
         "Virgo": "Creativity is great, but execution is everything.",
-        "Libra": "Your individuality is inspiring—I admire that.",
+        "Libra": "Your individuality is inspiring; I admire that.",
         "Scorpio": "A sharp mind can change the world if used correctly.",
-        "Sagittarius": "Rebels think alike—we should do something crazy!",
+        "Sagittarius": "Rebels think alike; we should do something crazy!",
         "Capricorn": "Innovation is good, but discipline makes it work.",
-        "Pisces": "A dreamer and a thinker—I like that combination."
+        "Pisces": "A dreamer and a thinker; I like that combination."
       }
     },
     "Pisces": {
@@ -184,11 +184,11 @@
         "Cancer": "We see the world in a way others don’t.",
         "Leo": "Dreams are great, but action makes them real.",
         "Virgo": "Emotions are important, but structure gives them direction.",
-        "Libra": "Your kindness is rare in this world—I admire that.",
+        "Libra": "Your kindness is rare in this world; I admire that.",
         "Scorpio": "There’s more depth in you than most people realize.",
         "Sagittarius": "I love a good dream, but have you ever chased one in real life?",
         "Capricorn": "Make sure your dreams don’t distract you from reality.",
-        "Aquarius": "Your imagination could change the world—if you act on it."
+        "Aquarius": "Your imagination could change the world; if you act on it."
       }
     }
   }

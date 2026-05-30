@@ -41,7 +41,7 @@ export const NowPlaying = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-center gap-2 max-w-[16rem] px-3 py-1.5 rounded-full bg-base-100/80 border border-base-300 shadow-sm hover:bg-base-100 transition-colors"
-            title={`${track.isPlaying ? "Now playing" : "Last played"} on Spotify · ${track.title} — ${track.artist}`}
+            title={`${track.isPlaying ? "Now playing" : "Last played"} on Spotify · ${track.title} · ${track.artist}`}
         >
             {track.albumArt && <img src={track.albumArt} alt="" className="w-5 h-5 rounded object-cover shrink-0" />}
             {track.isPlaying ? <Equalizer /> : <span className="text-base-content/40 shrink-0 text-[10px]">♪</span>}

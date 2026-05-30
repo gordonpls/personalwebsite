@@ -10,7 +10,7 @@ export default function NotFound() {
                     <p className="text-7xl font-extrabold text-primary tracking-tight">404</p>
                     <h1 className="text-2xl font-bold text-base-content">Page not found</h1>
                     <p className="text-base-content/60 max-w-md">
-                        That page doesn’t exist — it may have moved, or the link has a typo.
+                        That page doesn’t exist. It may have moved, or the link has a typo.
                     </p>
                     <div className="flex flex-wrap justify-center gap-2 mt-3">
                         <a href="/" className="btn btn-primary btn-sm">← Back home</a>

@@ -208,7 +208,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                     </ScrollArea>
 
                     {error && (
-                        <p className="text-[11px] text-base-content/40 pt-3 shrink-0">Live metadata unavailable — showing basics.</p>
+                        <p className="text-[11px] text-base-content/40 pt-3 shrink-0">Live metadata unavailable; showing basics.</p>
                     )}
                 </>
             )}

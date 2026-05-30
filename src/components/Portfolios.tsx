@@ -7,7 +7,7 @@ import { PortfolioAnalytics } from "./PortfolioAnalytics";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 const TABS: { id: string; desc: string }[] = [
-    { id: "Core", desc: "Diversified foundation built on broad index funds — the majority of the portfolio." },
+    { id: "Core", desc: "Diversified foundation built on broad index funds. The majority of the portfolio." },
     { id: "Tech & Speculation", desc: "Concentrated tech and speculative positions." },
     { id: "Retirement", desc: "Traditional & Roth IRA." },
 ];

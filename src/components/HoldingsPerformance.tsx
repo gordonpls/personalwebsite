@@ -337,7 +337,7 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
 
             <p className="text-xs text-base-content/60 leading-snug">
                 Performance reflects each holding’s dividend-adjusted total return over the selected range, blended by
-                current portfolio weight — a close estimate, not an exact account return, since it doesn’t account for
+                current portfolio weight. A close estimate, not an exact account return, since it doesn’t account for
                 trades or contributions made within the range. All-time return is measured against cost basis. Past
                 performance doesn’t guarantee future results.
             </p>
