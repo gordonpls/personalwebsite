@@ -101,17 +101,18 @@
     }
   }
 
-  /* Refined typing caret (block): solid while typing/deleting, smooth pulse when idle. */
+  /* Refined typing caret: solid while typing/deleting, smooth pulse when idle.
+     Variants set shape; the .active / .idle classes set the blink behavior. */
   .typing-greeting-refined .caret {
     display: inline-block;
-    width: 0.55em;
-    height: 1em;
     margin-left: 3px;
     background: currentColor;
     border-radius: 1px;
-    vertical-align: -0.14em;
     transition: opacity 120ms ease-out;
   }
+  .typing-greeting-refined .caret-block      { width: 0.55em; height: 1em; vertical-align: -0.14em; }
+  .typing-greeting-refined .caret-underscore { width: 0.55em; height: 2px;  vertical-align: 0; align-self: flex-end; margin-bottom: 0.18em; }
+  .typing-greeting-refined .caret-bar        { width: 2px;    height: 1em; vertical-align: -0.14em; }
   .typing-greeting-refined .caret.active { opacity: 1; }
   .typing-greeting-refined .caret.idle { animation: caret-pulse 1.05s ease-in-out infinite; }
   @keyframes caret-pulse {

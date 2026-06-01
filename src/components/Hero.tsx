@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 // Refined typing animation; swap back to "./subcomponents/TypingGreeting" to use the classic one.
-import TypingGreeting from "./subcomponents/TypingGreetingRefined";
+import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
+// Caret shape: "block" | "underscore" | "bar"
+const TypingGreeting = () => <TypingGreetingRefined caret="underscore" />;
 import InfoItem from "./ProfileCard/InfoItem";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";

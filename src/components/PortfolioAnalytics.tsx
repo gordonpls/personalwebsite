@@ -22,6 +22,70 @@ const isFund = (h: Holding, m?: Meta) => {
     return t.includes("etf") || t.includes("fund");
 };
 
+// Roll Finnhub's industry (sub-sector level) up to a GICS-ish sector so the donut
+// stays readable. Anything unrecognized is passed through, so genuine outliers
+// still get their own slice (and may end up bucketed into "Other" if small).
+const SECTOR_OF_INDUSTRY: Record<string, string> = {
+    "Technology": "Technology",
+    "Semiconductors": "Technology",
+    "Software": "Technology",
+    "Hardware": "Technology",
+    "Internet": "Technology",
+    "Media": "Communication Services",
+    "Telecommunication": "Communication Services",
+    "Pharmaceuticals": "Healthcare",
+    "Biotechnology": "Healthcare",
+    "Health Care": "Healthcare",
+    "Medical Devices": "Healthcare",
+    "Financial Services": "Financials",
+    "Banks": "Financials",
+    "Insurance": "Financials",
+    "Capital Markets": "Financials",
+    "Retail": "Consumer Discretionary",
+    "Automobiles": "Consumer Discretionary",
+    "Consumer Durables": "Consumer Discretionary",
+    "Hotels, Restaurants & Leisure": "Consumer Discretionary",
+    "Food, Beverage & Tobacco": "Consumer Staples",
+    "Household Products": "Consumer Staples",
+    "Personal Products": "Consumer Staples",
+    "Energy": "Energy",
+    "Oil & Gas": "Energy",
+    "Electrical Equipment": "Industrials",
+    "Aerospace & Defense": "Industrials",
+    "Machinery": "Industrials",
+    "Transportation": "Industrials",
+    "Construction": "Industrials",
+    "Materials": "Materials",
+    "Chemicals": "Materials",
+    "Metals & Mining": "Materials",
+    "Real Estate": "Real Estate",
+    "Utilities": "Utilities",
+};
+
+// Map a fund/ETF to a meaningful bucket using its name + ticker.
+// Order matters: bonds first, then international, then sectors, then broad market.
+function classifyFund(h: Holding, m?: Meta): string {
+    const name = (m?.name || h.name || "").toLowerCase();
+    const t = (h.ticker || "").toUpperCase();
+    if (/bond|treasur|aggregate|fixed income|municipal/.test(name)) return "Bonds";
+    if (/internation|ex-?us|emerging|developed market|world ex|eafe|all-world/.test(name)) return "International Equity";
+    if (/uranium|nuclear|energy/.test(name)) return "Energy";
+    if (/semiconductor/.test(name)) return "Technology";
+    if (/digital infrastructure|data center|cloud/.test(name)) return "Technology";
+    if (/real estate|reit/.test(name)) return "Real Estate";
+    if (/health|biotech|pharma/.test(name)) return "Healthcare";
+    if (/financ|bank/.test(name)) return "Financials";
+    if (/utilit/.test(name)) return "Utilities";
+    if (/gold|silver|preciou|commod/.test(name) || ["GLD", "SLV", "IAU"].includes(t)) return "Commodities";
+    if (/small-?cap/.test(name)) return "US Small/Mid-Cap";
+    if (/mid-?cap|extended market/.test(name)) return "US Small/Mid-Cap";
+    if (/growth/.test(name)) return "US Growth";
+    if (/value/.test(name)) return "US Value";
+    if (/momentum/.test(name)) return "US Factor";
+    if (/s&p 500|total stock market|total us|us market|large-?cap|nasdaq/.test(name)) return "US Broad Market";
+    return "Other Funds";
+}
+
 interface Slice { name: string; value: number }
 const DonutTip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: Slice }> }) => {
     if (!active || !payload?.length) return null;
@@ -84,7 +148,9 @@ export const PortfolioAnalytics = () => {
         for (const h of hs) {
             if (!h.ticker || h.weightPct <= 0) continue;
             const m = meta[h.ticker];
-            const cat = isFund(h, m) ? "ETFs & Funds" : (m?.industry || cap(h.type) || "Other");
+            const cat = isFund(h, m)
+                ? classifyFund(h, m)
+                : (SECTOR_OF_INDUSTRY[m?.industry ?? ""] || m?.industry || cap(h.type) || "Other");
             catW.set(cat, (catW.get(cat) || 0) + h.weightPct);
             const st = m?.stats;
             if (st?.beta != null) { bSum += h.weightPct * st.beta; bW += h.weightPct; }
@@ -107,9 +173,11 @@ export const PortfolioAnalytics = () => {
             }
         }
         let arr: Slice[] = [...catW.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-        if (arr.length > 7) {
-            const other = arr.slice(6).reduce((s, x) => s + x.value, 0);
-            arr = [...arr.slice(0, 6), { name: "Other", value: other }];
+        // Surface up to 8 named slices + collapse the long tail into "Other".
+        const MAX_SLICES = 8;
+        if (arr.length > MAX_SLICES + 1) {
+            const other = arr.slice(MAX_SLICES).reduce((s, x) => s + x.value, 0);
+            arr = [...arr.slice(0, MAX_SLICES), { name: "Other", value: other }];
         }
         return {
             slices: arr,

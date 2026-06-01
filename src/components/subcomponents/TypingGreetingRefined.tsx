@@ -27,8 +27,9 @@ const buildOrder = () => {
 };
 
 type Phase = "typing" | "hold" | "deleting" | "rest";
+type CaretShape = "block" | "underscore" | "bar";
 
-const TypingGreetingRefined = () => {
+const TypingGreetingRefined = ({ caret = "block" }: { caret?: CaretShape } = {}) => {
     const [order, setOrder] = useState<string[]>(buildOrder());
     const [index, setIndex] = useState(0);
     const [text, setText] = useState("");
@@ -79,7 +80,7 @@ const TypingGreetingRefined = () => {
         <div className="typing-greeting-refined text-center flex flex-col text-secondary w-full">
             <span className="text-xl lg:text-3xl font-bold w-full inline-flex items-center justify-center min-h-[1.4em]">
                 <span className="whitespace-pre">{text}</span>
-                <span className={`caret ${caretIdle ? "idle" : "active"}`} aria-hidden="true" />
+                <span className={`caret caret-${caret} ${caretIdle ? "idle" : "active"}`} aria-hidden="true" />
             </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-8xl font-bold my-2 pb-2 text-white animate-pulse drop-shadow-xl">
                 Gordon Zhong
