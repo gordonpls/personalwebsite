@@ -171,12 +171,12 @@ const ProjectCard = ({ p }: { p: Project }) => (
 
 export const Projects = () => (
     <section className="space-y-5">
-        <div className="flex items-end justify-between flex-wrap gap-3">
-            <div>
+        <div className="flex items-end flex-wrap gap-x-6 gap-y-2">
+            <div className="shrink-0">
                 <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Projects</p>
                 <h2 className="text-2xl md:text-3xl font-bold text-base-content mt-1">Things I&apos;ve been building</h2>
             </div>
-            <p className="text-sm text-base-content/60 max-w-md">
+            <p className="text-sm text-base-content/60 flex-1 min-w-[16rem]">
                 Three interactive apps; each one opens in a new tab. Hover a card for a quick preview, click to open the full thing.
             </p>
         </div>
