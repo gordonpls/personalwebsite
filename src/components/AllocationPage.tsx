@@ -1,6 +1,7 @@
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Allocation } from "./Allocation";
+import { AllocationArchitecture } from "./AllocationArchitecture";
 
 export default function AllocationPage() {
     return (
@@ -14,6 +15,7 @@ export default function AllocationPage() {
                 </div>
             </div>
             <Footer />
+            <AllocationArchitecture />
         </div>
     );
 }

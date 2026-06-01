@@ -71,7 +71,7 @@ export const Hero = () => {
                             <TypingGreeting />
                         </div>
                         <div className="">
-                            <div className="p-4 mx-auto border border-secondary border-4">
+                            <div className="p-4 mx-auto">
                                 <div className="flex flex-wrap gap-2 justify-center mx-auto self-center">
                                     <div className="badge badge-secondary">BSCS</div>
                                     <div className="badge badge-secondary">MBA</div>

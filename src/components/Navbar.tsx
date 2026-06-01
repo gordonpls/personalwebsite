@@ -39,8 +39,8 @@ export const Navbar = () => {
           >
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
             <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
+            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           </ul>
         </div>
       </div>

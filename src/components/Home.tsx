@@ -22,12 +22,12 @@ export const Home = () => {
                         <Reveal><Resume /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="gallery" className="scroll-mt-24">
-                        <Reveal><Gallery /></Reveal>
-                    </section>
-                    <div className="divider divider-primary" />
                     <section id="projects" className="scroll-mt-24">
                         <Reveal><Projects /></Reveal>
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section id="gallery" className="scroll-mt-24">
+                        <Reveal><Gallery /></Reveal>
                     </section>
 
                 </div>
