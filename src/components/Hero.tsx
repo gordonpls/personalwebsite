@@ -23,6 +23,10 @@ export const Hero = () => {
             gyroControls: false,
             minHeight: 200.00,
             minWidth: 200.00,
+            // Light blue sky; muted clouds with a darker blue shadow for contrast/depth.
+            skyColor: 0x8ec5e6,
+            cloudColor: 0xadc1de,
+            cloudShadowColor: 0x476d93,
             sunGlareColor: 0x181210,
             sunlightColor: 0xf08b40
         });
