@@ -1,6 +1,5 @@
 import { Hero } from "./Hero";
-// import { AboutMe } from "./AboutMe";
-// import { Milestones } from "./Milestones";
+import { AboutMe } from "./AboutMe";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
@@ -16,6 +15,10 @@ export const Home = () => {
                 <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md space-y-6">
                     <section>
                         <Hero />
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section id="about" className="scroll-mt-24">
+                        <Reveal><AboutMe /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
                     <section id="resume" className="scroll-mt-24">

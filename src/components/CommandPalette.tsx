@@ -20,6 +20,7 @@ export const CommandPalette = () => {
 
     const commands: Cmd[] = [
         { label: "Home", hint: "Top of page", anchor: "__top__" },
+        { label: "About", hint: "A short essay", anchor: "about" },
         { label: "Résumé", anchor: "resume" },
         { label: "Gallery", anchor: "gallery" },
         { label: "Projects", hint: "Allocation, Portfolio, Stablecoin", anchor: "projects" },

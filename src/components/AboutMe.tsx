@@ -1,20 +1,83 @@
+import avatar2 from "../assets/avatar2.webp";
+
+// Body prose uses a serif stack so it reads like a personal essay set apart
+// from the dashboard typography of the rest of the page.
+const SERIF = `"Iowan Old Style", "Palatino Linotype", "Hoefler Text", Georgia, serif`;
+
+const PARAGRAPHS = [
+    "I've spent a lot of time thinking about the kind of life I want to build and the kind of person I want to become. Through moments that required reflection and strength, I've come to see myself more clearly and develop a stronger sense of purpose. That reflection has helped me understand where I want to go and inspired me to move forward with intention.",
+    "Much of that foundation comes from my parents. Growing up, I watched them work tirelessly to create opportunities for our family. I also remember the warmth they brought into everything they did. My father approached his craft with care and precision, while my mother showed me the importance of education and patience. Their example taught me perseverance, dedication, and the discipline to approach things with passion and meticulous planning. I've learned to show up prepared, stay curious, and care about doing things well. The lessons I first learned sitting in the corner of our family's restaurant continue to guide the goals I set and the care I bring to them.",
+    "People who know me well often tell me that I have optimistic views. I think this quality was developed slowly. It started from the values I was raised with and grew through the people who have supported me. In time, it became tied to a belief I hold closely: even when life takes sharp, unexpected turns, the good can still outweigh the terrible. This optimism has expanded my gratitude for life and become a standard for the way I carry myself, treat others, and recognize the gift of each day.",
+    "The journey so far has given me a greater appreciation for where I come from and strengthened my conviction to build a future that reflects my ambition and dedication. At this time, that conviction is manifesting through the questions I find most intriguing: how money moves in finance, how systems work together in engineering, how people come together to build amazing things, and how technology constantly reshapes all three.",
+    "I believe in putting care into work, treating people with kindness, and remaining open to what each experience can teach me. I've also come to appreciate that everyone carries a story worth hearing. I enjoy sharing mine, and I'm always grateful when others take the time to listen. Those conversations create room for understanding, broader perspective, and bring more humanity into a complex world.",
+    "If anything here resonates, I would be grateful for the chance to connect and see where the conversation leads.",
+];
+
+const PULL_QUOTE = "Even when life takes sharp, unexpected turns, the good can still outweigh the terrible.";
+
 export const AboutMe = () => {
-    const aboutMe = (`My story began in the bustling streets of Brooklyn, New York. Raised by an exceptional chef and a dedicated schoolteacher, I grew up in a household that championed creativity, mastery, and lifelong learning. Inspired by my mother’s devotion to education, I come to value knowledge and cherish the bonds formed through sharing it. Learning opens doors to new opportunities and I strive to continue that cycle through growth and mentorship. 
-
-    As a child of Chinese immigrants, I am no stranger to hard work and hustle. My elders lived in a cramped NYC apartment, working tirelessly and saving every penny so that the next generation might have a better life. Their sacrifices and determination serve as a source of constant motivation. After our move to Colorado, I spent every evening in the corner of our family’s restaurant, studying while helping with the dinner rush. I grew up embodying a common Asian American story, finishing homework in the back of their local family-owned small business. When business slowed, I looked for ways to earn extra money. That early resourcefulness developed into a natural curiosity of exploring many diverse subjects and opportunities.
-
-    Yet who I am today is defined not just by my childhood, but by sudden and drastic change. In recent years, my life’s trajectory has unfolded into a Hero’s Journey. After enduring significant personal loss, I was forced to confront the fragility of life and the short time we are given on this earth. This experience tested my resolve, ignited an inner strength, and completely altered every aspect of my worldview. In the depths of solitude, I was propped up by tremendous support from those around me. Many shared that they found inspiration in my ability to move forward, and their encouragement has given me the bravery to embrace my story openly. I have learned that with a strong foundation, a positive mindset, and a loving community, even the darkest periods can lead to brighter days, and I am living proof of this belief. These challenging times have granted me clarity, perspective, and a measure of wisdom that continues to guide me.
-    
-    Emerging from that chapter, I begin to channel my efforts into new ventures. Guided by these lessons, I’ve gained experience across small business, software development, the food & beverage industry, and exploring various parts of the world. Each opportunity has broadened my perspective and reinforced my desire to pursue further education. The more I encounter more in life, the more fascinated I become about the world we live in.
-
-    Outside of work and study, I carry this same spirit into my personal passions. In my free time, I love to travel, eat delicious food, compete in online video games, and stay physically fit at the gym. My deep passion for food, especially Asian cuisines and milk tea, have led me across the country and abroad. Exploring new foods and destinations has deepened my appreciation for different cultures. And through conversations with people from many backgrounds, I have come to recognize the interconnectedness of human experience and the abundance that exists in the universe.
-    
-    From New York to Colorado, shaped by my time in Vegas and now making Massachusetts my home, my journey across the United States has been nothing short of an adventure. As I embark on this next chapter, I do so with excitement and gratitude, embracing each day as an opportunity. Although I have been to many exotic places, there are still countless destinations left to explore. My greatest adventures lie waiting just around the corner.`)
-
     return (
-        <div className="text-left bg-base-200 p-4 lg:p-8 rounded-md border-2 border-secondary scroll-mt-24" id="about">
-            <div className="lg:text-5xl text-3xl font-bold text-center lg:text-left pb-4 text-primary">A Little About Me</div>
-            <p style={{ whiteSpace: "pre-line" }}>{aboutMe}</p>
+        <div className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 lg:p-14 scroll-mt-24" id="about">
+            <div className="max-w-5xl mx-auto">
+                {/* Eyebrow */}
+                <div className="flex items-center gap-3 mb-8 lg:mb-12">
+                    <span className="h-px w-10 bg-primary/60" />
+                    <span className="text-[11px] uppercase tracking-[0.3em] text-primary font-semibold">About me</span>
+                </div>
+
+                {/* Body grid: prose on the left, portrait on the right */}
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-8 lg:gap-14">
+                    {/* Prose */}
+                    <article
+                        className="space-y-6 text-[17px] md:text-lg leading-[1.75] text-base-content/85 order-2 lg:order-1"
+                        style={{ fontFamily: SERIF }}
+                    >
+                        {/* Lead paragraph with drop cap */}
+                        <p>
+                            <span
+                                className="float-left text-7xl md:text-[5.5rem] font-bold pr-3 pt-2 leading-[0.85] text-primary select-none"
+                                style={{ fontFamily: SERIF }}
+                                aria-hidden="true"
+                            >
+                                I
+                            </span>
+                            <span aria-hidden="true">{PARAGRAPHS[0].slice(1)}</span>
+                            {/* Screen-reader version of the full paragraph */}
+                            <span className="sr-only">{PARAGRAPHS[0]}</span>
+                        </p>
+
+                        <p>{PARAGRAPHS[1]}</p>
+
+                        {/* Pull quote between roots and outlook */}
+                        <figure className="my-10">
+                            <blockquote className="border-l-4 border-primary/70 pl-6 italic text-xl md:text-2xl lg:text-[1.65rem] leading-snug text-base-content">
+                                <span aria-hidden="true" className="text-primary/60 pr-1 text-2xl">“</span>
+                                {PULL_QUOTE}
+                                <span aria-hidden="true" className="text-primary/60 pl-0.5 text-2xl">”</span>
+                            </blockquote>
+                        </figure>
+
+                        <p>{PARAGRAPHS[2]}</p>
+                        <p>{PARAGRAPHS[3]}</p>
+                        <p>{PARAGRAPHS[4]}</p>
+
+                        {/* Closing line set apart visually */}
+                        <p className="text-base-content italic">{PARAGRAPHS[5]}</p>
+                    </article>
+
+                    {/* Right rail: portrait */}
+                    <aside className="lg:sticky lg:top-24 self-start order-1 lg:order-2">
+                        <div className="relative">
+                            <img
+                                src={avatar2}
+                                alt="Gordon Zhong"
+                                className="w-44 h-44 lg:w-72 lg:h-72 mx-auto lg:mx-0 rounded-2xl object-cover shadow-xl ring-1 ring-base-300"
+                            />
+                            <div className="absolute -bottom-3 -right-3 hidden lg:block h-24 w-24 rounded-2xl bg-primary/15 -z-10" />
+                        </div>
+                    </aside>
+                </div>
+            </div>
         </div>
-    )
-}
+    );
+};

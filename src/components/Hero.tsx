@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 // Refined typing animation; swap back to "./subcomponents/TypingGreeting" to use the classic one.
 import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
 // Caret shape: "block" | "underscore" | "bar"
@@ -6,14 +6,11 @@ const TypingGreeting = () => <TypingGreetingRefined caret="bar" />;
 import InfoItem from "./ProfileCard/InfoItem";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";
-import avatar2 from "../assets/avatar2.webp";
 import { NowPlaying } from "./NowPlaying";
 
 import CLOUDS from "vanta/dist/vanta.clouds.min";
 
 export const Hero = () => {
-    const [isHovered, setIsHovered] = useState(false);
-
     const myRef = useRef(null);
     useEffect(() => {
         const effect = CLOUDS({
@@ -49,28 +46,11 @@ export const Hero = () => {
                 <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:space-x-6 lg:space-x-12">
                     {/* Picture (left) + now-playing under it */}
                     <div className="flex flex-col items-center gap-4 self-center pt-8 md:pt-0">
-                        <div
-                            className="relative cursor-pointer tooltip tooltip-success tooltip-open tooltip-top"
-                            onMouseEnter={() => setIsHovered(true)}
-                            onMouseLeave={() => setIsHovered(false)}
-                            onTouchStart={() => setIsHovered(true)}
-                            onTouchEnd={() => setIsHovered(false)}
-                            data-tip="Hover me!"
-                        >
-                            {/* HEADSHOT: Visible when not hovered */}
-                            <img
-                                src={avatar}
-                                alt="Avatar 1"
-                                className={`max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl transition-opacity duration-300 ring-4 ring-primary ${isHovered ? "opacity-0" : "opacity-100"}`}
-                            />
-
-                            {/* AVATAR: Visible when hovered */}
-                            <img
-                                src={avatar2}
-                                alt="Avatar 2"
-                                className={`max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl absolute top-0 left-0 transition-opacity duration-300 ring-4 ring-primary ${isHovered ? "opacity-100" : "opacity-0"}`}
-                            />
-                        </div>
+                        <img
+                            src={avatar}
+                            alt="Gordon Zhong"
+                            className="max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl ring-4 ring-primary"
+                        />
                         <NowPlaying />
                     </div>
                     {/* Component (right) */}

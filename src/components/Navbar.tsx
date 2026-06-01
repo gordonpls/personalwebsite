@@ -38,6 +38,7 @@ export const Navbar = () => {
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
           >
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
+            <li><a className="link link-hover link-info" href="/#about">About</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
             <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>

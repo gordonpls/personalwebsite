@@ -8,6 +8,9 @@ CacheDisable public /
 Options -MultiViews
 RewriteEngine On
 
+# /about → the About section on the home page (anchor scroll).
+RewriteRule ^about/?$ /#about [R=302,L]
+
 # /stablecoin → the live dashboard (kept reachable via gordonzhong.com/stablecoin)
 RewriteRule ^stablecoin/?$ https://stablecoin-dashboard-gz.streamlit.app/ [R=302,L]
 
