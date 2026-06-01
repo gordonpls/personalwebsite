@@ -14,25 +14,29 @@ import CLOUDS from "vanta/dist/vanta.clouds.min";
 export const Hero = () => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const [vantaEffect, setVantaEffect] = useState<any>(null);
     const myRef = useRef(null);
     useEffect(() => {
-        if (!vantaEffect) {
-            setVantaEffect(CLOUDS({
-                el: myRef.current,
-                mouseControls: true,
-                touchControls: true,
-                gyroControls: false,
-                minHeight: 200.00,
-                minWidth: 200.00,
-                sunGlareColor: 0x181210,
-                sunlightColor: 0xf08b40
-            }))
-        }
+        const effect = CLOUDS({
+            el: myRef.current,
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            sunGlareColor: 0x181210,
+            sunlightColor: 0xf08b40
+        });
+        // The container grows after late-loading content (avatar images, fonts)
+        // reflows it. Vanta only sizes its canvas on init and on window resize,
+        // so re-measure whenever the container's own size changes — otherwise the
+        // canvas stays at its shorter initial height and leaves a gap at the bottom.
+        const observer = new ResizeObserver(() => effect?.resize());
+        if (myRef.current) observer.observe(myRef.current);
         return () => {
-            if (vantaEffect) vantaEffect.destroy()
-        }
-    }, [vantaEffect])
+            observer.disconnect();
+            effect?.destroy();
+        };
+    }, [])
 
     return (
         <div ref={myRef} className="bg-base-200 border-2 border-secondary rounded-md p-4 overflow-hidden">
@@ -71,7 +75,7 @@ export const Hero = () => {
                             <TypingGreeting />
                         </div>
                         <div className="">
-                            <div className="p-4 mx-auto">
+                            <div className="p-4 mx-auto border border-secondary border-4">
                                 <div className="flex flex-wrap gap-2 justify-center mx-auto self-center">
                                     <div className="badge badge-secondary">BSCS</div>
                                     <div className="badge badge-secondary">MBA</div>
