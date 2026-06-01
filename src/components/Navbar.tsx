@@ -40,8 +40,8 @@ export const Navbar = () => {
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
             <li><a className="link link-hover link-info" href="/#about">About</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-            <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
+            <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
           </ul>
         </div>
       </div>
@@ -50,6 +50,7 @@ export const Navbar = () => {
       <div className="navbar-center hidden md:flex">
         <ul className="menu menu-horizontal px-1">
           <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
+          <li><a className="link link-hover link-info" href="/#about">About</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
