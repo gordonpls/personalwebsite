@@ -5,7 +5,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
 import { Resume } from "./Resume";
-import { Allocation } from "./Allocation";
+import { Projects } from "./Projects";
 import { Reveal } from "./Reveal";
 
 export const Home = () => {
@@ -26,8 +26,8 @@ export const Home = () => {
                         <Reveal><Gallery /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="allocation" className="scroll-mt-24">
-                        <Reveal><Allocation /></Reveal>
+                    <section id="projects" className="scroll-mt-24">
+                        <Reveal><Projects /></Reveal>
                     </section>
 
                 </div>

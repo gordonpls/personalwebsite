@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Home } from "./components/Home";
 import Stablecoin from "./components/Stablecoin";
 import Portfolio from "./components/Portfolio";
+import AllocationPage from "./components/AllocationPage";
 import NotFound from "./components/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -13,6 +14,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/portfolio" element={<Portfolio />} />
+                <Route path="/allocation" element={<AllocationPage />} />
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
