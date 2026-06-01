@@ -151,10 +151,11 @@ export const PortfolioAnalytics = () => {
                 {error ? (
                     <p className="text-xs text-base-content/50 py-8 text-center">Unavailable.</p>
                 ) : loading ? (
-                    <div className="flex-1 min-h-[12rem] rounded bg-base-200 animate-pulse mt-3" />
+                    <div className="h-56 lg:h-auto lg:flex-1 lg:min-h-[12rem] rounded bg-base-200 animate-pulse mt-3" />
                 ) : (
-                    <div className="flex-1 min-h-0 flex flex-col mt-2">
-                        <div className="flex-1 min-h-[8rem]">
+                    <div className="flex flex-col mt-2 lg:flex-1 lg:min-h-0">
+                        {/* Fixed mobile height (no flex parent to grow into) → flex on lg. */}
+                        <div className="h-56 lg:h-auto lg:flex-1 lg:min-h-[8rem]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={slices} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="56%" outerRadius="94%" paddingAngle={1} stroke="none">

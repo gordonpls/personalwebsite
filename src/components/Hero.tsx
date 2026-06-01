@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import TypingGreeting from "./subcomponents/TypingGreeting";
+// Refined typing animation; swap back to "./subcomponents/TypingGreeting" to use the classic one.
+import TypingGreeting from "./subcomponents/TypingGreetingRefined";
 import InfoItem from "./ProfileCard/InfoItem";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";

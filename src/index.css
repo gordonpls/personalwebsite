@@ -101,6 +101,25 @@
     }
   }
 
+  /* Refined typing caret (block): solid while typing/deleting, smooth pulse when idle. */
+  .typing-greeting-refined .caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 3px;
+    background: currentColor;
+    border-radius: 1px;
+    vertical-align: -0.14em;
+    transition: opacity 120ms ease-out;
+  }
+  .typing-greeting-refined .caret.active { opacity: 1; }
+  .typing-greeting-refined .caret.idle { animation: caret-pulse 1.05s ease-in-out infinite; }
+  @keyframes caret-pulse {
+    0%, 40%  { opacity: 1; }
+    50%, 90% { opacity: 0; }
+    100%     { opacity: 1; }
+  }
+
 @layer base {
   body {
     background-color: var(--color-base-100);
