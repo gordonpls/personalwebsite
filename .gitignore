@@ -1,6 +1,10 @@
 .env
 .env.local
 server/.env
+# Plaid Items catalog (access tokens + item IDs) — never commit.
+server/.plaid-items.json
+# Plaid structured logs (request_id, item_id, etc.) — local-only.
+server/logs/
 dist
 .DS_Store
 node_modules

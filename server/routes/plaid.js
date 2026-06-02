@@ -1,5 +1,7 @@
 const express = require("express");
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require("plaid");
+const items = require("../lib/plaid-items");
+const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
 
 const router = express.Router();
 
@@ -19,13 +21,10 @@ const plaidConfig = new Configuration({
 
 const plaidClient = new PlaidApi(plaidConfig);
 
-// One Plaid item (access token) per institution. Vanguard falls back to the
-// legacy PLAID_ACCESS_TOKEN var so existing deploys keep working.
+// Plaid Items live in server/.plaid-items.json (preferred) or legacy env vars
+// (backwards-compat). See server/lib/plaid-items.js for the storage rationale.
 function getTokens() {
-    return [
-        { institution: "Vanguard", token: process.env.PLAID_TOKEN_VANGUARD || process.env.PLAID_ACCESS_TOKEN },
-        { institution: "Robinhood", token: process.env.PLAID_TOKEN_ROBINHOOD },
-    ].filter((t) => t.token);
+    return items.loadItems().map((i) => ({ institution: i.institution, token: i.accessToken, itemId: i.itemId }));
 }
 
 // Cached fetcher with two free-tier safeguards:
@@ -100,28 +99,67 @@ router.post("/link/token/create", async (_req, res) => {
             country_codes: [CountryCode.Us],
             language: "en",
         });
+        logPlaidResponse("link.token.create", response);
         res.json({ link_token: response.data.link_token });
     } catch (err) {
-        console.error("[link/token/create]", err.response?.data ?? err.message);
+        logPlaidError("link.token.create", err);
         res.status(500).json({ error: "Failed to create link token" });
     }
 });
 
 // ── One-time setup: exchange the public token Plaid Link gives you ──
-// After completing Link, POST the public_token here to get your access token.
-// Copy the returned access_token into PLAID_ACCESS_TOKEN in your env vars.
+// After completing Link, POST the public_token + the institution label here.
+// The item is persisted to server/.plaid-items.json automatically; the
+// access_token is also returned for the operator to copy into env vars as a
+// belt-and-suspenders backup.
 router.post("/link/token/exchange", async (req, res) => {
     if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
-    const { public_token } = req.body;
+    const { public_token, institution } = req.body || {};
     if (!public_token) return res.status(400).json({ error: "public_token required" });
     try {
         const response = await plaidClient.itemPublicTokenExchange({ public_token });
         const { access_token, item_id } = response.data;
-        // Returned in the JSON body for the operator to copy; never logged.
-        res.json({ access_token, item_id });
+        const persistedInstitution = institution || "Unknown";
+        try {
+            items.addItem({ institution: persistedInstitution, accessToken: access_token, itemId: item_id });
+        } catch (e) {
+            // Catalog write failure shouldn't lose the token for the operator —
+            // they can still copy it from the response. Surface the error in logs.
+            logPlaid({ level: "warn", event: "items.add.fail", item_id, message: e.message });
+        }
+        logPlaidResponse("link.token.exchange", response, { institution: persistedInstitution, item_id });
+        // access_token returned for the operator's records; never logged.
+        res.json({ access_token, item_id, institution: persistedInstitution });
     } catch (err) {
-        console.error("[link/token/exchange]", err.response?.data ?? err.message);
+        logPlaidError("link.token.exchange", err);
         res.status(500).json({ error: "Failed to exchange token" });
+    }
+});
+
+// ── Admin: list the catalogued items (no tokens) ──
+router.get("/items", (_req, res) => {
+    if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
+    res.json({ items: items.listPublic() });
+});
+
+// ── Admin: remove an item upstream + drop it from the catalog ──
+// Best practice (per Plaid): delete Items via /item/remove when no longer
+// needed (user offboarding, prolonged error state, etc.). This calls the
+// upstream remove, then expires the local catalog entry.
+router.post("/items/remove", async (req, res) => {
+    if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
+    const { item_id } = req.body || {};
+    if (!item_id) return res.status(400).json({ error: "item_id required" });
+    const target = items.loadItems().find((i) => i.itemId === item_id);
+    if (!target) return res.status(404).json({ error: "item_id not found in catalog" });
+    try {
+        const response = await plaidClient.itemRemove({ access_token: target.accessToken });
+        logPlaidResponse("item.remove", response, { item_id });
+        items.removeItem(item_id);
+        res.json({ removed: 1, request_id: response.data.request_id });
+    } catch (err) {
+        logPlaidError("item.remove", err, { item_id });
+        res.status(500).json({ error: "Failed to remove item" });
     }
 });
 
@@ -130,8 +168,16 @@ async function fetchHoldingsPayload() {
     const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }
     let total = 0, costSum = 0, costValueSum = 0;
 
-    for (const { institution, token } of getTokens()) {
-        const resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
+    for (const { institution, token, itemId } of getTokens()) {
+        let resp;
+        try {
+            resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
+        } catch (err) {
+            logPlaidError("investments.holdings.get", err, { institution, item_id: itemId });
+            throw err;
+        }
+        logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resp.data?.item?.item_id });
+        if (resp.data?.item?.item_id) items.markSynced(resp.data.item.item_id);
         const { holdings, securities, accounts } = resp.data;
         const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
         const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
