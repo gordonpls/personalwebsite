@@ -16,15 +16,24 @@ const RAPID_URL = `https://${RAPID_HOST}/slack`;
 const FETCH_TIMEOUT_MS = 2500;
 
 // Best-effort extraction: RapidAPI's fortune-cookie4 /slack endpoint returns
-// a Slack-style payload. Try the common shapes before giving up.
+// a Slack-style payload. Try the common shapes before giving up, then strip
+// the "your fortune reads: '...'" wrapper the upstream tends to add so the
+// rendered slip is just the aphorism itself.
 function extractMessage(payload) {
     if (!payload) return null;
-    if (typeof payload === "string") return payload.trim() || null;
-    if (typeof payload.fortune === "string") return payload.fortune.trim();
-    if (typeof payload.text === "string") return payload.text.trim();
-    if (payload.data && typeof payload.data.message === "string") return payload.data.message.trim();
-    if (Array.isArray(payload.attachments) && payload.attachments[0]?.text) return String(payload.attachments[0].text).trim();
-    return null;
+    let raw = null;
+    if (typeof payload === "string") raw = payload;
+    else if (typeof payload.fortune === "string") raw = payload.fortune;
+    else if (typeof payload.text === "string") raw = payload.text;
+    else if (payload.data && typeof payload.data.message === "string") raw = payload.data.message;
+    else if (Array.isArray(payload.attachments) && payload.attachments[0]?.text) raw = String(payload.attachments[0].text);
+    if (!raw) return null;
+    let s = raw.trim();
+    // Strip a leading "your fortune reads:" preamble (case-insensitive).
+    s = s.replace(/^your fortune reads:\s*/i, "");
+    // Strip wrapping single or double quotes if the entire string is quoted.
+    s = s.replace(/^["'‘’“”](.+)["'‘’“”]$/s, "$1");
+    return s.trim() || null;
 }
 
 async function fetchFromRapidApi() {

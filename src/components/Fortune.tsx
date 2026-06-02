@@ -5,6 +5,7 @@ import { Footer } from "./Footer";
 import { CookieScene } from "./fortune/CookieScene";
 import { LuckyRow, type Lucky } from "./fortune/LuckyRow";
 import { ChinesePhrase, type Chinese } from "./fortune/ChinesePhrase";
+import { RightRailSkeleton } from "./fortune/RightRailSkeleton";
 import { buildShareImage, downloadShareImage } from "./fortune/shareCard";
 
 interface FortuneResponse {
@@ -84,11 +85,12 @@ export default function Fortune() {
                             <p className="text-sm text-base-content/60 mt-2">{formatDate(data?.date ?? null)}</p>
                         </div>
 
-                        {/* Two-column grid: cookie + fortune on the left, lucky + phrase on the right.
-                            Stacks on mobile. */}
+                        {/* Two-column grid: cookie + fortune on left, lucky + phrase on right.
+                            Both columns are top-aligned and the cookie size is tuned so the
+                            left column's height roughly matches the right column's content. */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-                            {/* Left column: cookie + the actual fortune text */}
-                            <div className="space-y-6 flex flex-col items-center">
+                            {/* Left column */}
+                            <div className="flex flex-col items-center gap-5">
                                 <CookieScene
                                     isOpen={state.kind === "open"}
                                     isAnimating={state.kind === "cracking"}
@@ -112,35 +114,47 @@ export default function Fortune() {
                                 </AnimatePresence>
                             </div>
 
-                            {/* Right column: stacked lucky + phrase. Stays hidden until crack so the
-                                page is visually focused on the cookie until the user interacts. */}
-                            <AnimatePresence>
-                                {state.kind === "open" && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 12 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.5, delay: 0.65 }}
-                                        className="space-y-6"
-                                    >
-                                        <LuckyRow lucky={state.data.lucky} />
-                                        <ChinesePhrase chinese={state.data.chinese} />
-                                        <div className="flex justify-center pt-1">
-                                            <button onClick={share} className="btn btn-primary btn-sm gap-2">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
-                                                    <polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round" />
-                                                    <line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                                Save share card
-                                            </button>
-                                        </div>
-                                        <p className="text-[11px] text-base-content/40 text-center">
-                                            One fortune per day. Come back tomorrow for a new one.
-                                        </p>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            {/* Right column: skeleton placeholders while closed, populated on crack. */}
+                            <div>
+                                <AnimatePresence mode="wait">
+                                    {state.kind !== "open" ? (
+                                        <motion.div
+                                            key="skeleton"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.25 }}
+                                        >
+                                            <RightRailSkeleton />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="content"
+                                            initial={{ opacity: 0, y: 12 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.65 }}
+                                            className="space-y-6"
+                                        >
+                                            <LuckyRow lucky={state.data.lucky} />
+                                            <ChinesePhrase chinese={state.data.chinese} />
+                                            <div className="flex justify-center pt-1">
+                                                <button onClick={share} className="btn btn-primary btn-sm gap-2">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    Save share card
+                                                </button>
+                                            </div>
+                                            <p className="text-[11px] text-base-content/40 text-center">
+                                                One fortune per day. Come back tomorrow for a new one.
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
 
                         {error && (
