@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
+import { HoldingLogo } from "./HoldingLogo";
 
 interface Holding {
     portfolio: string;
@@ -150,11 +151,9 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                     <ScrollArea className="flex-1 min-h-0" contentClassName="min-h-full flex flex-col justify-between gap-5 pr-4">
                         {/* Header */}
                         <div className="flex items-center gap-3">
-                            {meta.logo ? (
-                                <img src={meta.logo} alt="" className="w-11 h-11 rounded-lg object-contain bg-base-200 p-1" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
-                            ) : (
-                                <div className="w-11 h-11 rounded-lg bg-base-200 flex items-center justify-center text-base font-bold text-base-content/60">{(ticker || "?").slice(0, 2)}</div>
-                            )}
+                            {/* Same resolution logic as the Live Positions list so the
+                                logo for a given ticker matches in both views. */}
+                            <HoldingLogo ticker={ticker} meta={meta} className="w-11 h-11 rounded-lg" fallbackTextClass="text-sm" />
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-lg font-bold text-base-content">{ticker ?? "—"}</span>

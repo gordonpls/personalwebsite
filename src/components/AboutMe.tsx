@@ -5,11 +5,11 @@ import avatar2 from "../assets/avatar2.webp";
 const SERIF = `"Iowan Old Style", "Palatino Linotype", "Hoefler Text", Georgia, serif`;
 
 const PARAGRAPHS = [
-    "I've spent a lot of time thinking about the kind of life I want to build and the kind of person I want to become. Through moments requiring both reflection and strength, I've come to see myself more clearly and develop a stronger sense of purpose. This reflection has helped me understand where I want to go and inspired me to move forward with intention.",
+    "People who know me well often tell me that I have optimistic views. I think this quality has developed over time. It started from the values I was raised with and grew through the people who have supported me. In time, it became tied to a belief I hold closely: even when life takes sharp, unexpected turns, the good can still outweigh the terrible. This optimism has expanded my gratitude for life and become a standard for the way I carry myself, treat others, and recognize the gift of each day.",
     "Much of that foundation comes from my parents. Growing up, I watched them work tirelessly to create opportunities for our family. I also remember the warmth they brought into everything they did. My father approached his craft with care and precision, while my mother showed me the importance of education and patience. Their example taught me perseverance, dedication, and the discipline to approach things with passion and meticulous planning. I've learned to show up prepared, stay curious, and care about doing things well. The lessons I first learned sitting in the corner of our family's restaurant continue to guide the goals I set and the care I bring to them.",
-    "People who know me well often tell me that I have optimistic views. I think this quality was developed slowly. It started from the values I was raised with and grew through the people who have supported me. In time, it became tied to a belief I hold closely: even when life takes sharp, unexpected turns, the good can still outweigh the terrible. This optimism has expanded my gratitude for life and become a standard for the way I carry myself, treat others, and recognize the gift of each day.",
+    "I've spent a lot of time thinking about the kind of life I want to build and the kind of person I want to become. Through moments requiring both reflection and strength, I've come to see myself more clearly and develop a stronger sense of purpose. This reflection has helped me understand where I want to go and inspired me to move forward with intention.",
     "The journey so far has given me a greater appreciation for where I come from and strengthened my conviction to build a future that reflects my ambition and dedication. At this time, that conviction is manifesting through the questions I find most intriguing: how money moves in finance, how systems work together in engineering, how people come together to build amazing things, and how technology constantly reshapes all three.",
-    "I believe in putting care into work, treating people with kindness, and remaining open to what each experience can teach me. I've also come to appreciate that everyone carries a story worth hearing. I enjoy sharing mine, and I'm always grateful when others take the time to listen. Those conversations create room for understanding, broader perspective, and bring more humanity into a complex world.",
+    "I believe in putting care into work, treating people with kindness, and remaining open to what each experience can teach me. I've also come to appreciate that everyone carries a story worth hearing. I enjoy sharing mine, and I'm always grateful when people take the time to listen. Those conversations create room for understanding, broader perspective, and bring more humanity into a complex world.",
     "If anything here resonates, I would be grateful for the chance to connect and see where the conversation leads.",
 ];
 
@@ -39,7 +39,7 @@ export const AboutMe = () => {
                                 style={{ fontFamily: SERIF }}
                                 aria-hidden="true"
                             >
-                                I
+                                {PARAGRAPHS[0].charAt(0)}
                             </span>
                             <span aria-hidden="true">{PARAGRAPHS[0].slice(1)}</span>
                             {/* Screen-reader version of the full paragraph */}

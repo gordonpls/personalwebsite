@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
+import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
 
 export interface Holding {
     portfolio: string;
@@ -10,7 +11,7 @@ export interface Holding {
     returnPct: number | null;  // total return since purchase (cost basis); null if unavailable
 }
 
-interface Meta { type?: string; name?: string; logo?: string }
+interface Meta extends LogoMeta { type?: string }
 type MetaMap = Record<string, Meta>;
 
 interface HoldingsProps {
@@ -19,24 +20,6 @@ interface HoldingsProps {
     selectedTicker?: string | null;     // highlighted row
     onSelect?: (h: Holding) => void;    // row click; also auto-selects the first row
 }
-
-// ETF issuer detection by name keyword → domain we can pull a favicon from.
-// Order matters when issuer names overlap (e.g. "iShares MSCI" should hit
-// BlackRock/iShares before any generic "MSCI" rule).
-const ETF_ISSUERS: { test: RegExp; domain: string }[] = [
-    { test: /\bvanguard\b/i, domain: "vanguard.com" },
-    { test: /\b(ishares|blackrock)\b/i, domain: "ishares.com" },
-    { test: /\b(spdr|state street)\b/i, domain: "ssga.com" },
-    { test: /\bschwab\b/i, domain: "schwab.com" },
-    { test: /\binvesco\b/i, domain: "invesco.com" },
-    { test: /\bvaneck\b/i, domain: "vaneck.com" },
-    { test: /\bfidelity\b/i, domain: "fidelity.com" },
-    { test: /\bpacer\b/i, domain: "paceretfs.com" },
-    { test: /\bproshares\b/i, domain: "proshares.com" },
-    { test: /\bwisdomtree\b/i, domain: "wisdomtree.com" },
-    { test: /\bjpmorgan\b/i, domain: "jpmorgan.com" },
-    { test: /\bglobal x\b/i, domain: "globalxetfs.com" },
-];
 
 // Strip the boilerplate issuer/family wrapper from fund names so the list-row
 // secondary line shows the actual fund identifier (e.g. "Total Stock Market"
@@ -61,47 +44,6 @@ function cleanFundName(raw: string | null | undefined): string {
     s = s.replace(/\s+Index Fund$/i, "");
     return s.trim() || raw;
 }
-
-function getLogoUrl(ticker: string | null, meta?: Meta): string | null {
-    // Stocks: Finnhub usually has a logo and we bake it into holdingsMeta.json.
-    if (meta?.logo) return meta.logo;
-    // ETFs: identify the issuer from the fund name → favicon via Google.
-    const name = meta?.name ?? "";
-    for (const issuer of ETF_ISSUERS) {
-        if (issuer.test.test(name)) {
-            return `https://www.google.com/s2/favicons?domain=${issuer.domain}&sz=128`;
-        }
-    }
-    // Last-ditch: Finnhub's stock-logo bucket. May 404 for ETFs; the <Logo />
-    // component swaps to a letter chip on error.
-    return ticker
-        ? `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${ticker}.png`
-        : null;
-}
-
-const Logo = ({ ticker, meta }: { ticker: string | null; meta?: Meta }) => {
-    const [failed, setFailed] = useState(false);
-    const url = getLogoUrl(ticker, meta);
-    if (!url || failed) {
-        return (
-            <div
-                className="size-8 rounded-md bg-base-200 border border-base-300 flex items-center justify-center text-[9px] font-bold text-base-content/60 shrink-0"
-                aria-hidden="true"
-            >
-                {ticker ? ticker.slice(0, 4) : "—"}
-            </div>
-        );
-    }
-    return (
-        <img
-            className="size-8 rounded-md bg-base-100 border border-base-300 object-contain p-0.5 shrink-0"
-            src={url}
-            alt=""
-            loading="lazy"
-            onError={() => setFailed(true)}
-        />
-    );
-};
 
 export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
@@ -194,7 +136,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                                     className={`list-row !py-1.5 !px-3 cursor-pointer transition-colors items-center ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
                                     style={{ gridTemplateColumns: "auto minmax(0, 1fr) 3.5rem 5.5rem" }}
                                 >
-                                    <Logo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />
+                                    <HoldingLogo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />
                                     <div className="min-w-0">
                                         <div className="font-semibold text-base-content leading-tight text-sm">{h.ticker ?? "—"}</div>
                                         <div className="text-[10.5px] uppercase font-semibold opacity-60 truncate leading-tight" title={h.name}>{displayName}</div>
