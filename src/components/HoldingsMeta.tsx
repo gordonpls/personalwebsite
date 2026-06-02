@@ -167,7 +167,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                                             className="btn btn-xs btn-outline btn-primary normal-case font-medium gap-1 -my-0.5"
                                             title="Open the issuer's website in a new tab"
                                         >
-                                            Website
+                                            Visit website
                                             <span aria-hidden="true">↗</span>
                                         </a>
                                     )}

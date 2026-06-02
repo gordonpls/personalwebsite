@@ -171,12 +171,13 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             ) : (
                 <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="px-2 pb-2">
                     <ul className="list">
-                        {/* Column-header row using the same grid template as list-row */}
+                        {/* Column-header row using the same grid template as list-row.
+                            "Holding" spans the logo + name columns so it sits flush
+                            left with the row content below. */}
                         <li className="list-row !py-1 !px-3 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold items-center">
-                            <div aria-hidden="true" className="size-8" />
-                            <div>Holding</div>
+                            <div className="col-span-2">Holding</div>
                             <div className="text-right">Weight</div>
-                            <div className="text-right">Return</div>
+                            <div className="text-right whitespace-nowrap">Total Return</div>
                         </li>
                         {rows.map((h, i) => {
                             const isSelected = selectedTicker === h.ticker;
