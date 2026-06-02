@@ -156,9 +156,21 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                                 <div className="w-11 h-11 rounded-lg bg-base-200 flex items-center justify-center text-base font-bold text-base-content/60">{(ticker || "?").slice(0, 2)}</div>
                             )}
                             <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-lg font-bold text-base-content">{ticker ?? "—"}</span>
                                     {assetType && <span className="badge badge-sm badge-ghost">{assetType}</span>}
+                                    {meta.website && (
+                                        <a
+                                            href={meta.website}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn btn-xs btn-outline btn-primary normal-case font-medium gap-1 -my-0.5"
+                                            title="Open the issuer's website in a new tab"
+                                        >
+                                            Website
+                                            <span aria-hidden="true">↗</span>
+                                        </a>
+                                    )}
                                 </div>
                                 <p className="text-sm text-base-content/60 truncate">{name}</p>
                             </div>
@@ -177,12 +189,8 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                         {/* Sparkline */}
                         <Sparkline series={ticker ? prices[ticker] : undefined} />
 
-                        {/* Facts */}
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                            {facts.map((f) => <Fact key={f.label} label={f.label} value={f.value} valueClass={f.cls} />)}
-                        </div>
-
-                        {/* 52-week range */}
+                        {/* 52-week range (immediately under the sparkline so the
+                            price line and its high/low context read together) */}
                         {hasRange && (
                             <div>
                                 <div className="flex justify-between text-xs text-base-content/50 mb-1.5">
@@ -198,13 +206,13 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                             </div>
                         )}
 
-                        {/* Analyst sentiment */}
+                        {/* Analyst sentiment — paired with the price visuals above */}
                         {meta.analysts && <SentimentBar a={meta.analysts} />}
 
-                        {/* Website */}
-                        {meta.website && (
-                            <a href={meta.website} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline w-fit">Visit website ↗</a>
-                        )}
+                        {/* Facts (fundamentals + portfolio context) */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                            {facts.map((f) => <Fact key={f.label} label={f.label} value={f.value} valueClass={f.cls} />)}
+                        </div>
                     </ScrollArea>
 
                     {error && (

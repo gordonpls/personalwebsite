@@ -171,11 +171,17 @@ export const Gallery = () => {
                 ))}
             </div>
 
-            {/* ── "Coming Soon" placeholder for categories with no photos yet ── */}
+            {/* ── "Coming Soon" placeholder for categories with no photos yet ──
+                Mirrors the real grid: same responsive columns + square tiles,
+                but renders skeletons in place of images. */}
             {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-10">
-                    <div className="skeleton h-32 w-32"></div>
-                    <p className="text-lg font-semibold text-base-content/70">Coming Soon</p>
+                <div>
+                    <p className="text-center text-lg font-semibold text-base-content/70 mb-6">Coming Soon</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        {Array.from({ length: perPage }).map((_, i) => (
+                            <div key={i} className="skeleton aspect-square w-full rounded-xl"></div>
+                        ))}
+                    </div>
                 </div>
             ) : (
             <>
