@@ -163,6 +163,82 @@ router.post("/items/remove", async (req, res) => {
     }
 });
 
+// ── Admin: enrich every catalog Item with institution + accounts so you can
+// spot duplicates before calling /items/remove. Uses Plaid's accountsGet
+// (returns the accounts list + the Item's institution_id) and
+// institutionsGetById (turns institution_id into a friendly display name).
+// Items sharing the same plaidInstitutionId are flagged as `duplicateGroup`. ──
+router.get("/items/inspect", async (_req, res) => {
+    if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
+    const cat = items.loadItems();
+    const enriched = await Promise.all(cat.map(async (entry) => {
+        if (!entry.accessToken) {
+            return { itemId: entry.itemId, institution: entry.institution, error: "no access token in catalog entry" };
+        }
+        try {
+            const acctResp = await plaidClient.accountsGet({ access_token: entry.accessToken });
+            const { accounts, item } = acctResp.data;
+            logPlaidResponse("accounts.get", acctResp, { item_id: item?.item_id, institution: entry.institution });
+            let institutionName = null;
+            if (item?.institution_id) {
+                try {
+                    const instResp = await plaidClient.institutionsGetById({
+                        institution_id: item.institution_id,
+                        country_codes: [CountryCode.Us],
+                    });
+                    institutionName = instResp.data.institution?.name ?? null;
+                    logPlaidResponse("institutions.get_by_id", instResp, { item_id: item.item_id });
+                } catch (instErr) {
+                    logPlaidError("institutions.get_by_id", instErr, { item_id: item?.item_id });
+                }
+            }
+            return {
+                itemId: item?.item_id ?? entry.itemId,
+                catalogLabel: entry.institution,
+                plaidInstitutionId: item?.institution_id ?? null,
+                plaidInstitutionName: institutionName,
+                linkedAt: entry.linkedAt,
+                lastSyncedAt: entry.lastSyncedAt,
+                itemCreatedAt: item?.created_at ?? null,
+                itemError: item?.error ?? null,
+                consentedProducts: item?.consented_products ?? null,
+                accounts: (accounts || []).map((a) => ({
+                    accountId: a.account_id,
+                    name: a.name,
+                    officialName: a.official_name,
+                    mask: a.mask,
+                    type: a.type,
+                    subtype: a.subtype,
+                })),
+            };
+        } catch (err) {
+            logPlaidError("accounts.get", err, { item_id: entry.itemId, institution: entry.institution });
+            return {
+                itemId: entry.itemId,
+                catalogLabel: entry.institution,
+                error: err.response?.data?.error_message ?? err.message,
+                errorCode: err.response?.data?.error_code ?? null,
+            };
+        }
+    }));
+    // Mark duplicate groups by plaidInstitutionId. Two items sharing an
+    // institution_id is suspicious (you probably linked the same bank twice);
+    // sharing institution_id AND an accountId is definitely a duplicate.
+    const byInst = new Map();
+    for (const it of enriched) {
+        if (!it.plaidInstitutionId) continue;
+        const arr = byInst.get(it.plaidInstitutionId) ?? [];
+        arr.push(it);
+        byInst.set(it.plaidInstitutionId, arr);
+    }
+    for (const group of byInst.values()) {
+        if (group.length > 1) {
+            for (const it of group) it.duplicateGroup = it.plaidInstitutionId;
+        }
+    }
+    res.json({ items: enriched });
+});
+
 // Build the privacy-safe holdings payload from Plaid (no $ amounts/account names).
 async function fetchHoldingsPayload() {
     const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }

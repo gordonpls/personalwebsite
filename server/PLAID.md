@@ -150,3 +150,62 @@ want to switch to the catalog file, you can either:
    remember it.
 
 Until the file exists, the env-var fallback keeps the deploy working.
+
+## Endpoint surface audit
+
+Total set of Plaid endpoints this server calls today:
+
+| Endpoint | Where | Called when | Why |
+|---|---|---|---|
+| `linkTokenCreate` | `routes/plaid.js` `POST /api/link/token/create` | Setup only (`PLAID_SETUP_ENABLED=true`) | Mint a short-lived token that the Link client uses to authenticate with Plaid. |
+| `itemPublicTokenExchange` | `routes/plaid.js` `POST /api/link/token/exchange` | Setup only | Turn a Link `public_token` into the permanent `access_token` + `item_id`; persisted to the catalog. |
+| `investmentsHoldingsGet` | `routes/plaid.js` `fetchHoldingsPayload()` | Every `/api/holdings` cache miss (TTL 6h, plus in-flight dedup) | The only runtime endpoint. Pulls each Item's holdings + securities + accounts; reshaped into the privacy-safe payload before going to the client. |
+| `itemRemove` | `routes/plaid.js` `POST /api/items/remove` | Setup only | Delete an Item upstream when no longer needed (per Plaid's "delete unused Items" guidance). |
+| `accountsGet` | `routes/plaid.js` `GET /api/items/inspect` | Setup only | Enriches each catalog Item with its accounts + institution_id, used for finding duplicates before cleanup. |
+| `institutionsGetById` | `routes/plaid.js` `GET /api/items/inspect` | Setup only | Turn `institution_id` into a friendly display name in the inspect report. |
+
+Endpoints we deliberately do **not** call (and why):
+
+- `accountsBalanceGet` — we don't render dollar balances; ratios are derived from `investmentsHoldingsGet` already.
+- `itemGet` — every field we'd want from it (`institution_id`, `error`, etc.) is already on the `item` field returned by `accountsGet`. No second round-trip.
+- `transactionsSync` / `transactionsGet` — not modelling cash flows.
+- `authGet` / `identityGet` — no banking-level identity needed.
+- `webhookVerificationKeyGet` and webhook handlers — no webhook subscriber wired up yet; if you ever do, log `webhook_code` + `item_id` per event.
+
+The runtime surface (what production actually hits) is effectively **one endpoint**: `investmentsHoldingsGet`, cached for 6 hours. Everything else is setup-flagged off in production.
+
+## Finding (and removing) duplicate Items
+
+Plaid counts each Item against the connections limit (10 for production). If
+you've linked the same bank twice during testing, those count as separate
+Items even when they list the same accounts. To find them:
+
+1. Set `PLAID_SETUP_ENABLED=true` in `server/.env` and restart.
+2. `GET /api/items/inspect` — returns each Item enriched with:
+   - `plaidInstitutionId` + `plaidInstitutionName` (the bank as Plaid sees it)
+   - `itemCreatedAt` (when the Item was first linked at Plaid)
+   - `lastSyncedAt` (last time our server successfully fetched its holdings)
+   - `accounts[]` (`name`, `mask`, `type`, `subtype`)
+   - `duplicateGroup` field set to the shared `institution_id` when two or more Items collide
+3. Compare candidates. Two Items in the same `duplicateGroup` with overlapping
+   account `mask` values are definitely the same brokerage login linked twice;
+   keep the one with the more recent `lastSyncedAt` and drop the older one.
+4. Remove the loser:
+   ```http
+   POST /api/items/remove
+   Content-Type: application/json
+
+   { "item_id": "abc123…" }
+   ```
+   That calls `plaidClient.itemRemove` upstream and deletes the local
+   catalog entry.
+
+Caveats:
+- The catalog only knows about Items linked **through this app**. Orphan
+  tokens from earlier sandboxes or other apps using the same Plaid account
+  won't show up — those have to be removed via the Plaid Dashboard directly.
+- Once `itemRemove` runs the Item is gone for good; the access_token is
+  invalidated server-side at Plaid. If you ever want the Item back you'll
+  have to relink through `/link/token/create` + `/link/token/exchange`.
+- Disable `PLAID_SETUP_ENABLED` after the cleanup so the admin endpoints
+  return 404 in production again.
