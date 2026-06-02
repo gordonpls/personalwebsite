@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PortfolioScopePill } from "./PortfolioScopePill";
 
 interface Holding {
     portfolio: string;
@@ -106,9 +107,22 @@ const Stat = ({ label, value, valueClass }: { label: string; value: string; valu
 );
 
 // Sector/asset-class allocation donut + portfolio-level risk/income stats.
-// All overall (every holding), matching the all-holdings heatmap it sits beside.
-// Reuses /api/holdings + the baked /holdingsMeta.json — no extra API calls.
-export const PortfolioAnalytics = () => {
+// Tab-scoped: the optional `portfolio` filters the same /api/holdings feed the
+// heatmap uses, so both cards always agree on what they're showing. When the
+// scope pill in the header is wired (scopeLabel/onScopeChange/scopeOptions),
+// the user can also change scope from this component instead of scrolling to
+// the global tabs.
+export const PortfolioAnalytics = ({
+    portfolio,
+    scopeLabel,
+    onScopeChange,
+    scopeOptions,
+}: {
+    portfolio?: string;
+    scopeLabel?: string;
+    onScopeChange?: (next: string) => void;
+    scopeOptions?: readonly string[];
+} = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [meta, setMeta] = useState<MetaMap>({});
     const [prices, setPrices] = useState<PriceMap>({});
@@ -132,7 +146,8 @@ export const PortfolioAnalytics = () => {
     }, []);
 
     const { slices, beta, vol, ret1y, divYield } = useMemo(() => {
-        const hs = holdings ?? [];
+        const all = holdings ?? [];
+        const hs = portfolio ? all.filter((h) => h.portfolio === portfolio) : all;
         const catW = new Map<string, number>();
         let bSum = 0, bW = 0, vSum = 0, vW = 0, rSum = 0, rW = 0, dSum = 0, dW = 0;
 
@@ -186,7 +201,7 @@ export const PortfolioAnalytics = () => {
             ret1y: rW > 0 ? rSum / rW : null,
             divYield: dW > 0 ? dSum / dW : null,
         };
-    }, [holdings, meta]);
+    }, [holdings, meta, prices, portfolio]);
 
     const loading = !holdings && !error;
 
@@ -194,7 +209,12 @@ export const PortfolioAnalytics = () => {
         <>
             {/* Risk & income */}
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 shrink-0">
-                <h3 className="text-sm font-semibold text-base-content mb-3">Risk, return &amp; income</h3>
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <h3 className="text-sm font-semibold text-base-content">Risk, return &amp; income</h3>
+                    {scopeLabel && onScopeChange && scopeOptions && (
+                        <PortfolioScopePill current={scopeLabel} onChange={onScopeChange} options={scopeOptions} />
+                    )}
+                </div>
                 {error ? (
                     <p className="text-xs text-base-content/50">Unavailable.</p>
                 ) : loading ? (
@@ -214,7 +234,7 @@ export const PortfolioAnalytics = () => {
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col lg:flex-1 lg:min-h-0">
                 <div className="flex items-baseline gap-2 shrink-0">
                     <h3 className="text-sm font-semibold text-base-content">Allocation</h3>
-                    <p className="text-xs text-base-content/50">By sector &amp; fund</p>
+                    <p className="text-xs text-base-content/50">By category</p>
                 </div>
                 {error ? (
                     <p className="text-xs text-base-content/50 py-8 text-center">Unavailable.</p>

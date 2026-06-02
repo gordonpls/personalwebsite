@@ -109,7 +109,7 @@ const PROJECTS: Project[] = [
         accent: "text-success",
         glow: "from-success/15 via-success/0 to-primary/10",
         description:
-            "My live brokerage holdings, reshaped for privacy: heatmap, dividend-adjusted performance vs the S&P 500, sector allocation, and per-holding analytics. Backed by a weekly bake job.",
+            "My live brokerage holdings: heatmap, dividend-adjusted performance vs the S&P 500, sector allocation, and per-holding analytics. Backed by a weekly bake job.",
         tags: ["Plaid", "Recharts", "Express"],
         preview: <LinePreview />,
     },

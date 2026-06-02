@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
+import { PortfolioScopePill } from "./PortfolioScopePill";
 
 interface Holding {
     portfolio: string;
@@ -86,7 +87,19 @@ const HeatTooltip = (props: any) => {
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; title?: string } = {}) => {
+export const HoldingsHeatmap = ({
+    portfolio,
+    title,
+    scopeLabel,
+    onScopeChange,
+    scopeOptions,
+}: {
+    portfolio?: string;
+    title?: string;
+    scopeLabel?: string;
+    onScopeChange?: (next: string) => void;
+    scopeOptions?: readonly string[];
+} = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [quotes, setQuotes] = useState<Record<string, number>>({});
     const [quotesAsOf, setQuotesAsOf] = useState<string | null>(null);
@@ -134,8 +147,13 @@ export const HoldingsHeatmap = ({ portfolio, title }: { portfolio?: string; titl
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col h-full">
             <div className="flex items-start justify-between flex-wrap gap-3 shrink-0 mb-4">
-                <div>
-                    {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>}
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Heatmap"}</h2>}
+                        {scopeLabel && onScopeChange && scopeOptions && (
+                            <PortfolioScopePill current={scopeLabel} onChange={onScopeChange} options={scopeOptions} />
+                        )}
+                    </div>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         Sized by weight · shaded by today’s price change
                         {!quotesOk && <span className="text-base-content/40"> · live prices unavailable</span>}
