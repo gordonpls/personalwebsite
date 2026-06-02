@@ -54,27 +54,40 @@ async function fetchFromRapidApi() {
 }
 
 // In-memory cache so repeated visitors on the same day don't re-hit upstream.
-// Key = seed string ("YYYY-MM-DD"); value = { message, source }.
+// Key = "YYYY-MM-DD|<ipHash>"; value = { message, source }.
 const dayCache = new Map();
 
-// GET /api/fortune
-//   default            → deterministic daily fortune (cached for the day).
-//   ?random=1          → fresh roll, not cached, ignores the day seed.
-router.get("/fortune", async (req, res) => {
-    const isRandom = req.query.random === "1" || req.query.random === "true";
-    const seed = isRandom
-        ? `random-${Date.now()}-${Math.random()}` // non-cacheable, unique seed
-        : dailySeed();
+// Stable, non-reversible IP identifier for cache + seed. We never store, log,
+// or expose the raw IP — just a hash combined with the date.
+function ipFingerprint(ip) {
+    let h = 1779033703 ^ ip.length;
+    for (let i = 0; i < ip.length; i++) {
+        h = Math.imul(h ^ ip.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+    }
+    return (h >>> 0).toString(36);
+}
 
-    // Lucky payload is always derived from the same seed, so the daily mode is
-    // stable and the random mode varies per call.
+// GET /api/fortune
+//   default → deterministic fortune for (this IP, today). Once a visitor sees
+//   a fortune they keep that one for the rest of the calendar day; new day
+//   means new cookie.
+router.get("/fortune", async (req, res) => {
+    const date = dailySeed();
+    // req.ip resolves through the trust-proxy setting in app.js (X-Forwarded-For).
+    const ip = req.ip || (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "anon";
+    const ipHash = ipFingerprint(ip);
+    const seed = `${date}|${ipHash}`;
+
+    // Lucky payload + Chinese phrase are seed-derived, so they're stable for the
+    // (ip, day) pair and different visitors see different combinations.
     const lucky = buildLuckyForSeed(seed);
     const chinese = pickFromArray(CHINESE, seed + "-zh");
 
-    // Fortune source resolution: cached daily → RapidAPI → local corpus.
+    // Fortune source resolution: cached → RapidAPI → local corpus.
     let message = null;
     let source = null;
-    if (!isRandom && dayCache.has(seed)) {
+    if (dayCache.has(seed)) {
         const cached = dayCache.get(seed);
         message = cached.message;
         source = cached.source;
@@ -87,15 +100,15 @@ router.get("/fortune", async (req, res) => {
         }
     }
     if (!message) {
-        // Pick locally with the same seed so a daily fallback is also stable.
+        // Deterministic corpus pick so a fallback is also locked for the day.
         const rand = mulberry32(hashSeed(seed + "-msg"));
         message = FORTUNES[Math.floor(rand() * FORTUNES.length)];
         source = "corpus";
     }
-    if (!isRandom) dayCache.set(seed, { message, source });
+    dayCache.set(seed, { message, source });
 
     res.json({
-        seed: isRandom ? null : seed,
+        date,
         message,
         source,
         lucky,
