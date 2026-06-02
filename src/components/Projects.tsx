@@ -68,6 +68,27 @@ const LinePreview = () => (
     </svg>
 );
 
+// Inline cookie: stylized closed fortune cookie that "shakes" on hover.
+const CookiePreview = () => (
+    <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
+        <defs>
+            <linearGradient id="ckTop" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#F0C97A" />
+                <stop offset="1" stopColor="#D89A3C" />
+            </linearGradient>
+            <linearGradient id="ckBot" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#9B6822" />
+                <stop offset="1" stopColor="#D89A3C" />
+            </linearGradient>
+        </defs>
+        <g transform="translate(100 60)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+            <path d="M -42 0 Q -42 -42 0 -42 Q 42 -42 42 0 L 36 0 Q 0 -5 -36 0 Z" fill="url(#ckTop)" stroke="#6e4814" strokeWidth="0.8" />
+            <path d="M -42 0 Q -42 42 0 42 Q 42 42 42 0 L 36 0 Q 0 5 -36 0 Z" fill="url(#ckBot)" stroke="#6e4814" strokeWidth="0.8" />
+            <path d="M -30 -32 Q -10 -42 5 -39" stroke="#ffe3a8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.7" />
+        </g>
+    </svg>
+);
+
 // Inline peg: dashed $1 reference + a near-flat wobble line + pulsing dot on hover.
 const PegPreview = () => (
     <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
@@ -123,6 +144,17 @@ const PROJECTS: Project[] = [
             "A Streamlit dashboard tracking ~320 stablecoins by supply, peg deviation, liquidity depth, and reserve freshness, rolled into an explainable weighted risk score. Updated nightly.",
         tags: ["Streamlit", "SQLite", "Python"],
         preview: <PegPreview />,
+    },
+    {
+        title: "Fortune",
+        href: "/fortune",
+        tag: "Daily",
+        accent: "text-warning",
+        glow: "from-warning/20 via-warning/0 to-error/10",
+        description:
+            "A daily fortune cookie with a crack animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. RapidAPI upstream with a local corpus fallback.",
+        tags: ["Framer Motion", "Canvas", "Web Speech"],
+        preview: <CookiePreview />,
     },
 ];
 

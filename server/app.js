@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const plaidRoutes = require("./routes/plaid");
 const spotifyRoutes = require("./routes/spotify");
+const fortuneRoutes = require("./routes/fortune");
 
 const app = express();
 
@@ -33,6 +34,7 @@ if (process.env.PLAID_SETUP_ENABLED === "true") {
 
 app.use("/api", plaidRoutes);
 app.use("/api", spotifyRoutes);
+app.use("/api", fortuneRoutes);
 
 app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 

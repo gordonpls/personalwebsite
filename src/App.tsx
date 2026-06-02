@@ -4,6 +4,7 @@ import { Home } from "./components/Home";
 import Stablecoin from "./components/Stablecoin";
 import Portfolio from "./components/Portfolio";
 import AllocationPage from "./components/AllocationPage";
+import Fortune from "./components/Fortune";
 import NotFound from "./components/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -18,6 +19,7 @@ function App() {
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/allocation" element={<AllocationPage />} />
                 <Route path="/stablecoin" element={<Stablecoin />} />
+                <Route path="/fortune" element={<Fortune />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </BrowserRouter>

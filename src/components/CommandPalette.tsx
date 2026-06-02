@@ -27,6 +27,7 @@ export const CommandPalette = () => {
         { label: "Allocation", hint: "Risk quiz & simulator", path: "/allocation" },
         { label: "Portfolio", hint: "Live holdings & performance", path: "/portfolio" },
         { label: "Stablecoin dashboard", path: "/stablecoin" },
+        { label: "Fortune", hint: "Daily fortune cookie", path: "/fortune" },
         { label: "Toggle light / dark", action: toggleTheme },
     ];
 
