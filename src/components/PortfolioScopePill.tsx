@@ -26,7 +26,7 @@ export const PortfolioScopePill = ({
             title="Click to switch portfolio"
             className="btn btn-sm btn-outline normal-case font-normal gap-2"
         >
-            <span className="text-[10px] uppercase tracking-widest text-base-content/50 font-semibold">Showing</span>
+            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Showing</span>
             <span className="font-semibold text-base-content">{current}</span>
             <svg width="11" height="11" viewBox="0 0 10 10" className="opacity-80" aria-hidden="true">
                 <path

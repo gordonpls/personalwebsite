@@ -253,11 +253,10 @@ export const PortfolioAnalytics = ({
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        {/* Single column on lg (narrow rail → no truncation), two
-                            on mobile/tablet where the card is full-width. Each row
-                            also carries a native title= so any remaining truncation
-                            still surfaces the full name on hover. */}
-                        <div className="grid grid-cols-2 lg:grid-cols-1 gap-x-3 gap-y-1 mt-3 text-xs shrink-0">
+                        {/* Two columns at every breakpoint so the donut keeps room
+                            to breathe. Long labels truncate; each row carries a
+                            native title= so the full name + share appears on hover. */}
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs shrink-0">
                             {slices.map((s, i) => (
                                 <div key={s.name} className="flex items-center gap-1.5 min-w-0" title={`${s.name} · ${s.value.toFixed(1)}%`}>
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
