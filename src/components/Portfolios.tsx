@@ -67,7 +67,7 @@ export const Portfolios = () => {
 
             {/* Holdings (left) + selected holding detail (right) */}
             <div className="flex flex-col lg:flex-row gap-4 lg:h-[34rem]">
-                <div className="w-full lg:w-80 lg:shrink-0 lg:h-full">
+                <div className="w-full lg:w-96 lg:shrink-0 lg:h-full">
                     <Holdings portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
                 </div>
                 <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">

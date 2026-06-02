@@ -10,6 +10,9 @@ export interface Holding {
     returnPct: number | null;  // total return since purchase (cost basis); null if unavailable
 }
 
+interface Meta { type?: string; name?: string; logo?: string }
+type MetaMap = Record<string, Meta>;
+
 interface HoldingsProps {
     portfolio?: string;  // when set, show only this portfolio (weights renormalized within it)
     title?: string;
@@ -17,8 +20,68 @@ interface HoldingsProps {
     onSelect?: (h: Holding) => void;    // row click; also auto-selects the first row
 }
 
+// ETF issuer detection by name keyword → domain we can pull a favicon from.
+// Order matters when issuer names overlap (e.g. "iShares MSCI" should hit
+// BlackRock/iShares before any generic "MSCI" rule).
+const ETF_ISSUERS: { test: RegExp; domain: string }[] = [
+    { test: /\bvanguard\b/i, domain: "vanguard.com" },
+    { test: /\b(ishares|blackrock)\b/i, domain: "ishares.com" },
+    { test: /\b(spdr|state street)\b/i, domain: "ssga.com" },
+    { test: /\bschwab\b/i, domain: "schwab.com" },
+    { test: /\binvesco\b/i, domain: "invesco.com" },
+    { test: /\bvaneck\b/i, domain: "vaneck.com" },
+    { test: /\bfidelity\b/i, domain: "fidelity.com" },
+    { test: /\bpacer\b/i, domain: "paceretfs.com" },
+    { test: /\bproshares\b/i, domain: "proshares.com" },
+    { test: /\bwisdomtree\b/i, domain: "wisdomtree.com" },
+    { test: /\bjpmorgan\b/i, domain: "jpmorgan.com" },
+    { test: /\bglobal x\b/i, domain: "globalxetfs.com" },
+];
+
+function getLogoUrl(ticker: string | null, meta?: Meta): string | null {
+    // Stocks: Finnhub usually has a logo and we bake it into holdingsMeta.json.
+    if (meta?.logo) return meta.logo;
+    // ETFs: identify the issuer from the fund name → favicon via Google.
+    const name = meta?.name ?? "";
+    for (const issuer of ETF_ISSUERS) {
+        if (issuer.test.test(name)) {
+            return `https://www.google.com/s2/favicons?domain=${issuer.domain}&sz=128`;
+        }
+    }
+    // Last-ditch: Finnhub's stock-logo bucket. May 404 for ETFs; the <Logo />
+    // component swaps to a letter chip on error.
+    return ticker
+        ? `https://static2.finnhub.io/file/publicdatany/finnhubimage/stock_logo/${ticker}.png`
+        : null;
+}
+
+const Logo = ({ ticker, meta }: { ticker: string | null; meta?: Meta }) => {
+    const [failed, setFailed] = useState(false);
+    const url = getLogoUrl(ticker, meta);
+    if (!url || failed) {
+        return (
+            <div
+                className="size-10 rounded-box bg-base-200 border border-base-300 flex items-center justify-center text-[10px] font-bold text-base-content/60"
+                aria-hidden="true"
+            >
+                {ticker ? ticker.slice(0, 4) : "—"}
+            </div>
+        );
+    }
+    return (
+        <img
+            className="size-10 rounded-box bg-base-100 border border-base-300 object-contain p-1"
+            src={url}
+            alt=""
+            loading="lazy"
+            onError={() => setFailed(true)}
+        />
+    );
+};
+
 export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
+    const [meta, setMeta] = useState<MetaMap>({});
     const [error, setError] = useState(false);
 
     useEffect(() => {
@@ -30,6 +93,13 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             })
             .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
             .catch(() => { if (!cancelled) setError(true); });
+
+        // Logos + names live here. Failing this fetch just means letter chips.
+        fetch("/holdingsMeta.json", { cache: "no-cache" })
+            .then((r) => r.ok ? r.json() : Promise.reject())
+            .then((d) => { if (!cancelled) setMeta(d.meta ?? {}); })
+            .catch(() => { /* letter chips fallback */ });
+
         return () => { cancelled = true; };
     }, []);
 
@@ -50,9 +120,9 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
     }, [rows, selectedTicker, onSelect]);
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col h-full">
+        <div className="bg-base-100 border border-base-300 rounded-2xl flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <div className="shrink-0 mb-3">
+            <div className="shrink-0 p-5 pb-3">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
                 <p className="text-sm text-base-content/60 mt-0.5 flex items-center gap-2">
                     <span className="relative flex h-2 w-2" aria-hidden="true">
@@ -65,43 +135,43 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             </div>
 
             {error ? (
-                <p className="text-sm text-base-content/50 py-8 text-center">Holdings are currently unavailable.</p>
+                <p className="text-sm text-base-content/50 py-8 text-center px-5">Holdings are currently unavailable.</p>
             ) : !holdings ? (
-                <div className="space-y-2" aria-hidden="true">
+                <div className="space-y-2 px-5 pb-5" aria-hidden="true">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="h-9 rounded bg-base-200 animate-pulse" />
+                        <div key={i} className="h-14 rounded-box bg-base-200 animate-pulse" />
                     ))}
                 </div>
             ) : rows.length === 0 ? (
-                <p className="text-sm text-base-content/50 py-8 text-center">No holdings to display.</p>
+                <p className="text-sm text-base-content/50 py-8 text-center px-5">No holdings to display.</p>
             ) : (
-                <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="pr-4">
-                    <table className="table table-xs table-pin-rows w-full table-fixed">
-                        <thead>
-                            <tr className="text-base-content/50 align-bottom">
-                                <th className="pl-0 align-bottom">Holding</th>
-                                <th className="text-right w-14 align-bottom">Weight</th>
-                                <th className="text-right pr-0 w-28 whitespace-nowrap align-bottom">Total Return</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((h, i) => (
-                                <tr
+                <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="px-2 pb-2">
+                    <ul className="list">
+                        {/* Column-header row using the same grid template as list-row */}
+                        <li className="list-row !py-1 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold">
+                            <div aria-hidden="true" className="size-10" />
+                            <div>Holding</div>
+                            <div className="text-right">Weight</div>
+                            <div className="text-right">Return</div>
+                        </li>
+                        {rows.map((h, i) => {
+                            const isSelected = selectedTicker === h.ticker;
+                            return (
+                                <li
                                     key={`${h.ticker ?? h.name}-${i}`}
                                     onClick={() => onSelect?.(h)}
-                                    aria-selected={selectedTicker === h.ticker}
-                                    className={`cursor-pointer transition-colors ${selectedTicker === h.ticker ? "bg-primary/10" : "hover:bg-base-200/40"}`}
+                                    aria-selected={isSelected}
+                                    className={`list-row cursor-pointer transition-colors ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
                                 >
-                                    <td className="pl-0 pr-2">
+                                    <Logo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />
+                                    <div className="min-w-0">
                                         <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
-                                        <div className="text-xs text-base-content/50 truncate">{h.name}</div>
-                                    </td>
-                                    <td className="text-right w-14 align-middle">
-                                        <span className="font-medium text-base-content tabular-nums">
-                                            {h.weightPct.toFixed(1)}%
-                                        </span>
-                                    </td>
-                                    <td className="text-right pr-0 w-28 align-middle">
+                                        <div className="text-[11px] uppercase font-semibold opacity-60 truncate" title={h.name}>{h.name}</div>
+                                    </div>
+                                    <div className="text-right tabular-nums font-medium text-base-content shrink-0">
+                                        {h.weightPct.toFixed(1)}%
+                                    </div>
+                                    <div className="text-right shrink-0">
                                         {h.returnPct == null ? (
                                             <span className="text-base-content/30" title="Cost basis unavailable">—</span>
                                         ) : (
@@ -109,11 +179,11 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                                                 {h.returnPct > 0 ? "+" : ""}{h.returnPct.toFixed(1)}%
                                             </span>
                                         )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </ScrollArea>
             )}
         </div>

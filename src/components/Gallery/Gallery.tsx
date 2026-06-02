@@ -6,7 +6,7 @@ import { IMAGES } from "./GalleryImages";
 // can pick the smallest adequate thumbnail from srcset.
 const GRID_SIZES = "(min-width:1280px) 20vw, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw";
 
-const CATEGORIES = ["All", "Denver", "Thailand", "Vegas", "New York"];
+const CATEGORIES = ["All", "Denver", "Thailand", "Vegas", "New York", "Japan"];
 
 // Page size per breakpoint: kept a multiple of that breakpoint's column count so
 // every row stays full (no lonely thumbnail), and smaller on mobile so the
@@ -171,6 +171,14 @@ export const Gallery = () => {
                 ))}
             </div>
 
+            {/* ── "Coming Soon" placeholder for categories with no photos yet ── */}
+            {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-10">
+                    <div className="skeleton h-32 w-32"></div>
+                    <p className="text-lg font-semibold text-base-content/70">Coming Soon</p>
+                </div>
+            ) : (
+            <>
             {/* ── Image grid ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                 {paginated.map((img, i) => (
@@ -243,6 +251,8 @@ export const Gallery = () => {
                         >»</button>
                     </div>
                 </div>
+            )}
+            </>
             )}
 
             {/* ── Lightbox ── */}
