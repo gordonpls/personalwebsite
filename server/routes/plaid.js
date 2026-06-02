@@ -117,9 +117,7 @@ router.post("/link/token/exchange", async (req, res) => {
     try {
         const response = await plaidClient.itemPublicTokenExchange({ public_token });
         const { access_token, item_id } = response.data;
-        // Log once so you can copy it — then store in env, never log again
-        console.log("[SETUP] access_token:", access_token);
-        console.log("[SETUP] item_id:", item_id);
+        // Returned in the JSON body for the operator to copy; never logged.
         res.json({ access_token, item_id });
     } catch (err) {
         console.error("[link/token/exchange]", err.response?.data ?? err.message);

@@ -154,3 +154,20 @@
 /* Spotify "now playing" equalizer bars. */
 @keyframes eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
 .eq-bar { width: 2px; height: 100%; background: currentColor; border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
+
+/* Respect prefers-reduced-motion: kill the decorative animations so the page
+   still feels alive (transitions) without anything looping in the background. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+    .group:hover .project-shimmer,
+    .group:hover .project-line,
+    .project-peg-pulse,
+    .eq-bar,
+    .typing-greeting-refined .caret.idle {
+        animation: none !important;
+    }
+}

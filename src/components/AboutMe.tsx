@@ -17,7 +17,7 @@ const PULL_QUOTE = "Even when life takes sharp, unexpected turns, the good can s
 
 export const AboutMe = () => {
     return (
-        <div className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 lg:p-14 scroll-mt-24" id="about">
+        <div className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 lg:p-14">
             <div className="max-w-5xl mx-auto">
                 {/* Eyebrow */}
                 <div className="flex items-center gap-3 mb-8 lg:mb-12">
@@ -29,7 +29,7 @@ export const AboutMe = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-8 lg:gap-14">
                     {/* Prose */}
                     <article
-                        className="space-y-6 text-[17px] md:text-lg leading-[1.75] text-base-content/85 order-2 lg:order-1"
+                        className="space-y-6 text-[17px] md:text-lg leading-[1.75] text-base-content/85 order-2 lg:order-1 lg:max-w-prose"
                         style={{ fontFamily: SERIF }}
                     >
                         {/* Lead paragraph with drop cap */}
@@ -67,13 +67,14 @@ export const AboutMe = () => {
 
                     {/* Right rail: portrait */}
                     <aside className="lg:sticky lg:top-24 self-start order-1 lg:order-2">
-                        <div className="relative">
+                        <div className="relative w-44 h-44 lg:w-72 lg:h-72 mx-auto lg:mx-0">
+                            {/* Primary-tinted offset block sits behind the portrait but above the section bg */}
+                            <div aria-hidden="true" className="absolute -bottom-3 -right-3 hidden lg:block h-24 w-24 rounded-2xl bg-primary/20" />
                             <img
                                 src={avatar2}
-                                alt="Gordon Zhong"
-                                className="w-44 h-44 lg:w-72 lg:h-72 mx-auto lg:mx-0 rounded-2xl object-cover shadow-xl ring-1 ring-base-300"
+                                alt="Portrait of Gordon Zhong"
+                                className="relative w-full h-full rounded-2xl object-cover shadow-xl ring-1 ring-base-300"
                             />
-                            <div className="absolute -bottom-3 -right-3 hidden lg:block h-24 w-24 rounded-2xl bg-primary/15 -z-10" />
                         </div>
                     </aside>
                 </div>

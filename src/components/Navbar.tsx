@@ -13,17 +13,18 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-gray-300 shadow-sm">
+    <div className="navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-base-300 shadow-sm">
       {/* Navbar Start with Mobile Dropdown */}
       <div className="navbar-start">
         <div className="dropdown md:hidden">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+          <div tabIndex={0} role="button" aria-label="Open navigation menu" aria-haspopup="true" className="btn btn-ghost btn-circle">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -35,13 +36,13 @@ export const Navbar = () => {
           </div>
           <ul
             tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow border border-base-300"
           >
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
             <li><a className="link link-hover link-info" href="/#about">About</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
             <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
+            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           </ul>
         </div>
       </div>
@@ -52,8 +53,8 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
           <li><a className="link link-hover link-info" href="/#about">About</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-          <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
+          <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
         </ul>
       </div>
 
