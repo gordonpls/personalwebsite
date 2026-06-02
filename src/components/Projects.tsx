@@ -109,7 +109,7 @@ const PROJECTS: Project[] = [
         accent: "text-success",
         glow: "from-success/15 via-success/0 to-primary/10",
         description:
-            "My live brokerage holdings: heatmap, dividend-adjusted performance vs the S&P 500, sector allocation, and per-holding analytics. Backed by a weekly bake job.",
+            "My live brokerage holdings: heatmap, dividend-adjusted performance vs the S&P 500, sector allocation, and per-holding analytics. Powered by a scheduled Plaid ingestion pipeline with a pre-computed serving layer.",
         tags: ["Plaid", "Recharts", "Express"],
         preview: <LinePreview />,
     },
@@ -169,6 +169,50 @@ const ProjectCard = ({ p }: { p: Project }) => (
     </a>
 );
 
+// Featured hero: the live Portfolio app gets a wide card at the top of the
+// section (line chart on one side, copy + CTA on the other); the remaining
+// projects sit in a smaller grid below.
+const portfolio = PROJECTS.find((p) => p.title === "Portfolio") as Project;
+const otherProjects = PROJECTS.filter((p) => p.title !== "Portfolio");
+
+const FeaturedHero = () => (
+    <a
+        href={portfolio.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+        <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${portfolio.glow}`} />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+            {/* Preview band */}
+            <div className="relative h-56 lg:h-auto bg-gradient-to-br from-base-200 to-base-300 overflow-hidden border-b lg:border-b-0 lg:border-r border-base-300">
+                <div className="absolute inset-0 p-6"><LinePreview /></div>
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="project-shimmer absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-base-content/5 to-transparent" />
+                </div>
+            </div>
+            {/* Body */}
+            <div className="p-6 md:p-8 relative flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>{portfolio.tag}</span>
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold text-base-content group-hover:text-primary transition-colors">Every stock I hold, out in the open</h3>
+                <p className="text-sm md:text-base text-base-content/70 leading-relaxed mt-2">{portfolio.description}</p>
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                    {portfolio.tags.map((t) => (
+                        <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
+                    ))}
+                </div>
+                <span className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold text-primary">
+                    Open the live dashboard
+                    <span className="transition-transform group-hover:translate-x-1">↗</span>
+                </span>
+            </div>
+        </div>
+    </a>
+);
+
 export const Projects = () => (
     <section className="space-y-5">
         <div className="flex items-end flex-wrap gap-x-6 gap-y-2">
@@ -181,8 +225,10 @@ export const Projects = () => (
             </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
-            {PROJECTS.map((p) => <ProjectCard key={p.title} p={p} />)}
+        <FeaturedHero />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+            {otherProjects.map((p) => <ProjectCard key={p.title} p={p} />)}
         </div>
     </section>
 );
