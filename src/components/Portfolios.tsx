@@ -80,7 +80,7 @@ export const Portfolios = () => {
                 scroll back up to the global tabs to see or change the scope. The
                 row is sized so the donut + Risk cards split evenly. */}
             <div className="flex flex-col lg:flex-row gap-4 lg:h-[36rem]">
-                <div className="w-full lg:w-80 lg:shrink-0 flex flex-col gap-4 lg:h-full">
+                <div className="w-full lg:w-96 lg:shrink-0 flex flex-col gap-4 lg:h-full">
                     <PortfolioAnalytics
                         portfolio={portfolioFilter}
                         scopeLabel={active}

@@ -38,6 +38,30 @@ const ETF_ISSUERS: { test: RegExp; domain: string }[] = [
     { test: /\bglobal x\b/i, domain: "globalxetfs.com" },
 ];
 
+// Strip the boilerplate issuer/family wrapper from fund names so the list-row
+// secondary line shows the actual fund identifier (e.g. "Total Stock Market"
+// instead of "Vanguard Index Funds - Vanguard Total Stock Market ETF Shares").
+// The full unstripped name still appears in HoldingsMeta on the right.
+function cleanFundName(raw: string | null | undefined): string {
+    if (!raw) return raw ?? "";
+    let s = raw;
+    // Wrapper entities like "Vanguard Index Funds -" or "iShares Trust -"
+    s = s.replace(
+        /^(Vanguard Index Funds|Vanguard World Fund|Vanguard Bond Index Funds|Vanguard Tax-Managed Funds|iShares Trust|iShares,?\s*Inc\.?|iShares,?\s*Inc|SPDR Series Trust|SPDR Index Shares Funds|VanEck ETF Trust|Schwab Strategic Trust)\s*[-:]\s*/i,
+        "",
+    );
+    // Plain brand prefix when it's the first word (e.g. "Vanguard Total ...")
+    s = s.replace(
+        /^(Vanguard|iShares|Schwab|Invesco|VanEck|SPDR|State Street|BlackRock|Pacer|WisdomTree|Fidelity|JPMorgan|Global X|ProShares)\s+/i,
+        "",
+    );
+    // Common boilerplate suffixes
+    s = s.replace(/\s+ETF Shares$/i, "");
+    s = s.replace(/\s+ETF$/i, "");
+    s = s.replace(/\s+Index Fund$/i, "");
+    return s.trim() || raw;
+}
+
 function getLogoUrl(ticker: string | null, meta?: Meta): string | null {
     // Stocks: Finnhub usually has a logo and we bake it into holdingsMeta.json.
     if (meta?.logo) return meta.logo;
@@ -61,7 +85,7 @@ const Logo = ({ ticker, meta }: { ticker: string | null; meta?: Meta }) => {
     if (!url || failed) {
         return (
             <div
-                className="size-10 rounded-box bg-base-200 border border-base-300 flex items-center justify-center text-[10px] font-bold text-base-content/60"
+                className="size-8 rounded-md bg-base-200 border border-base-300 flex items-center justify-center text-[9px] font-bold text-base-content/60 shrink-0"
                 aria-hidden="true"
             >
                 {ticker ? ticker.slice(0, 4) : "—"}
@@ -70,7 +94,7 @@ const Logo = ({ ticker, meta }: { ticker: string | null; meta?: Meta }) => {
     }
     return (
         <img
-            className="size-10 rounded-box bg-base-100 border border-base-300 object-contain p-1"
+            className="size-8 rounded-md bg-base-100 border border-base-300 object-contain p-0.5 shrink-0"
             src={url}
             alt=""
             loading="lazy"
@@ -148,30 +172,31 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                 <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="px-2 pb-2">
                     <ul className="list">
                         {/* Column-header row using the same grid template as list-row */}
-                        <li className="list-row !py-1 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold">
-                            <div aria-hidden="true" className="size-10" />
+                        <li className="list-row !py-1 !px-3 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold items-center">
+                            <div aria-hidden="true" className="size-8" />
                             <div>Holding</div>
                             <div className="text-right">Weight</div>
                             <div className="text-right">Return</div>
                         </li>
                         {rows.map((h, i) => {
                             const isSelected = selectedTicker === h.ticker;
+                            const displayName = cleanFundName(h.name);
                             return (
                                 <li
                                     key={`${h.ticker ?? h.name}-${i}`}
                                     onClick={() => onSelect?.(h)}
                                     aria-selected={isSelected}
-                                    className={`list-row cursor-pointer transition-colors ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
+                                    className={`list-row !py-1.5 !px-3 cursor-pointer transition-colors items-center ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
                                 >
                                     <Logo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />
                                     <div className="min-w-0">
-                                        <div className="font-semibold text-base-content leading-tight">{h.ticker ?? "—"}</div>
-                                        <div className="text-[11px] uppercase font-semibold opacity-60 truncate" title={h.name}>{h.name}</div>
+                                        <div className="font-semibold text-base-content leading-tight text-sm">{h.ticker ?? "—"}</div>
+                                        <div className="text-[10.5px] uppercase font-semibold opacity-60 truncate leading-tight" title={h.name}>{displayName}</div>
                                     </div>
-                                    <div className="text-right tabular-nums font-medium text-base-content shrink-0">
+                                    <div className="text-right tabular-nums font-medium text-base-content shrink-0 text-sm">
                                         {h.weightPct.toFixed(1)}%
                                     </div>
-                                    <div className="text-right shrink-0">
+                                    <div className="text-right shrink-0 text-sm">
                                         {h.returnPct == null ? (
                                             <span className="text-base-content/30" title="Cost basis unavailable">—</span>
                                         ) : (
