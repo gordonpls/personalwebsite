@@ -8,6 +8,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import { PortfolioScopePill } from "./PortfolioScopePill";
 
 interface Holding {
     portfolio: string;
@@ -226,7 +227,19 @@ const XTick = ({ x = 0, y = 0, payload, index = 0, range, lastIndex }: XTickProp
     );
 };
 
-export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
+export const HoldingsPerformance = ({
+    title,
+    portfolio,
+    scopeLabel,
+    onScopeChange,
+    scopeOptions,
+}: {
+    title?: string;
+    portfolio?: string;
+    scopeLabel?: string;
+    onScopeChange?: (next: string) => void;
+    scopeOptions?: readonly string[];
+} = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [totalReturnPct, setTotalReturnPct] = useState<number | null>(null); // cost-basis return since purchase (all-time)
     const [prices, setPrices] = useState<PriceMap | null>(null);
@@ -250,12 +263,40 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
         return () => { cancelled = true; };
     }, []);
 
+    // Filter to the selected portfolio (or "All" when undefined) and renormalize
+    // weights within the filtered set so the chart line stays a fair % return
+    // for that scope.
+    const filteredHoldings = useMemo(() => {
+        if (!holdings) return null;
+        const list = portfolio ? holdings.filter((h) => h.portfolio === portfolio) : holdings;
+        const sum = list.reduce((s, h) => s + h.weightPct, 0);
+        return sum > 0
+            ? list.map((h) => ({ ...h, weightPct: (h.weightPct / sum) * 100 }))
+            : list;
+    }, [holdings, portfolio]);
+
+    // "All" range header: at full scope use the backend's reported global
+    // totalReturnPct (cost-basis HPR). When scoped to a single portfolio the
+    // backend doesn't carry a per-portfolio aggregate, so compute it here as
+    // the weight-renormalized average of each holding's returnPct.
+    const scopedTotalReturnPct = useMemo<number | null>(() => {
+        if (!filteredHoldings) return null;
+        if (!portfolio) return totalReturnPct;
+        let s = 0, w = 0;
+        for (const h of filteredHoldings) {
+            if (h.returnPct == null) continue;
+            s += h.weightPct * h.returnPct;
+            w += h.weightPct;
+        }
+        return w > 0 ? Math.round((s / w) * 100) / 100 : null;
+    }, [filteredHoldings, portfolio, totalReturnPct]);
+
     const { data, coveragePct } = useMemo(
         () => {
-            if (!holdings || !prices) return { data: [], coveragePct: 0, asOfLast: null };
-            return range === "All" ? buildAllSeries(holdings, prices) : buildSeries(range, holdings, prices);
+            if (!filteredHoldings || !prices) return { data: [], coveragePct: 0, asOfLast: null };
+            return range === "All" ? buildAllSeries(filteredHoldings, prices) : buildSeries(range, filteredHoldings, prices);
         },
-        [range, holdings, prices],
+        [range, filteredHoldings, prices],
     );
 
     const last = data[data.length - 1];
@@ -268,13 +309,18 @@ export const HoldingsPerformance = ({ title }: { title?: string } = {}) => {
         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
             {/* Header */}
             <div className="flex items-start justify-between flex-wrap gap-3">
-                <div>
-                    <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Performance"}</h2>
+                        {scopeLabel && onScopeChange && scopeOptions && (
+                            <PortfolioScopePill current={scopeLabel} onChange={onScopeChange} options={scopeOptions} />
+                        )}
+                    </div>
                     <p className="text-sm text-base-content/60 mt-0.5">
                         {error ? "Performance is currently unavailable."
-                            : range === "All" && totalReturnPct != null
-                                ? <><span className={`font-semibold ${totalReturnPct >= 0 ? "text-success" : "text-error"}`}>
-                                        {totalReturnPct > 0 ? "+" : ""}{totalReturnPct}%
+                            : range === "All" && scopedTotalReturnPct != null
+                                ? <><span className={`font-semibold ${scopedTotalReturnPct >= 0 ? "text-success" : "text-error"}`}>
+                                        {scopedTotalReturnPct > 0 ? "+" : ""}{scopedTotalReturnPct}%
                                     </span>{" "}all time</>
                                 : last
                                     ? <><span className={`font-semibold ${last.value >= 0 ? "text-success" : "text-error"}`}>

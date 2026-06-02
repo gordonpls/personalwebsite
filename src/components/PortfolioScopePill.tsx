@@ -8,12 +8,17 @@ export const PortfolioScopePill = ({
     current,
     onChange,
     options,
+    align = "end",
 }: {
     current: string;
     onChange: (next: string) => void;
     options: readonly string[];
+    // Which edge the menu aligns to. Use "start" when the pill sits near the
+    // left edge of a narrow column so the menu opens rightward and isn't
+    // clipped by the page's overflow-x-hidden.
+    align?: "start" | "end";
 }) => (
-    <div className="dropdown dropdown-end shrink-0">
+    <div className={`dropdown shrink-0 ${align === "end" ? "dropdown-end" : ""}`}>
         <div
             tabIndex={0}
             role="button"

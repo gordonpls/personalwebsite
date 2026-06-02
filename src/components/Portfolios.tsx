@@ -75,10 +75,11 @@ export const Portfolios = () => {
                 </div>
             </div>
 
-            {/* Allocation donut + risk stats (left) beside the heatmap (right) — both
-                tab-scoped, with their own inline scope picker so you don't have to
-                scroll back up to the global tabs to see or change the scope. */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:h-[32rem]">
+            {/* Allocation donut + risk stats (left) beside the heatmap (right) —
+                all three tab-scoped, with inline scope pickers so you don't have to
+                scroll back up to the global tabs to see or change the scope. The
+                row is sized so the donut + Risk cards split evenly. */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:h-[36rem]">
                 <div className="w-full lg:w-80 lg:shrink-0 flex flex-col gap-4 lg:h-full">
                     <PortfolioAnalytics
                         portfolio={portfolioFilter}
@@ -98,9 +99,15 @@ export const Portfolios = () => {
                 </div>
             </div>
 
-            {/* Overall performance (whole portfolio always — pinned at the bottom
-                so it's visually separated from the tab-scoped views above). */}
-            <HoldingsPerformance title="Overall Performance" />
+            {/* Overall performance: now also tab-scoped, with its own pill in the
+                header. Pinned at the bottom as the page's "summary" view. */}
+            <HoldingsPerformance
+                title="Performance"
+                portfolio={portfolioFilter}
+                scopeLabel={active}
+                onScopeChange={changeTab}
+                scopeOptions={SCOPE_OPTIONS}
+            />
         </div>
     );
 };
