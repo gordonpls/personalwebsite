@@ -209,3 +209,26 @@ Caveats:
   have to relink through `/link/token/create` + `/link/token/exchange`.
 - Disable `PLAID_SETUP_ENABLED` after the cleanup so the admin endpoints
   return 404 in production again.
+
+### Batch cleanup with the Dashboard CSV
+
+For one-off batch triage (e.g. "I exported a CSV of all my tokens from the
+Plaid Dashboard and want to see which are duplicates"), use
+[server/scripts/inspect-tokens.mjs](scripts/inspect-tokens.mjs) — a CLI tool
+that hits `accountsGet` + `institutionsGetById` for each token in parallel
+and prints a per-institution report. It does not touch the catalog file, so
+it's safe to run against raw tokens before you decide what to keep.
+
+```sh
+# Inspect every access_token in the CSV
+node server/scripts/inspect-tokens.mjs tokens.csv
+
+# It prints suggested removals at the end. Pass those tokens to --remove:
+node server/scripts/inspect-tokens.mjs --remove \
+  access-production-… \
+  access-production-…
+```
+
+The removal step prompts for `YES` before calling `itemRemove`. Dead tokens
+(`ITEM_NOT_FOUND` / `INVALID_ACCESS_TOKEN`) are listed separately — Plaid
+has already cleaned those up; no action needed.
