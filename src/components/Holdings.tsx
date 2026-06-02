@@ -173,8 +173,12 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                     <ul className="list">
                         {/* Column-header row using the same grid template as list-row.
                             "Holding" spans the logo + name columns so it sits flush
-                            left with the row content below. */}
-                        <li className="list-row !py-1 !px-3 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold items-center">
+                            left with the row content below. The fixed-width Weight
+                            and Total Return tracks align every row's right edge. */}
+                        <li
+                            className="list-row !py-1 !px-3 !bg-transparent text-[10px] uppercase tracking-widest text-base-content/40 font-semibold items-center"
+                            style={{ gridTemplateColumns: "auto minmax(0, 1fr) 3.5rem 5.5rem" }}
+                        >
                             <div className="col-span-2">Holding</div>
                             <div className="text-right">Weight</div>
                             <div className="text-right whitespace-nowrap">Total Return</div>
@@ -188,6 +192,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                                     onClick={() => onSelect?.(h)}
                                     aria-selected={isSelected}
                                     className={`list-row !py-1.5 !px-3 cursor-pointer transition-colors items-center ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
+                                    style={{ gridTemplateColumns: "auto minmax(0, 1fr) 3.5rem 5.5rem" }}
                                 >
                                     <Logo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />
                                     <div className="min-w-0">

@@ -189,17 +189,38 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
                         {/* Sparkline */}
                         <Sparkline series={ticker ? prices[ticker] : undefined} />
 
-                        {/* 52-week range (immediately under the sparkline so the
-                            price line and its high/low context read together) */}
+                        {/* 52-week range. Filled progress (low → current) lands in
+                            primary; the current point is a large primary dot with a
+                            base-100 border and a soft primary halo so it pops on
+                            both light and dark themes. The current price is labeled
+                            above the dot so the marker is unambiguously "you are
+                            here." */}
                         {hasRange && (
-                            <div>
-                                <div className="flex justify-between text-xs text-base-content/50 mb-1.5">
+                            <div className="pt-3">
+                                <div className="flex justify-between text-xs text-base-content/50 mb-2">
                                     <span>52-week range</span>
+                                    {meta.price != null && (
+                                        <span className="font-medium text-base-content/70 tabular-nums">${meta.price.toFixed(2)}</span>
+                                    )}
                                 </div>
-                                <div className="relative h-1.5 rounded-full bg-base-300">
-                                    {pos != null && <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-base-100 shadow" style={{ left: `calc(${pos}% - 6px)` }} />}
+                                <div className="relative h-2 rounded-full bg-base-300 overflow-visible">
+                                    {pos != null && (
+                                        <>
+                                            {/* Filled bar: low → current */}
+                                            <div
+                                                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary/40 to-primary"
+                                                style={{ width: `${pos}%` }}
+                                            />
+                                            {/* Marker dot with halo */}
+                                            <div
+                                                className="absolute top-1/2 -translate-y-1/2 z-10 w-4 h-4 rounded-full bg-primary border-[3px] border-base-100 shadow-md ring-2 ring-primary/25"
+                                                style={{ left: `calc(${pos}% - 0.5rem)` }}
+                                                aria-label={`Current price is ${pos.toFixed(0)}% of the 52-week range`}
+                                            />
+                                        </>
+                                    )}
                                 </div>
-                                <div className="flex justify-between text-[11px] text-base-content/40 mt-1">
+                                <div className="flex justify-between text-[11px] text-base-content/40 mt-1.5 tabular-nums">
                                     <span>${meta.week52Low!.toFixed(2)}</span>
                                     <span>${meta.week52High!.toFixed(2)}</span>
                                 </div>
