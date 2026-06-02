@@ -110,7 +110,6 @@ export default function Fortune() {
                             isOpen={state.kind === "open"}
                             isAnimating={state.kind === "cracking"}
                             onCrack={crack}
-                            fortune={state.kind === "open" ? state.data.message : null}
                         />
 
                         {/* The fortune slip & details */}
@@ -123,20 +122,15 @@ export default function Fortune() {
                                     transition={{ duration: 0.5, delay: 0.55 }}
                                     className="space-y-8"
                                 >
-                                    {/* Big readable fortune (the slip text in the cookie is small) */}
-                                    <figure className="text-center px-4">
-                                        <blockquote
-                                            className="text-xl md:text-2xl leading-snug italic text-base-content max-w-xl mx-auto"
-                                            style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
-                                        >
-                                            <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
-                                            {state.data.message}
-                                            <span aria-hidden="true" className="text-primary/60 pl-0.5">”</span>
-                                        </blockquote>
-                                        <figcaption className="text-[10px] uppercase tracking-widest text-base-content/40 mt-3">
-                                            Source: {state.data.source === "rapidapi" ? "live oracle" : "house corpus"}
-                                        </figcaption>
-                                    </figure>
+                                    {/* Big readable fortune (the slip in the cookie is decorative) */}
+                                    <blockquote
+                                        className="text-center text-xl md:text-2xl leading-snug italic text-base-content max-w-xl mx-auto px-4"
+                                        style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
+                                    >
+                                        <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
+                                        {state.data.message}
+                                        <span aria-hidden="true" className="text-primary/60 pl-0.5">”</span>
+                                    </blockquote>
 
                                     <LuckyRow lucky={state.data.lucky} />
 
