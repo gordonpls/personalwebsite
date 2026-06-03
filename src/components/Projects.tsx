@@ -82,9 +82,9 @@ const CookiePreview = () => (
                 <stop offset="1" stopColor="#B97623" />
             </linearGradient>
         </defs>
-        {/* Cookie's geometric center is ~(-2, -5); scale 0.85 nearly fills
-            the viewBox vertically so the cookie reads bigger in wide cards. */}
-        <g transform="translate(101.7 64.25) scale(0.85)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+        {/* Cookie's geometric center is ~(-2, -5); scale 0.72 leaves enough
+            margin that the triangular tips don't kiss the viewBox top edge. */}
+        <g transform="translate(101.4 63.6) scale(0.72)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
             {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
             <path
                 d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
@@ -201,12 +201,7 @@ export const ProjectCard = ({ p }: { p: Project }) => (
         {/* Body */}
         <div className="p-5 relative flex-1 flex flex-col">
             <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                <h3 className="text-lg font-bold text-base-content group-hover:text-primary transition-colors flex items-center gap-2">
-                    {p.title === PORTFOLIO_TITLE && (
-                        <span className="badge badge-xs badge-primary text-[9px] uppercase tracking-widest font-semibold">★ Featured</span>
-                    )}
-                    {p.title}
-                </h3>
+                <h3 className="text-lg font-bold text-base-content group-hover:text-primary transition-colors">{p.title}</h3>
                 <span className={`text-[10px] uppercase tracking-widest font-semibold ${p.accent}`}>{p.tag}</span>
             </div>
             <p className="text-sm text-base-content/70 leading-snug line-clamp-3">{p.description}</p>
@@ -219,9 +214,49 @@ export const ProjectCard = ({ p }: { p: Project }) => (
     </a>
 );
 
-// Portfolio is still the "featured" project but it now rides inside the
-// carousel alongside the others; the title-row badge marks it.
-const PORTFOLIO_TITLE = "Portfolio";
+// Featured hero: the live Portfolio app gets a wide card at the top of the
+// section (line chart on one side, copy + CTA on the other); the remaining
+// projects sit in a carousel below.
+const portfolio = PROJECTS.find((p) => p.title === "Portfolio") as Project;
+const otherProjects = PROJECTS.filter((p) => p.title !== "Portfolio");
+
+const FeaturedHero = () => (
+    <a
+        href={portfolio.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+        <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${portfolio.glow}`} />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+            {/* Preview band */}
+            <div className="relative h-56 lg:h-auto bg-gradient-to-br from-base-200 to-base-300 overflow-hidden border-b lg:border-b-0 lg:border-r border-base-300">
+                <div className="absolute inset-0 p-6"><LinePreview /></div>
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="project-shimmer absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-base-content/5 to-transparent" />
+                </div>
+            </div>
+            {/* Body */}
+            <div className="p-6 md:p-8 relative flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>{portfolio.tag}</span>
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold text-base-content group-hover:text-primary transition-colors">Every stock I hold, out in the open</h3>
+                <p className="text-sm md:text-base text-base-content/70 leading-relaxed mt-2">{portfolio.description}</p>
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                    {portfolio.tags.map((t) => (
+                        <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
+                    ))}
+                </div>
+                <span className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold text-primary">
+                    Open the live dashboard
+                    <span className="transition-transform group-hover:translate-x-1">↗</span>
+                </span>
+            </div>
+        </div>
+    </a>
+);
 
 // Round-robin carousel: auto-scrolls slowly with all cards in a loop. Hover
 // any card pauses the scroll and lifts/expands it. Arrows snap into a
@@ -250,7 +285,7 @@ const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrow
     // Duplicate once so a 50% translate loops seamlessly.
     const items = [...projects, ...projects];
     return (
-        <div className="relative">
+        <div className="relative max-w-4xl mx-auto">
             <div className="overflow-hidden rounded-2xl project-carousel-fade">
                 <div
                     data-paused={paused}
@@ -261,7 +296,7 @@ const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrow
                     {items.map((p, i) => (
                         <div
                             key={`${p.title}-${i}`}
-                            className="flex-shrink-0 w-72 md:w-[22rem] transition-transform duration-300 hover:scale-[1.03] hover:z-10 relative"
+                            className="flex-shrink-0 w-80 md:w-[28rem] transition-transform duration-300 hover:scale-[1.02] hover:z-10 relative"
                         >
                             <ProjectCard p={p} />
                         </div>
@@ -366,6 +401,8 @@ export const Projects = () => (
             </p>
         </div>
 
-        <ProjectsCarousel projects={PROJECTS} />
+        <FeaturedHero />
+
+        <ProjectsCarousel projects={otherProjects} />
     </section>
 );
