@@ -11,13 +11,15 @@ interface CookieSceneProps {
 }
 
 // Right lobe (drawn first; left lobe overlaps it near the center top).
-// Slightly lower top + shorter outer reach gives the asymmetry.
-const RIGHT_LOBE = "M 4 -50 Q 28 -56 50 -36 Q 66 -8 56 22 Q 42 50 14 56 Q -2 56 -4 44 Q 8 0 4 -50 Z";
+// Top point pulled further from center for a wider V valley; sharper
+// triangular angle at the outer-top corner.
+const RIGHT_LOBE = "M 16 -50 Q 30 -62 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z";
 // Left lobe sits on top, slightly taller and reaches a touch further out
 // so the right lobe disappears behind it near the upper center.
-const LEFT_LOBE = "M -2 -54 Q -28 -58 -52 -38 Q -68 -8 -58 24 Q -44 52 -14 58 Q 4 56 0 42 Q -8 0 -2 -54 Z";
-// Curved shadow line inside the cookie suggesting the fold/valley.
-const CREASE = "M -2 -45 Q -10 -10 -2 30 Q 0 44 4 52";
+const LEFT_LOBE = "M -20 -54 Q -32 -64 -52 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z";
+// Curved shadow line inside the cookie suggesting the fold/valley. Starts
+// inside the wider V and narrows as it descends.
+const CREASE = "M -6 -42 Q -10 -10 -2 24 Q 2 44 6 54";
 // Soft inner-glow curves following each lobe's outer face.
 const LEFT_GLOSS = "M -22 -40 Q -40 -22 -50 0";
 const RIGHT_GLOSS = "M 18 -38 Q 36 -20 46 0";
