@@ -296,7 +296,7 @@ const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrow
     // Duplicate once so a 50% translate loops seamlessly.
     const items = [...projects, ...projects];
     return (
-        <div className="relative max-w-5xl mx-auto">
+        <div className="relative max-w-7xl mx-auto">
             <div className="overflow-hidden rounded-2xl project-carousel-fade">
                 <div
                     data-paused={paused}
@@ -354,7 +354,7 @@ const SpotlightCarousel = ({
 
     return (
         <motion.div
-            className="relative max-w-5xl mx-auto"
+            className="relative max-w-7xl mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
@@ -477,7 +477,7 @@ export const Projects = () => (
             </p>
         </div>
 
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
             <FeaturedHero />
         </div>
 
