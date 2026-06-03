@@ -3,7 +3,8 @@
 // gets a hover animation specific to its visualization (donut spins, line
 // re-draws, peg pulses) plus a card-wide lift + "open in new tab" hint.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Project {
     title: string;
@@ -82,9 +83,10 @@ const CookiePreview = () => (
                 <stop offset="1" stopColor="#B97623" />
             </linearGradient>
         </defs>
-        {/* Cookie's geometric center is ~(-2, -5); scale 0.72 leaves enough
-            margin that the triangular tips don't kiss the viewBox top edge. */}
-        <g transform="translate(101.4 63.6) scale(0.72)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+        {/* Cookie's geometric center is ~(-2, -5); scale 0.62 leaves a real
+            margin all around so the triangular tips clear the viewBox top
+            edge even in the wider spotlight-mode preview band. */}
+        <g transform="translate(101.24 63.1) scale(0.62)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
             {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
             <path
                 d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
@@ -285,18 +287,18 @@ const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrow
     // Duplicate once so a 50% translate loops seamlessly.
     const items = [...projects, ...projects];
     return (
-        <div className="relative max-w-4xl mx-auto">
+        <div className="relative max-w-5xl mx-auto">
             <div className="overflow-hidden rounded-2xl project-carousel-fade">
                 <div
                     data-paused={paused}
-                    className="flex gap-4 md:gap-5 project-carousel-track py-1"
+                    className="flex gap-4 md:gap-6 project-carousel-track py-1"
                     onMouseEnter={() => setPaused(true)}
                     onMouseLeave={() => setPaused(false)}
                 >
                     {items.map((p, i) => (
                         <div
                             key={`${p.title}-${i}`}
-                            className="flex-shrink-0 w-80 md:w-[28rem] transition-transform duration-300 hover:scale-[1.02] hover:z-10 relative"
+                            className="flex-shrink-0 w-[22rem] md:w-[32rem] transition-transform duration-300 hover:scale-[1.02] hover:z-10 relative"
                         >
                             <ProjectCard p={p} />
                         </div>
@@ -308,6 +310,9 @@ const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrow
         </div>
     );
 };
+
+// After this many ms of no hover, the spotlight rewinds back into auto mode.
+const SPOTLIGHT_IDLE_MS = 5000;
 
 const SpotlightCarousel = ({
     projects,
@@ -324,25 +329,71 @@ const SpotlightCarousel = ({
     const prev = projects[(centerIndex - 1 + n) % n];
     const center = projects[centerIndex];
     const next = projects[(centerIndex + 1) % n];
+    const [hovering, setHovering] = useState(false);
+    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Reset the idle timer whenever the user navigates or stops hovering.
+    // When the timer fires without being reset, switch back to auto mode.
+    useEffect(() => {
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+        if (hovering) return;
+        idleTimerRef.current = setTimeout(() => onResume(), SPOTLIGHT_IDLE_MS);
+        return () => {
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+        };
+    }, [hovering, centerIndex, onResume]);
+
     return (
-        <div className="relative">
+        <motion.div
+            className="relative max-w-5xl mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.35 }}
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
+        >
+            {/* Desktop: 3-column layout with center spotlight + peeks */}
             <div className="hidden md:grid grid-cols-[1fr_2fr_1fr] gap-4 lg:gap-6 items-stretch">
-                <div className="opacity-50 scale-[0.9] origin-right pointer-events-none transition-all duration-500">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.7, x: 30 }}
+                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    className="origin-right pointer-events-none"
+                >
                     <ProjectCard p={prev} />
-                </div>
-                <div className="z-10 transition-all duration-500">
+                </motion.div>
+                <motion.div
+                    key={center.title}
+                    initial={{ opacity: 0.5, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    className="z-10"
+                >
                     <ProjectCard p={center} />
-                </div>
-                <div className="opacity-50 scale-[0.9] origin-left pointer-events-none transition-all duration-500">
+                </motion.div>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.7, x: -30 }}
+                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    className="origin-left pointer-events-none"
+                >
                     <ProjectCard p={next} />
-                </div>
+                </motion.div>
             </div>
             {/* Mobile: just the center card, peeks hidden */}
-            <div className="md:hidden">
+            <motion.div
+                key={`m-${center.title}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="md:hidden"
+            >
                 <ProjectCard p={center} />
-            </div>
+            </motion.div>
+
             <ArrowButton dir="left" side="left" onClick={() => onNavigate("prev")} />
             <ArrowButton dir="right" side="right" onClick={() => onNavigate("next")} />
+
             <div className="flex justify-center mt-4">
                 <button
                     type="button"
@@ -355,7 +406,7 @@ const SpotlightCarousel = ({
                     Resume auto-play
                 </button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -367,25 +418,41 @@ const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
         setCenterIndex((i) => (dir === "next" ? (i + 1) % projects.length : (i - 1 + projects.length) % projects.length));
     };
 
-    if (mode === "spotlight") {
-        return (
-            <SpotlightCarousel
-                projects={projects}
-                centerIndex={centerIndex}
-                onNavigate={navigate}
-                onResume={() => setMode("auto")}
-            />
-        );
-    }
-
     return (
-        <AutoCarousel
-            projects={projects}
-            onArrowClick={(dir) => {
-                setMode("spotlight");
-                navigate(dir);
-            }}
-        />
+        <AnimatePresence mode="wait">
+            {mode === "spotlight" ? (
+                <motion.div
+                    key="spotlight"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <SpotlightCarousel
+                        projects={projects}
+                        centerIndex={centerIndex}
+                        onNavigate={navigate}
+                        onResume={() => setMode("auto")}
+                    />
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="auto"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <AutoCarousel
+                        projects={projects}
+                        onArrowClick={(dir) => {
+                            setMode("spotlight");
+                            navigate(dir);
+                        }}
+                    />
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 
