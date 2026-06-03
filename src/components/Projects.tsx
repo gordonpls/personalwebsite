@@ -72,36 +72,45 @@ const LinePreview = () => (
 );
 
 // Inline cookie: stylized closed fortune cookie that "shakes" on hover.
-// Matches the geometry of the on-page CookieScene (triangular-tipped lobes,
-// wide V valley) so the card preview reads as the same artifact.
+// Different centering approach from previous iterations: the viewBox itself
+// is calibrated so the cookie's geometric center (-2, -5) lands at the
+// viewBox center, and the cookie paths use their natural coordinates with
+// NO translate/scale transform. The SVG container is then a flex box that
+// centers a square-ish SVG horizontally in the preview band, sized by CSS.
+// Result: cookie is always centered in its SVG, the SVG is always centered
+// in the preview band, with no transform math to drift out of alignment.
 const CookiePreview = () => (
-    <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
-        <defs>
-            <linearGradient id="ckPrevBody" x1="0.2" y1="0" x2="0.7" y2="1">
-                <stop offset="0" stopColor="#F8CB7C" />
-                <stop offset="0.5" stopColor="#E5A24B" />
-                <stop offset="1" stopColor="#B97623" />
-            </linearGradient>
-        </defs>
-        {/* Cookie's geometric center is ~(-2, -5); scale 0.62 leaves a real
-            margin all around so the triangular tips clear the viewBox top
-            edge even in the wider spotlight-mode preview band. */}
-        <g transform="translate(101.24 63.1) scale(0.62)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
-            {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
-            <path
-                d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
-                fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
-            />
-            {/* Left lobe — slightly taller, drawn on top */}
-            <path
-                d="M -20 -54 L -42 -68 L -54 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z"
-                fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
-            />
-            {/* Soft highlights on the bulging outer faces */}
-            <path d="M -22 -40 Q -40 -22 -50 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
-            <path d="M 18 -38 Q 36 -20 46 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
-        </g>
-    </svg>
+    <div className="flex items-center justify-center w-full h-full">
+        <svg
+            viewBox="-72 -85 140 160"
+            className="h-full w-auto max-h-full"
+            aria-hidden="true"
+            preserveAspectRatio="xMidYMid meet"
+        >
+            <defs>
+                <linearGradient id="ckPrevBody" x1="0.2" y1="0" x2="0.7" y2="1">
+                    <stop offset="0" stopColor="#F8CB7C" />
+                    <stop offset="0.5" stopColor="#E5A24B" />
+                    <stop offset="1" stopColor="#B97623" />
+                </linearGradient>
+            </defs>
+            <g className="transition-transform duration-300 group-hover:rotate-[-3deg]" style={{ transformOrigin: "center", transformBox: "fill-box" }}>
+                {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
+                <path
+                    d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
+                    fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+                />
+                {/* Left lobe — slightly taller, drawn on top */}
+                <path
+                    d="M -20 -54 L -42 -68 L -54 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z"
+                    fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+                />
+                {/* Soft highlights on the bulging outer faces */}
+                <path d="M -22 -40 Q -40 -22 -50 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
+                <path d="M 18 -38 Q 36 -20 46 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
+            </g>
+        </svg>
+    </div>
 );
 
 // Inline peg: dashed $1 reference + a near-flat wobble line + pulsing dot on hover.
@@ -468,7 +477,9 @@ export const Projects = () => (
             </p>
         </div>
 
-        <FeaturedHero />
+        <div className="max-w-5xl mx-auto">
+            <FeaturedHero />
+        </div>
 
         <ProjectsCarousel projects={otherProjects} />
     </section>
