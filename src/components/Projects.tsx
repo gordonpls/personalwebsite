@@ -249,9 +249,16 @@ const FeaturedHero = () => (
             </div>
             {/* Body */}
             <div className="p-6 md:p-8 relative flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center justify-between gap-3 mb-3">
                     <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
-                    <span className={`text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>{portfolio.tag}</span>
+                    <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>
+                        {/* Green pulsing dot: outer ping ring + solid inner pip */}
+                        <span className="relative flex h-2 w-2" aria-hidden="true">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                        </span>
+                        {portfolio.tag}
+                    </span>
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-base-content group-hover:text-primary transition-colors">Every stock I hold, out in the open</h3>
                 <p className="text-sm md:text-base text-base-content/70 leading-relaxed mt-2">{portfolio.description}</p>
