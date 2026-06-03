@@ -2,6 +2,15 @@ import { useLocation } from "react-router-dom";
 import { JumpToTop } from "./JumpToTop";
 import { ThemeChanger } from "./ThemeChanger";
 
+// Individual projects surfaced as a submenu under the "Projects" nav link.
+// Keep in sync with the cards in Projects.tsx.
+const PROJECT_LINKS = [
+  { label: "Allocation", href: "/allocation" },
+  { label: "Portfolio", href: "/portfolio" },
+  { label: "Stablecoin Dashboard", href: "/stablecoin" },
+  { label: "Fortune", href: "/fortune" },
+];
+
 export const Navbar = () => {
   const location = useLocation();
 
@@ -41,7 +50,17 @@ export const Navbar = () => {
             <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
             <li><a className="link link-hover link-info" href="/#about">About</a></li>
             <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-            <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
+            <li>
+              <details>
+                <summary className="link link-hover link-info">Projects</summary>
+                <ul className="p-2">
+                  <li><a className="link link-hover link-info" href="/#projects">All projects</a></li>
+                  {PROJECT_LINKS.map((proj) => (
+                    <li key={proj.href}><a className="link link-hover link-info" href={proj.href}>{proj.label}</a></li>
+                  ))}
+                </ul>
+              </details>
+            </li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           </ul>
         </div>
@@ -53,7 +72,19 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
           <li><a className="link link-hover link-info" href="/#about">About</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
-          <li><a className="link link-hover link-info" href="/#projects">Projects</a></li>
+          <li className="dropdown dropdown-hover dropdown-bottom dropdown-end p-0">
+            <a tabIndex={0} role="button" aria-haspopup="true" className="link link-hover link-info" href="/#projects">
+              Projects
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 fill-current opacity-60" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
+            </a>
+            <ul tabIndex={0} className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-2 w-56 p-2 shadow border border-base-300">
+              {PROJECT_LINKS.map((proj) => (
+                <li key={proj.href}><a className="link link-hover link-info" href={proj.href}>{proj.label}</a></li>
+              ))}
+            </ul>
+          </li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
         </ul>
       </div>

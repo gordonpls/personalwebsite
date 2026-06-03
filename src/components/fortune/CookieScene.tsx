@@ -1,24 +1,33 @@
 import { motion, AnimatePresence } from "framer-motion";
 
-// Cartoon-style fortune cookie modeled on the user's reference: two smooth
-// leaf-shaped halves meeting at the top center, with soft interior highlights
-// and only a single subtle fold line per half. On crack, each half swings
-// outward around its bottom tip and a paper slip emerges from the gap.
+// One continuous folded fortune cookie. The two lobes are joined at the
+// bottom by a pinched fold (rendered as a fixed connector element) so the
+// whole thing reads as a single object even when the lobes rotate open on
+// crack. The right lobe is drawn first and the left lobe is drawn on top,
+// so the left flap tucks the right one slightly behind it near the center
+// — the asymmetric overlap that defines the silhouette. The crease in the
+// middle is a curved shadow line, not a vertical cut.
 interface CookieSceneProps {
     isOpen: boolean;
     isAnimating: boolean;
     onCrack: () => void;
 }
 
-// Left half: a rounded wing curling inward at the top. Outer edge bulges out
-// (left side), bottom is rounded, and the inside edge curves AWAY from center
-// at the top so the two halves form a soft V-valley where they meet.
-const LEFT_HALF = "M -8 -52 Q -28 -56 -48 -38 Q -64 -12 -54 18 Q -42 50 -14 60 Q 2 60 -2 48 Q -10 -10 -8 -52 Z";
-const RIGHT_HALF = "M 8 -52 Q 28 -56 48 -38 Q 64 -12 54 18 Q 42 50 14 60 Q -2 60 2 48 Q 10 -10 8 -52 Z";
-
-// Soft inner highlight following each wing's outer curve.
-const LEFT_GLOSS = "M -18 -42 Q -38 -28 -46 -6";
-const RIGHT_GLOSS = "M 18 -42 Q 38 -28 46 -6";
+// Right lobe (drawn first; left lobe overlaps it near the center top).
+// Slightly lower top + shorter outer reach gives the asymmetry.
+const RIGHT_LOBE = "M 4 -50 Q 28 -56 50 -36 Q 66 -8 56 22 Q 42 50 14 56 Q -2 56 -4 44 Q 8 0 4 -50 Z";
+// Left lobe sits on top, slightly taller and reaches a touch further out
+// so the right lobe disappears behind it near the upper center.
+const LEFT_LOBE = "M -2 -54 Q -28 -58 -52 -38 Q -68 -8 -58 24 Q -44 52 -14 58 Q 4 56 0 42 Q -8 0 -2 -54 Z";
+// Pinched fold at the bottom that visually joins the two lobes — this is the
+// "knot" of the cookie and never animates; it stays put while the lobes rotate.
+const BOTTOM_FOLD = "M -16 50 Q -4 64 0 60 Q 4 64 16 50 Q 6 54 0 55 Q -6 54 -16 50 Z";
+// Curved shadow line inside the cookie suggesting the fold/valley. Not a
+// straight cut — it dips and rises like a real fold.
+const CREASE = "M -2 -45 Q -10 -10 -2 30 Q 0 44 4 52";
+// Soft inner-glow curves following each lobe's outer face.
+const LEFT_GLOSS = "M -22 -40 Q -40 -22 -50 0";
+const RIGHT_GLOSS = "M 18 -38 Q 36 -20 46 0";
 
 export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) => {
     return (
@@ -35,9 +44,13 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
             >
                 <defs>
                     <linearGradient id="ckBody" x1="0.2" y1="0" x2="0.7" y2="1">
-                        <stop offset="0" stopColor="#F8C97B" />
-                        <stop offset="0.55" stopColor="#E8A85B" />
-                        <stop offset="1" stopColor="#C97D2A" />
+                        <stop offset="0" stopColor="#F8CB7C" />
+                        <stop offset="0.5" stopColor="#E5A24B" />
+                        <stop offset="1" stopColor="#B97623" />
+                    </linearGradient>
+                    <linearGradient id="ckFold" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stopColor="#A66B1F" />
+                        <stop offset="1" stopColor="#7B4D14" />
                     </linearGradient>
                     <linearGradient id="slipPaper" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0" stopColor="#FFFCEF" />
@@ -45,50 +58,66 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     </linearGradient>
                 </defs>
 
-                {/* Left half — pivots around its bottom tip when cracking. */}
+                {/* Right lobe — drawn first so the left can tuck it behind */}
                 <motion.g
                     initial={false}
                     animate={isOpen
-                        ? { x: -8, y: 4, rotate: -22 }
-                        : isAnimating
-                            ? { x: [0, -2, 2, -2, 0], y: [0, -1, 1, -1, 0] }
-                            : { x: 0, y: 0, rotate: 0 }
-                    }
-                    transition={isOpen
-                        ? { duration: 0.55, ease: "easeOut" }
-                        : { duration: 0.35 }
-                    }
-                    style={{ transformOrigin: "-16px 60px" }}
-                >
-                    <path d={LEFT_HALF} fill="url(#ckBody)" stroke="#8B5A1A" strokeWidth="3" strokeLinejoin="round" />
-                    {/* Inner shadow at the crease to deepen the V valley */}
-                    <path d="M -6 -50 Q -8 0 -4 46" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.45" />
-                    {/* Soft inner glow following the leaf's curve */}
-                    <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
-                    {/* Specular highlight (small) */}
-                    <ellipse cx="-28" cy="-28" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -28 -28)" />
-                </motion.g>
-
-                {/* Right half — mirrors. */}
-                <motion.g
-                    initial={false}
-                    animate={isOpen
-                        ? { x: 8, y: 4, rotate: 22 }
+                        ? { x: 8, y: 3, rotate: 20 }
                         : isAnimating
                             ? { x: [0, 2, -2, 2, 0], y: [0, 1, -1, 1, 0] }
                             : { x: 0, y: 0, rotate: 0 }
                     }
                     transition={isOpen
-                        ? { duration: 0.55, ease: "easeOut" }
+                        ? { duration: 0.6, ease: "easeOut" }
                         : { duration: 0.35 }
                     }
-                    style={{ transformOrigin: "16px 60px" }}
+                    style={{ transformOrigin: "8px 56px" }}
                 >
-                    <path d={RIGHT_HALF} fill="url(#ckBody)" stroke="#8B5A1A" strokeWidth="3" strokeLinejoin="round" />
-                    <path d="M 6 -50 Q 8 0 4 46" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.45" />
+                    <path d={RIGHT_LOBE} fill="url(#ckBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round" />
                     <path d={RIGHT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
-                    <ellipse cx="28" cy="-28" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 28 -28)" />
+                    <ellipse cx="30" cy="-26" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 30 -26)" />
                 </motion.g>
+
+                {/* Left lobe — drawn on top, sits slightly higher; the right
+                    lobe tucks behind it near the center top */}
+                <motion.g
+                    initial={false}
+                    animate={isOpen
+                        ? { x: -8, y: 3, rotate: -22 }
+                        : isAnimating
+                            ? { x: [0, -2, 2, -2, 0], y: [0, -1, 1, -1, 0] }
+                            : { x: 0, y: 0, rotate: 0 }
+                    }
+                    transition={isOpen
+                        ? { duration: 0.6, ease: "easeOut" }
+                        : { duration: 0.35 }
+                    }
+                    style={{ transformOrigin: "-14px 58px" }}
+                >
+                    <path d={LEFT_LOBE} fill="url(#ckBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round" />
+                    <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
+                    <ellipse cx="-26" cy="-26" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -26 -26)" />
+                </motion.g>
+
+                {/* Curved shadow crease — the fold valley. Fades on open. */}
+                <motion.path
+                    d={CREASE}
+                    fill="none"
+                    stroke="#5E3B0F"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    opacity="0.55"
+                    initial={false}
+                    animate={{ opacity: isOpen ? 0 : 0.55 }}
+                    transition={{ duration: 0.3 }}
+                />
+
+                {/* Pinched bottom fold — the knot that joins the two lobes.
+                    Stays in place when the lobes rotate so the cookie still
+                    reads as a single continuous object. */}
+                <path d={BOTTOM_FOLD} fill="url(#ckFold)" stroke="#5E3B0F" strokeWidth="2" strokeLinejoin="round" />
+                {/* Highlight pinch line across the knot */}
+                <path d="M -10 56 Q 0 60 10 56" stroke="#FFE3A8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.6" />
 
                 {/* Crumb debris fans out upward on crack. */}
                 <AnimatePresence>
@@ -101,7 +130,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                                     <motion.circle
                                         key={i}
                                         cx={Math.cos(angle) * 6}
-                                        cy={-55 + Math.sin(angle) * 4}
+                                        cy={-50 + Math.sin(angle) * 4}
                                         r={1.4 + (i % 3) * 0.7}
                                         fill="#A87929"
                                         initial={{ opacity: 1, x: 0, y: 0 }}
@@ -118,13 +147,13 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     )}
                 </AnimatePresence>
 
-                {/* Paper slip — rendered last so it sits on top of both halves. */}
+                {/* Paper slip — rendered last so it sits on top of everything. */}
                 <AnimatePresence>
                     {isOpen && (
                         <motion.g
-                            initial={{ y: -25, opacity: 0, scaleY: 0.1, rotate: -8 }}
-                            animate={{ y: -62, opacity: 1, scaleY: 1, rotate: -10 }}
-                            exit={{ y: -25, opacity: 0, scaleY: 0.1 }}
+                            initial={{ y: -22, opacity: 0, scaleY: 0.1, rotate: -8 }}
+                            animate={{ y: -58, opacity: 1, scaleY: 1, rotate: -10 }}
+                            exit={{ y: -22, opacity: 0, scaleY: 0.1 }}
                             transition={{ duration: 0.55, delay: 0.4, ease: "easeOut" }}
                             style={{ transformOrigin: "0 0" }}
                         >

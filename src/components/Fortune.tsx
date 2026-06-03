@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { CookieScene } from "./fortune/CookieScene";
 import { LuckyRow, type Lucky } from "./fortune/LuckyRow";
 import { ChinesePhrase, type Chinese } from "./fortune/ChinesePhrase";
-import { RightRailSkeleton } from "./fortune/RightRailSkeleton";
 import { buildShareImage, downloadShareImage } from "./fortune/shareCard";
 
 interface FortuneResponse {
@@ -71,6 +70,7 @@ export default function Fortune() {
     };
 
     const data = state.data;
+    const isOpen = state.kind === "open";
 
     return (
         <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
@@ -85,57 +85,50 @@ export default function Fortune() {
                             <p className="text-sm text-base-content/70 mt-2">{formatDate(data?.date ?? null)}</p>
                         </div>
 
-                        {/* Flex layout so both halves hug the center instead of floating in
-                            their own 50/50 quadrants. Each column has a tight max-width that
-                            matches the cookie's visual weight, and they meet at the center
-                            for symmetric balance. */}
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-8 lg:gap-12">
-                            {/* Left column: cookie + fortune */}
-                            <div className="w-full lg:w-72 flex flex-col items-center gap-5 shrink-0">
-                                <CookieScene
-                                    isOpen={state.kind === "open"}
-                                    isAnimating={state.kind === "cracking"}
-                                    onCrack={crack}
-                                />
+                        {/* When closed, only the cookie shows (centered). On crack, the
+                            cookie slides left and the rest slides in from the right
+                            (desktop) or stacks below (mobile). Framer's `layout` prop
+                            handles the position transition automatically as the right
+                            column mounts. */}
+                        <LayoutGroup>
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-8 lg:gap-12">
+                                <motion.div
+                                    layout
+                                    transition={{ layout: { duration: 0.55, ease: "easeInOut" } }}
+                                    className="w-full lg:w-72 flex flex-col items-center gap-5 shrink-0"
+                                >
+                                    <CookieScene
+                                        isOpen={isOpen}
+                                        isAnimating={state.kind === "cracking"}
+                                        onCrack={crack}
+                                    />
+
+                                    <AnimatePresence>
+                                        {isOpen && (
+                                            <motion.blockquote
+                                                initial={{ opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.5, delay: 0.55 }}
+                                                className="text-center text-lg md:text-xl leading-snug italic text-base-content"
+                                                style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
+                                            >
+                                                <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
+                                                {state.data.message}
+                                                <span aria-hidden="true" className="text-primary/60 pl-0.5">”</span>
+                                            </motion.blockquote>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
 
                                 <AnimatePresence>
-                                    {state.kind === "open" && (
-                                        <motion.blockquote
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.5, delay: 0.55 }}
-                                            className="text-center text-lg md:text-xl leading-snug italic text-base-content"
-                                            style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
-                                        >
-                                            <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
-                                            {state.data.message}
-                                            <span aria-hidden="true" className="text-primary/60 pl-0.5">”</span>
-                                        </motion.blockquote>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Right column: skeleton while closed, content on crack. */}
-                            <div className="w-full lg:w-96 shrink-0">
-                                <AnimatePresence mode="wait">
-                                    {state.kind !== "open" ? (
-                                        <motion.div
-                                            key="skeleton"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.25 }}
-                                        >
-                                            <RightRailSkeleton />
-                                        </motion.div>
-                                    ) : (
+                                    {isOpen && (
                                         <motion.div
                                             key="content"
-                                            initial={{ opacity: 0, y: 12 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.5, delay: 0.65 }}
-                                            className="space-y-6"
+                                            initial={{ opacity: 0, x: 40 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 40 }}
+                                            transition={{ duration: 0.55, delay: 0.45, ease: "easeOut" }}
+                                            className="w-full lg:w-96 shrink-0 space-y-6"
                                         >
                                             <LuckyRow lucky={state.data.lucky} />
                                             <ChinesePhrase chinese={state.data.chinese} />
@@ -156,7 +149,7 @@ export default function Fortune() {
                                     )}
                                 </AnimatePresence>
                             </div>
-                        </div>
+                        </LayoutGroup>
 
                         {error && (
                             <p className="text-sm text-error text-center mt-6">{error}</p>
