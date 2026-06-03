@@ -172,9 +172,9 @@ export const PROJECTS: Project[] = [
     {
         title: "Daily Fortune",
         href: "/fortune",
-        tag: "Daily",
-        accent: "text-warning",
-        glow: "from-warning/20 via-warning/0 to-error/10",
+        tag: "Generative",
+        accent: "text-error",
+        glow: "from-error/20 via-error/0 to-primary/10",
         description:
             "A daily fortune cookie with a crack animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. A mulberry32 PRNG seeded by (date, IP-hash) locks each visitor's payload for the calendar day.",
         tags: ["Framer Motion", "Canvas", "Web Speech"],
