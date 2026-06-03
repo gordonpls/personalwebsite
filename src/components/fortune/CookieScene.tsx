@@ -25,7 +25,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
     return (
         <div className="relative w-full max-w-[18rem] mx-auto aspect-square select-none">
             <motion.svg
-                viewBox="-100 -100 200 200"
+                viewBox="-140 -130 280 260"
                 className={`w-full h-full ${isOpen ? "" : "cursor-pointer"} drop-shadow-xl`}
                 onClick={!isOpen && !isAnimating ? onCrack : undefined}
                 role={!isOpen ? "button" : undefined}

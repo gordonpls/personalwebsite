@@ -128,6 +128,27 @@
   }
 }
 
+/* Projects carousel auto-scroll. The track contains the cards duplicated
+   once, so translating by -50% lands the duplicate set exactly where the
+   original began — a seamless loop. */
+@keyframes project-carousel-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+.project-carousel-track {
+    width: max-content;
+    animation: project-carousel-scroll 40s linear infinite;
+}
+.project-carousel-track[data-paused="true"] {
+    animation-play-state: paused;
+}
+/* Soft fade at the left and right edges of the carousel so cards
+   entering/leaving the viewport don't pop. */
+.project-carousel-fade {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 4%, black 96%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, black 4%, black 96%, transparent 100%);
+}
+
 /* Projects preview animations. */
 @keyframes project-shimmer-sweep {
     0%   { transform: translateX(0); }

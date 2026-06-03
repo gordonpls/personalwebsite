@@ -3,6 +3,8 @@
 // gets a hover animation specific to its visualization (donut spins, line
 // re-draws, peg pulses) plus a card-wide lift + "open in new tab" hint.
 
+import { useState } from "react";
+
 interface Project {
     title: string;
     href: string;
@@ -80,7 +82,7 @@ const CookiePreview = () => (
                 <stop offset="1" stopColor="#B97623" />
             </linearGradient>
         </defs>
-        <g transform="translate(100 68) scale(0.7)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+        <g transform="translate(100 62) scale(0.62)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
             {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
             <path
                 d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
@@ -254,6 +256,137 @@ const FeaturedHero = () => (
     </a>
 );
 
+// Round-robin carousel: auto-scrolls slowly with all cards in a loop. Hover
+// any card pauses the scroll and lifts/expands it. Arrows snap into a
+// spotlight mode that centers one card with peeks of its neighbors.
+const ChevronIcon = ({ dir }: { dir: "left" | "right" }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5" aria-hidden="true">
+        {dir === "left"
+            ? <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+            : <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+);
+
+const ArrowButton = ({ dir, onClick, side }: { dir: "left" | "right"; onClick: () => void; side: "left" | "right" }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-label={dir === "left" ? "Previous project" : "Next project"}
+        className={`absolute top-1/2 -translate-y-1/2 z-20 ${side === "left" ? "left-1 md:left-2" : "right-1 md:right-2"} btn btn-circle btn-sm md:btn-md bg-base-100/95 border border-base-300 shadow-md hover:bg-base-100 hover:scale-110 transition-transform`}
+    >
+        <ChevronIcon dir={dir} />
+    </button>
+);
+
+const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrowClick: (dir: "prev" | "next") => void }) => {
+    const [paused, setPaused] = useState(false);
+    // Duplicate once so a 50% translate loops seamlessly.
+    const items = [...projects, ...projects];
+    return (
+        <div className="relative">
+            <div className="overflow-hidden rounded-2xl project-carousel-fade">
+                <div
+                    data-paused={paused}
+                    className="flex gap-4 md:gap-5 project-carousel-track py-1"
+                    onMouseEnter={() => setPaused(true)}
+                    onMouseLeave={() => setPaused(false)}
+                >
+                    {items.map((p, i) => (
+                        <div
+                            key={`${p.title}-${i}`}
+                            className="flex-shrink-0 w-72 md:w-[22rem] transition-transform duration-300 hover:scale-[1.03] hover:z-10 relative"
+                        >
+                            <ProjectCard p={p} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <ArrowButton dir="left" side="left" onClick={() => onArrowClick("prev")} />
+            <ArrowButton dir="right" side="right" onClick={() => onArrowClick("next")} />
+        </div>
+    );
+};
+
+const SpotlightCarousel = ({
+    projects,
+    centerIndex,
+    onNavigate,
+    onResume,
+}: {
+    projects: Project[];
+    centerIndex: number;
+    onNavigate: (dir: "prev" | "next") => void;
+    onResume: () => void;
+}) => {
+    const n = projects.length;
+    const prev = projects[(centerIndex - 1 + n) % n];
+    const center = projects[centerIndex];
+    const next = projects[(centerIndex + 1) % n];
+    return (
+        <div className="relative">
+            <div className="hidden md:grid grid-cols-[1fr_2fr_1fr] gap-4 lg:gap-6 items-stretch">
+                <div className="opacity-50 scale-[0.9] origin-right pointer-events-none transition-all duration-500">
+                    <ProjectCard p={prev} />
+                </div>
+                <div className="z-10 transition-all duration-500">
+                    <ProjectCard p={center} />
+                </div>
+                <div className="opacity-50 scale-[0.9] origin-left pointer-events-none transition-all duration-500">
+                    <ProjectCard p={next} />
+                </div>
+            </div>
+            {/* Mobile: just the center card, peeks hidden */}
+            <div className="md:hidden">
+                <ProjectCard p={center} />
+            </div>
+            <ArrowButton dir="left" side="left" onClick={() => onNavigate("prev")} />
+            <ArrowButton dir="right" side="right" onClick={() => onNavigate("next")} />
+            <div className="flex justify-center mt-4">
+                <button
+                    type="button"
+                    onClick={onResume}
+                    className="btn btn-ghost btn-xs gap-1.5 text-base-content/70"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <polygon points="5 3 19 12 5 21 5 3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Resume auto-play
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
+    const [mode, setMode] = useState<"auto" | "spotlight">("auto");
+    const [centerIndex, setCenterIndex] = useState(0);
+
+    const navigate = (dir: "prev" | "next") => {
+        setCenterIndex((i) => (dir === "next" ? (i + 1) % projects.length : (i - 1 + projects.length) % projects.length));
+    };
+
+    if (mode === "spotlight") {
+        return (
+            <SpotlightCarousel
+                projects={projects}
+                centerIndex={centerIndex}
+                onNavigate={navigate}
+                onResume={() => setMode("auto")}
+            />
+        );
+    }
+
+    return (
+        <AutoCarousel
+            projects={projects}
+            onArrowClick={(dir) => {
+                setMode("spotlight");
+                navigate(dir);
+            }}
+        />
+    );
+};
+
 export const Projects = () => (
     <section className="space-y-5">
         <div className="flex items-end flex-wrap gap-x-6 gap-y-2">
@@ -262,14 +395,12 @@ export const Projects = () => (
                 <h2 className="text-2xl md:text-3xl font-bold text-base-content mt-1">Things I&apos;ve been building</h2>
             </div>
             <p className="text-sm text-base-content/60 flex-1 min-w-[16rem]">
-                Three interactive apps; each one opens in a new tab. Hover a card for a quick preview, click to open the full thing.
+                Three interactive apps; each one opens in a new tab. Hover any card to pause the carousel; click an arrow for one-at-a-time browsing.
             </p>
         </div>
 
         <FeaturedHero />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-            {otherProjects.map((p) => <ProjectCard key={p.title} p={p} />)}
-        </div>
+        <ProjectsCarousel projects={otherProjects} />
     </section>
 );
