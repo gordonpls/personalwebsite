@@ -82,9 +82,9 @@ const CookiePreview = () => (
                 <stop offset="1" stopColor="#B97623" />
             </linearGradient>
         </defs>
-        {/* Cookie's geometric center is ~(-2, -5), so translate to (102, 65)
-            to land it visually centered in the 200x120 thumbnail viewBox. */}
-        <g transform="translate(102 65) scale(0.58)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+        {/* Cookie's geometric center is ~(-2, -5); scale 0.85 nearly fills
+            the viewBox vertically so the cookie reads bigger in wide cards. */}
+        <g transform="translate(101.7 64.25) scale(0.85)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
             {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
             <path
                 d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
@@ -124,7 +124,7 @@ const PegPreview = () => (
     </svg>
 );
 
-const PROJECTS: Project[] = [
+export const PROJECTS: Project[] = [
     {
         title: "Allocation",
         href: "/allocation",
@@ -171,7 +171,7 @@ const PROJECTS: Project[] = [
     },
 ];
 
-const ProjectCard = ({ p }: { p: Project }) => (
+export const ProjectCard = ({ p }: { p: Project }) => (
     <a
         href={p.href}
         target="_blank"
