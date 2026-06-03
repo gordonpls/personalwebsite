@@ -1,31 +1,26 @@
 import { motion, AnimatePresence } from "framer-motion";
 
-// One continuous folded fortune cookie modeled on a real one: two puffy
-// rounded lobes whose tops curl inward toward each other, a deep V valley
-// at the top center, and a pinched fold at the bottom that joins both
-// lobes into one object. The right lobe is drawn first and the left lobe
-// is drawn on top, so the right one tucks slightly behind the left near
-// the center top — the asymmetric overlap that defines the silhouette.
+// One folded fortune cookie. The two organic-edged lobes meet at the
+// center with the right lobe tucked slightly behind the left for the
+// classic asymmetric overlap. No pinched bottom knot — the lobes meet
+// cleanly at the bottom-center seam.
 interface CookieSceneProps {
     isOpen: boolean;
     isAnimating: boolean;
     onCrack: () => void;
 }
 
-// Right lobe (drawn first). The top point sits a hair to the right of
-// center and slightly lower than the left lobe's top — asymmetric.
-const RIGHT_LOBE = "M 2 -48 Q 20 -64 42 -56 Q 64 -34 66 -4 Q 62 28 42 50 Q 22 60 4 56 Q -2 48 2 -48 Z";
-// Left lobe (drawn on top). Sits slightly higher than the right and
-// reaches a touch further so it tucks the right lobe behind it.
-const LEFT_LOBE = "M -2 -54 Q -22 -68 -46 -58 Q -68 -34 -68 -2 Q -64 30 -44 52 Q -22 62 -2 58 Q 2 50 -2 -54 Z";
-// Pinched bottom fold — the knot that joins the two lobes. Drawn after
-// the lobes so it sits cleanly across the seam.
-const BOTTOM_FOLD = "M -22 50 Q -10 70 0 64 Q 10 70 22 50 Q 10 56 0 58 Q -10 56 -22 50 Z";
-// Curved shadow crease — the fold valley. Dips and rises like a real fold.
-const CREASE = "M 0 -48 Q -6 -10 0 30 Q 4 50 8 58";
-// Inner-glow curves following each lobe's outer face.
-const LEFT_GLOSS = "M -22 -42 Q -42 -22 -50 0";
-const RIGHT_GLOSS = "M 18 -40 Q 38 -20 48 2";
+// Right lobe (drawn first; left lobe overlaps it near the center top).
+// Slightly lower top + shorter outer reach gives the asymmetry.
+const RIGHT_LOBE = "M 4 -50 Q 28 -56 50 -36 Q 66 -8 56 22 Q 42 50 14 56 Q -2 56 -4 44 Q 8 0 4 -50 Z";
+// Left lobe sits on top, slightly taller and reaches a touch further out
+// so the right lobe disappears behind it near the upper center.
+const LEFT_LOBE = "M -2 -54 Q -28 -58 -52 -38 Q -68 -8 -58 24 Q -44 52 -14 58 Q 4 56 0 42 Q -8 0 -2 -54 Z";
+// Curved shadow line inside the cookie suggesting the fold/valley.
+const CREASE = "M -2 -45 Q -10 -10 -2 30 Q 0 44 4 52";
+// Soft inner-glow curves following each lobe's outer face.
+const LEFT_GLOSS = "M -22 -40 Q -40 -22 -50 0";
+const RIGHT_GLOSS = "M 18 -38 Q 36 -20 46 0";
 
 export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) => {
     return (
@@ -41,17 +36,10 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                 transition={!isOpen && !isAnimating ? { repeat: Infinity, repeatDelay: 2.4, duration: 0.6 } : {}}
             >
                 <defs>
-                    {/* More uniform orange-tan like a real fortune cookie. The
-                        light source is upper-left so the gradient mostly stays
-                        bright until the lower-right where it tapers darker. */}
-                    <radialGradient id="ckBody" cx="0.35" cy="0.3" r="1.0">
-                        <stop offset="0" stopColor="#F8CC7A" />
-                        <stop offset="0.55" stopColor="#EBA94A" />
+                    <linearGradient id="ckBody" x1="0.2" y1="0" x2="0.7" y2="1">
+                        <stop offset="0" stopColor="#F8CB7C" />
+                        <stop offset="0.5" stopColor="#E5A24B" />
                         <stop offset="1" stopColor="#B97623" />
-                    </radialGradient>
-                    <linearGradient id="ckFold" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#A66B1F" />
-                        <stop offset="1" stopColor="#7B4D14" />
                     </linearGradient>
                     <linearGradient id="slipPaper" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0" stopColor="#FFFCEF" />
@@ -63,7 +51,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                 <motion.g
                     initial={false}
                     animate={isOpen
-                        ? { x: 8, y: 3, rotate: 22 }
+                        ? { x: 8, y: 3, rotate: 20 }
                         : isAnimating
                             ? { x: [0, 2, -2, 2, 0], y: [0, 1, -1, 1, 0] }
                             : { x: 0, y: 0, rotate: 0 }
@@ -72,16 +60,15 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                         ? { duration: 0.6, ease: "easeOut" }
                         : { duration: 0.35 }
                     }
-                    style={{ transformOrigin: "10px 58px" }}
+                    style={{ transformOrigin: "8px 56px" }}
                 >
                     <path d={RIGHT_LOBE} fill="url(#ckBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round" />
-                    <path d={RIGHT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.45" />
-                    {/* small specular highlight on the bulging outer face */}
-                    <ellipse cx="30" cy="-22" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 30 -22)" />
+                    <path d={RIGHT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
+                    <ellipse cx="30" cy="-26" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 30 -26)" />
                 </motion.g>
 
-                {/* Left lobe — on top, slightly higher; the right lobe tucks
-                    behind it near the center top */}
+                {/* Left lobe — drawn on top, sits slightly higher; the right
+                    lobe tucks behind it near the center top */}
                 <motion.g
                     initial={false}
                     animate={isOpen
@@ -94,10 +81,10 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                         ? { duration: 0.6, ease: "easeOut" }
                         : { duration: 0.35 }
                     }
-                    style={{ transformOrigin: "-14px 60px" }}
+                    style={{ transformOrigin: "-14px 58px" }}
                 >
                     <path d={LEFT_LOBE} fill="url(#ckBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round" />
-                    <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.5" />
+                    <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
                     <ellipse cx="-26" cy="-26" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -26 -26)" />
                 </motion.g>
 
@@ -113,10 +100,6 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     animate={{ opacity: isOpen ? 0 : 0.55 }}
                     transition={{ duration: 0.3 }}
                 />
-
-                {/* Pinched bottom fold — the knot that joins the two lobes. */}
-                <path d={BOTTOM_FOLD} fill="url(#ckFold)" stroke="#5E3B0F" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M -12 56 Q 0 62 12 56" stroke="#FFE3A8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.55" />
 
                 {/* Crumb debris fans out upward on crack. */}
                 <AnimatePresence>
