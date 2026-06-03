@@ -11,15 +11,12 @@ interface CookieSceneProps {
 }
 
 // Right lobe (drawn first; left lobe overlaps it near the center top).
-// Top point pulled further from center for a wider V valley; sharper
-// triangular angle at the outer-top corner.
-const RIGHT_LOBE = "M 16 -50 Q 30 -62 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z";
+// The two straight L segments at the top create a triangular tip; the
+// curved outer side rolls down into the rounded bottom.
+const RIGHT_LOBE = "M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z";
 // Left lobe sits on top, slightly taller and reaches a touch further out
 // so the right lobe disappears behind it near the upper center.
-const LEFT_LOBE = "M -20 -54 Q -32 -64 -52 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z";
-// Curved shadow line inside the cookie suggesting the fold/valley. Starts
-// inside the wider V and narrows as it descends.
-const CREASE = "M -6 -42 Q -10 -10 -2 24 Q 2 44 6 54";
+const LEFT_LOBE = "M -20 -54 L -42 -68 L -54 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z";
 // Soft inner-glow curves following each lobe's outer face.
 const LEFT_GLOSS = "M -22 -40 Q -40 -22 -50 0";
 const RIGHT_GLOSS = "M 18 -38 Q 36 -20 46 0";
@@ -89,19 +86,6 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
                     <ellipse cx="-26" cy="-26" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -26 -26)" />
                 </motion.g>
-
-                {/* Curved shadow crease — the fold valley. Fades on open. */}
-                <motion.path
-                    d={CREASE}
-                    fill="none"
-                    stroke="#5E3B0F"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    opacity="0.55"
-                    initial={false}
-                    animate={{ opacity: isOpen ? 0 : 0.55 }}
-                    transition={{ duration: 0.3 }}
-                />
 
                 {/* Crumb debris fans out upward on crack. */}
                 <AnimatePresence>
