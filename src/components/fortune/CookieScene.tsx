@@ -10,13 +10,15 @@ interface CookieSceneProps {
     onCrack: () => void;
 }
 
-// Left half: a smooth teardrop / leaf shape with the point at the top.
-const LEFT_HALF = "M 0 -60 Q -22 -58 -42 -38 Q -62 -10 -55 22 Q -42 52 -16 60 Q -2 56 0 42 Q -6 -10 0 -60 Z";
-const RIGHT_HALF = "M 0 -60 Q 22 -58 42 -38 Q 62 -10 55 22 Q 42 52 16 60 Q 2 56 0 42 Q 6 -10 0 -60 Z";
+// Left half: a rounded wing curling inward at the top. Outer edge bulges out
+// (left side), bottom is rounded, and the inside edge curves AWAY from center
+// at the top so the two halves form a soft V-valley where they meet.
+const LEFT_HALF = "M -8 -52 Q -28 -56 -48 -38 Q -64 -12 -54 18 Q -42 50 -14 60 Q 2 60 -2 48 Q -10 -10 -8 -52 Z";
+const RIGHT_HALF = "M 8 -52 Q 28 -56 48 -38 Q 64 -12 54 18 Q 42 50 14 60 Q -2 60 2 48 Q 10 -10 8 -52 Z";
 
-// Soft inner highlight following the leaf's outer curve, suggests depth.
-const LEFT_GLOSS = "M -10 -45 Q -32 -32 -42 -8";
-const RIGHT_GLOSS = "M 10 -45 Q 32 -32 42 -8";
+// Soft inner highlight following each wing's outer curve.
+const LEFT_GLOSS = "M -18 -42 Q -38 -28 -46 -6";
+const RIGHT_GLOSS = "M 18 -42 Q 38 -28 46 -6";
 
 export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) => {
     return (
@@ -59,12 +61,12 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     style={{ transformOrigin: "-16px 60px" }}
                 >
                     <path d={LEFT_HALF} fill="url(#ckBody)" stroke="#8B5A1A" strokeWidth="3" strokeLinejoin="round" />
-                    {/* Subtle fold crease near the seam */}
-                    <path d="M -2 -40 Q -8 0 -4 40" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.35" />
+                    {/* Inner shadow at the crease to deepen the V valley */}
+                    <path d="M -6 -50 Q -8 0 -4 46" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.45" />
                     {/* Soft inner glow following the leaf's curve */}
                     <path d={LEFT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
                     {/* Specular highlight (small) */}
-                    <ellipse cx="-22" cy="-30" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -22 -30)" />
+                    <ellipse cx="-28" cy="-28" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(-30 -28 -28)" />
                 </motion.g>
 
                 {/* Right half — mirrors. */}
@@ -83,25 +85,9 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                     style={{ transformOrigin: "16px 60px" }}
                 >
                     <path d={RIGHT_HALF} fill="url(#ckBody)" stroke="#8B5A1A" strokeWidth="3" strokeLinejoin="round" />
-                    <path d="M 2 -40 Q 8 0 4 40" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.35" />
+                    <path d="M 6 -50 Q 8 0 4 46" stroke="#8B5A1A" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.45" />
                     <path d={RIGHT_GLOSS} stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
-                    <ellipse cx="22" cy="-30" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 22 -30)" />
-                </motion.g>
-
-                {/* Top knot/fold detail — visible only when closed; fades during the crack. */}
-                <motion.g
-                    initial={false}
-                    animate={isOpen ? { opacity: 0, scale: 0.6, y: -6 } : { opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    style={{ transformOrigin: "0 -60px" }}
-                >
-                    <path
-                        d="M -11 -60 Q 0 -72 11 -60 Q 6 -54 0 -56 Q -6 -54 -11 -60 Z"
-                        fill="url(#ckBody)"
-                        stroke="#8B5A1A"
-                        strokeWidth="2.4"
-                        strokeLinejoin="round"
-                    />
+                    <ellipse cx="28" cy="-28" rx="6" ry="3" fill="#FFF8DA" opacity="0.7" transform="rotate(30 28 -28)" />
                 </motion.g>
 
                 {/* Crumb debris fans out upward on crack. */}
@@ -163,7 +149,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                         initial={{ opacity: 0, y: -4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="absolute -bottom-2 left-0 right-0 text-center text-xs uppercase tracking-[0.3em] text-base-content/50 font-semibold"
+                        className="absolute -bottom-2 left-0 right-0 text-center text-xs uppercase tracking-[0.3em] text-base-content/70 font-semibold"
                     >
                         Tap to crack
                     </motion.p>

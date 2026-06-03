@@ -11,7 +11,7 @@ export const LuckyRow = ({ lucky }: { lucky: Lucky }) => (
     <div className="flex flex-col items-center gap-5">
         {/* Numbers + powerball */}
         <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-semibold mb-2 text-center">Lucky numbers</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/70 font-semibold mb-2 text-center">Lucky numbers</p>
             <div className="flex items-center gap-2 flex-wrap justify-center">
                 {lucky.numbers.map((n, i) => (
                     <motion.span
@@ -46,7 +46,7 @@ export const LuckyRow = ({ lucky }: { lucky: Lucky }) => (
                     aria-hidden="true"
                 />
                 <div className="leading-tight">
-                    <p className="text-[9px] uppercase tracking-widest text-base-content/40">Color</p>
+                    <p className="text-[9px] uppercase tracking-widest text-base-content/60">Color</p>
                     <p className="text-sm font-medium text-base-content">{lucky.color.name}</p>
                 </div>
             </div>
@@ -55,7 +55,7 @@ export const LuckyRow = ({ lucky }: { lucky: Lucky }) => (
                     {lucky.element.glyph}
                 </span>
                 <div className="leading-tight">
-                    <p className="text-[9px] uppercase tracking-widest text-base-content/40">Element</p>
+                    <p className="text-[9px] uppercase tracking-widest text-base-content/60">Element</p>
                     <p className="text-sm font-medium text-base-content">{lucky.element.name}</p>
                 </div>
             </div>

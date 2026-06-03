@@ -19,7 +19,7 @@ export const ChinesePhrase = ({ chinese }: { chinese: Chinese | null }) => {
     };
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-5 text-center">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-semibold mb-3">Phrase of the day</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/70 font-semibold mb-3">Phrase of the day</p>
             <div className="flex items-center justify-center gap-3">
                 <p
                     className="text-3xl md:text-4xl font-semibold text-base-content"

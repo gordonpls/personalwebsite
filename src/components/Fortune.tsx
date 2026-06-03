@@ -82,15 +82,16 @@ export default function Fortune() {
                         <div className="text-center mb-8 md:mb-10">
                             <p className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">Fortune</p>
                             <h1 className="text-3xl md:text-4xl font-bold text-base-content mt-2">Crack open today’s.</h1>
-                            <p className="text-sm text-base-content/60 mt-2">{formatDate(data?.date ?? null)}</p>
+                            <p className="text-sm text-base-content/70 mt-2">{formatDate(data?.date ?? null)}</p>
                         </div>
 
-                        {/* Two-column grid: cookie + fortune on left, lucky + phrase on right.
-                            Both columns are top-aligned and the cookie size is tuned so the
-                            left column's height roughly matches the right column's content. */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-                            {/* Left column */}
-                            <div className="flex flex-col items-center gap-5">
+                        {/* Flex layout so both halves hug the center instead of floating in
+                            their own 50/50 quadrants. Each column has a tight max-width that
+                            matches the cookie's visual weight, and they meet at the center
+                            for symmetric balance. */}
+                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-8 lg:gap-12">
+                            {/* Left column: cookie + fortune */}
+                            <div className="w-full lg:w-72 flex flex-col items-center gap-5 shrink-0">
                                 <CookieScene
                                     isOpen={state.kind === "open"}
                                     isAnimating={state.kind === "cracking"}
@@ -103,7 +104,7 @@ export default function Fortune() {
                                             initial={{ opacity: 0, y: 8 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.5, delay: 0.55 }}
-                                            className="text-center text-xl md:text-2xl leading-snug italic text-base-content max-w-md mx-auto px-4"
+                                            className="text-center text-lg md:text-xl leading-snug italic text-base-content"
                                             style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
                                         >
                                             <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
@@ -114,8 +115,8 @@ export default function Fortune() {
                                 </AnimatePresence>
                             </div>
 
-                            {/* Right column: skeleton placeholders while closed, populated on crack. */}
-                            <div>
+                            {/* Right column: skeleton while closed, content on crack. */}
+                            <div className="w-full lg:w-96 shrink-0">
                                 <AnimatePresence mode="wait">
                                     {state.kind !== "open" ? (
                                         <motion.div
@@ -148,7 +149,7 @@ export default function Fortune() {
                                                     Save share card
                                                 </button>
                                             </div>
-                                            <p className="text-[11px] text-base-content/40 text-center">
+                                            <p className="text-xs text-base-content/70 text-center">
                                                 One fortune per day. Come back tomorrow for a new one.
                                             </p>
                                         </motion.div>
