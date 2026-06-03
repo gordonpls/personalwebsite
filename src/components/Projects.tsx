@@ -69,22 +69,31 @@ const LinePreview = () => (
 );
 
 // Inline cookie: stylized closed fortune cookie that "shakes" on hover.
+// Matches the geometry of the on-page CookieScene (triangular-tipped lobes,
+// wide V valley) so the card preview reads as the same artifact.
 const CookiePreview = () => (
     <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
         <defs>
-            <linearGradient id="ckTop" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#F0C97A" />
-                <stop offset="1" stopColor="#D89A3C" />
-            </linearGradient>
-            <linearGradient id="ckBot" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#9B6822" />
-                <stop offset="1" stopColor="#D89A3C" />
+            <linearGradient id="ckPrevBody" x1="0.2" y1="0" x2="0.7" y2="1">
+                <stop offset="0" stopColor="#F8CB7C" />
+                <stop offset="0.5" stopColor="#E5A24B" />
+                <stop offset="1" stopColor="#B97623" />
             </linearGradient>
         </defs>
-        <g transform="translate(100 60)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
-            <path d="M -42 0 Q -42 -42 0 -42 Q 42 -42 42 0 L 36 0 Q 0 -5 -36 0 Z" fill="url(#ckTop)" stroke="#6e4814" strokeWidth="0.8" />
-            <path d="M -42 0 Q -42 42 0 42 Q 42 42 42 0 L 36 0 Q 0 5 -36 0 Z" fill="url(#ckBot)" stroke="#6e4814" strokeWidth="0.8" />
-            <path d="M -30 -32 Q -10 -42 5 -39" stroke="#ffe3a8" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.7" />
+        <g transform="translate(100 68) scale(0.7)" className="origin-center transition-transform duration-300 group-hover:rotate-[-3deg]">
+            {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
+            <path
+                d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
+                fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+            />
+            {/* Left lobe — slightly taller, drawn on top */}
+            <path
+                d="M -20 -54 L -42 -68 L -54 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z"
+                fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+            />
+            {/* Soft highlights on the bulging outer faces */}
+            <path d="M -22 -40 Q -40 -22 -50 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
+            <path d="M 18 -38 Q 36 -20 46 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
         </g>
     </svg>
 );
@@ -152,7 +161,7 @@ const PROJECTS: Project[] = [
         accent: "text-warning",
         glow: "from-warning/20 via-warning/0 to-error/10",
         description:
-            "A daily fortune cookie with a crack animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. RapidAPI upstream with a local corpus fallback.",
+            "A daily fortune cookie with a crack animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. A mulberry32 PRNG seeded by (date, IP-hash) locks each visitor's payload for the calendar day.",
         tags: ["Framer Motion", "Canvas", "Web Speech"],
         preview: <CookiePreview />,
     },

@@ -50,7 +50,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                 <motion.g
                     initial={false}
                     animate={isOpen
-                        ? { x: 8, y: 3, rotate: 20 }
+                        ? { x: 30, y: 5, rotate: 28 }
                         : isAnimating
                             ? { x: [0, 2, -2, 2, 0], y: [0, 1, -1, 1, 0] }
                             : { x: 0, y: 0, rotate: 0 }
@@ -71,7 +71,7 @@ export const CookieScene = ({ isOpen, isAnimating, onCrack }: CookieSceneProps) 
                 <motion.g
                     initial={false}
                     animate={isOpen
-                        ? { x: -8, y: 3, rotate: -22 }
+                        ? { x: -30, y: 5, rotate: -30 }
                         : isAnimating
                             ? { x: [0, -2, 2, -2, 0], y: [0, -1, 1, -1, 0] }
                             : { x: 0, y: 0, rotate: 0 }
