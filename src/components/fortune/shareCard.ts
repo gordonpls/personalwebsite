@@ -59,8 +59,8 @@ export function buildShareImage({ fortune, seed, lucky, chinese }: BuildOpts): s
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // Lucky-color glow at bottom-center.
-    const glow = ctx.createRadialGradient(W / 2, H * 0.82, 60, W / 2, H * 0.82, 700);
+    // Lucky-color glow behind the Phrase of the Day block (mid-card).
+    const glow = ctx.createRadialGradient(W / 2, H * 0.55, 80, W / 2, H * 0.55, 760);
     glow.addColorStop(0, lucky.color.hex + "AA");
     glow.addColorStop(1, "#00000000");
     ctx.fillStyle = glow;
@@ -171,9 +171,12 @@ export function buildShareImage({ fortune, seed, lucky, chinese }: BuildOpts): s
     ctx.stroke();
 
     // ── Footer ──────────────────────────────────────────────────────────────
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    // Sit a fixed distance below the last content row instead of pinning to the
+    // canvas bottom, so the dead space between content and link closes up.
+    y += 70;
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "26px ui-sans-serif, -apple-system, system-ui, sans-serif";
-    ctx.fillText("gordonzhong.com/fortune", W / 2, H - 80);
+    ctx.fillText("gordonzhong.com/fortune", W / 2, y);
 
     return canvas.toDataURL("image/png");
 }

@@ -21,6 +21,15 @@ export const Navbar = () => {
     }
   };
 
+  // The Projects link doubles as a hover dropdown trigger; on the home page the
+  // dropdown wrapper swallows the anchor's default jump, so scroll explicitly.
+  const handleProjectsClick = (e: React.MouseEvent) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-base-300 shadow-sm">
       {/* Navbar Start with Mobile Dropdown */}
@@ -73,7 +82,7 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/#about">About</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li className="dropdown dropdown-hover dropdown-bottom dropdown-end p-0">
-            <a tabIndex={0} aria-haspopup="true" className="link link-hover link-info" href="/#projects">
+            <a tabIndex={0} aria-haspopup="true" className="link link-hover link-info" href="/#projects" onClick={handleProjectsClick}>
               Projects
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 fill-current opacity-60" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 10l5 5 5-5z" />
