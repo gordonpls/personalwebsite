@@ -146,7 +146,7 @@ const PROJECTS: Project[] = [
         preview: <PegPreview />,
     },
     {
-        title: "Fortune",
+        title: "Daily Fortune",
         href: "/fortune",
         tag: "Daily",
         accent: "text-warning",

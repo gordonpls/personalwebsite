@@ -144,7 +144,7 @@ export default function Fortune() {
                                                         <polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round" />
                                                         <line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round" strokeLinejoin="round" />
                                                     </svg>
-                                                    Save share card
+                                                    Download fortune image
                                                 </button>
                                             </div>
                                             <p className="text-xs text-base-content/70 text-center">
