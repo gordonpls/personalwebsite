@@ -76,32 +76,37 @@ export default function Fortune() {
         <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
             <Navbar />
             <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
-                <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-10 rounded-md">
-                    <section className="max-w-5xl mx-auto px-2 md:px-6 py-6 md:py-8">
+                <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md">
+                    {/* min-h-[70vh] keeps the closed state from looking truncated on
+                        small viewports; once cracked the content grows naturally. */}
+                    <section className="max-w-5xl mx-auto px-2 md:px-6 py-4 md:py-8 min-h-[70vh] flex flex-col">
                         {/* Eyebrow */}
-                        <div className="text-center mb-8 md:mb-10">
+                        <div className="text-center mb-6 md:mb-10 shrink-0">
                             <p className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">Fortune</p>
-                            <h1 className="text-3xl md:text-4xl font-bold text-base-content mt-2">Crack open today’s.</h1>
+                            <h1 className="text-2xl md:text-4xl font-bold text-base-content mt-2">Crack open today’s.</h1>
                             <p className="text-sm text-base-content/70 mt-2">{formatDate(data?.date ?? null)}</p>
                         </div>
 
-                        {/* When closed, only the cookie shows (centered). On crack, the
-                            cookie slides left and the rest slides in from the right
-                            (desktop) or stacks below (mobile). Framer's `layout` prop
-                            handles the position transition automatically as the right
-                            column mounts. */}
+                        {/* When closed, the row centers vertically in the available
+                            space so the cookie has breathing room on every viewport.
+                            On crack, the cookie shifts left and the right column
+                            slides in (desktop) / stacks below (mobile). */}
                         <LayoutGroup>
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-8 lg:gap-12">
+                            <div className={`flex flex-col lg:flex-row lg:items-start lg:justify-center gap-5 md:gap-8 lg:gap-12 flex-1 ${!isOpen ? "justify-center" : ""}`}>
                                 <motion.div
                                     layout
                                     transition={{ layout: { duration: 0.55, ease: "easeInOut" } }}
-                                    className="w-full lg:w-72 flex flex-col items-center gap-5 shrink-0"
+                                    className="w-full flex flex-col items-center gap-4 shrink-0 lg:w-72"
                                 >
-                                    <CookieScene
-                                        isOpen={isOpen}
-                                        isAnimating={state.kind === "cracking"}
-                                        onCrack={crack}
-                                    />
+                                    {/* Cookie shrinks on open so the open state fits one
+                                        mobile viewport without scrolling. */}
+                                    <div className={`w-full transition-all duration-500 ${isOpen ? "max-w-[12rem] md:max-w-[14rem] lg:max-w-[18rem]" : "max-w-[18rem]"}`}>
+                                        <CookieScene
+                                            isOpen={isOpen}
+                                            isAnimating={state.kind === "cracking"}
+                                            onCrack={crack}
+                                        />
+                                    </div>
 
                                     <AnimatePresence>
                                         {isOpen && (
@@ -109,7 +114,7 @@ export default function Fortune() {
                                                 initial={{ opacity: 0, y: 8 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.5, delay: 0.55 }}
-                                                className="text-center text-lg md:text-xl leading-snug italic text-base-content"
+                                                className="text-center text-base md:text-lg lg:text-xl leading-snug italic text-base-content px-2"
                                                 style={{ fontFamily: '"Iowan Old Style", Georgia, serif' }}
                                             >
                                                 <span aria-hidden="true" className="text-primary/60 pr-1">“</span>
@@ -128,11 +133,11 @@ export default function Fortune() {
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 40 }}
                                             transition={{ duration: 0.55, delay: 0.45, ease: "easeOut" }}
-                                            className="w-full lg:w-96 shrink-0 space-y-6"
+                                            className="w-full lg:w-96 shrink-0 space-y-4 lg:space-y-6"
                                         >
                                             <LuckyRow lucky={state.data.lucky} />
                                             <ChinesePhrase chinese={state.data.chinese} />
-                                            <div className="flex justify-center pt-1">
+                                            <div className="flex justify-center pt-0.5">
                                                 <button onClick={share} className="btn btn-primary btn-sm gap-2">
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />

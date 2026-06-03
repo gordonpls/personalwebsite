@@ -73,7 +73,7 @@ export const Navbar = () => {
           <li><a className="link link-hover link-info" href="/#about">About</a></li>
           <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
           <li className="dropdown dropdown-hover dropdown-bottom dropdown-end p-0">
-            <a tabIndex={0} role="button" aria-haspopup="true" className="link link-hover link-info" href="/#projects">
+            <a tabIndex={0} aria-haspopup="true" className="link link-hover link-info" href="/#projects">
               Projects
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 fill-current opacity-60" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 10l5 5 5-5z" />
