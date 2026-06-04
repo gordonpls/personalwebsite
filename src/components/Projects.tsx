@@ -308,7 +308,7 @@ const ArrowButton = ({ dir, onClick, side }: { dir: "left" | "right"; onClick: (
 
 const SWIPE_THRESHOLD = 40; // px of horizontal travel that counts as a swipe
 // After this many ms of no interaction, the spotlight rewinds back into auto mode.
-const SPOTLIGHT_IDLE_MS = 5000;
+const SPOTLIGHT_IDLE_MS = 2500;
 
 // Default mode: a continuous auto-scrolling marquee of all cards that pauses on
 // hover. Arrows + swipe live in ProjectsCarousel so they sit above this and are
