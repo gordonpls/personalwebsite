@@ -45,6 +45,16 @@
     <pre id="investOutput">Waiting...</pre>
   </div>
 
+  <hr style="margin: 48px 0 24px; border: 0; border-top: 1px solid #333;" />
+
+  <div class="step active" id="updatePanel">
+    <div class="label">Update mode — fix an ITEM_LOGIN_REQUIRED Item</div>
+    <p>Paste the access_token of the stuck Item, then run Link in update mode. No re-exchange — the same access_token resumes working.</p>
+    <input id="updateToken" placeholder="access-production-…" style="width:100%;padding:10px;background:#1a1a1a;color:#e0e0e0;border:1px solid #333;border-radius:6px;font-family:monospace;font-size:13px;margin-top:8px;" />
+    <button id="updateBtn" onclick="startUpdate()" style="margin-top:12px;">Open Plaid Link (update mode)</button>
+    <p id="updateStatus"></p>
+  </div>
+
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
     const API = "http://localhost:3000/api";
@@ -98,6 +108,43 @@
         document.getElementById("testBtn").disabled = false;
       } catch (err) {
         document.getElementById("step2Status").innerHTML = `<span class="error">${err.message}</span>`;
+      }
+    }
+
+    async function startUpdate() {
+      const tok = document.getElementById("updateToken").value.trim();
+      if (!tok.startsWith("access-")) {
+        document.getElementById("updateStatus").innerHTML = `<span class="error">Paste a valid access_token (starts with "access-").</span>`;
+        return;
+      }
+      document.getElementById("updateBtn").disabled = true;
+      document.getElementById("updateStatus").textContent = "Minting update-mode link token…";
+      try {
+        const res = await fetch(`${API}/link/token/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: tok }),
+        });
+        const { link_token, mode, error } = await res.json();
+        if (error || !link_token) throw new Error(error || "No link token returned");
+        if (mode !== "update") throw new Error("Expected update mode but got new-Item mode");
+
+        const handler = Plaid.create({
+          token: link_token,
+          onSuccess: () => {
+            document.getElementById("updateStatus").innerHTML =
+              `<span class="token">✓ Item restored. The same access_token will resume working — no .env change needed.</span>`;
+          },
+          onExit: (err) => {
+            document.getElementById("updateBtn").disabled = false;
+            if (err) document.getElementById("updateStatus").innerHTML = `<span class="error">Error: ${err.display_message ?? err.error_message}</span>`;
+            else document.getElementById("updateStatus").textContent = "Cancelled. Click the button to try again.";
+          },
+        });
+        handler.open();
+      } catch (err) {
+        document.getElementById("updateStatus").innerHTML = `<span class="error">${err.message}</span>`;
+        document.getElementById("updateBtn").disabled = false;
       }
     }
 

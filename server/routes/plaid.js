@@ -86,21 +86,33 @@ function portfolioOf(institution, subtype) {
         : "Tech & Speculation";
 }
 
-// ── One-time setup: create a Link token so you can connect your brokerage ──
-// Call this once from your browser dev tools or Postman, then open the
-// returned link_token in Plaid Link to authorize your accounts.
-router.post("/link/token/create", async (_req, res) => {
+// ── Link token: create OR update-mode ──
+// Body { access_token? }
+//   omitted → fresh Link flow for a brand-new Item (one-time setup).
+//   present → update mode: regenerates the Item's session so a stuck
+//             ITEM_LOGIN_REQUIRED / PENDING_EXPIRATION / etc. Item can be
+//             re-authorized without exchanging for a new access token. The
+//             same access_token resumes working after the user completes Link.
+router.post("/link/token/create", async (req, res) => {
     if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
+    const { access_token } = req.body || {};
     try {
-        const response = await plaidClient.linkTokenCreate({
+        const payload = {
             user: { client_user_id: "owner" },
             client_name: "Gordon Zhong Portfolio",
-            products: [Products.Investments],
             country_codes: [CountryCode.Us],
             language: "en",
-        });
-        logPlaidResponse("link.token.create", response);
-        res.json({ link_token: response.data.link_token });
+        };
+        if (access_token) {
+            // Update mode: omit `products`, pass the stuck access_token.
+            payload.access_token = access_token;
+        } else {
+            // New-Item mode.
+            payload.products = [Products.Investments];
+        }
+        const response = await plaidClient.linkTokenCreate(payload);
+        logPlaidResponse("link.token.create", response, { mode: access_token ? "update" : "new" });
+        res.json({ link_token: response.data.link_token, mode: access_token ? "update" : "new" });
     } catch (err) {
         logPlaidError("link.token.create", err);
         res.status(500).json({ error: "Failed to create link token" });

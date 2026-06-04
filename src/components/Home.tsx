@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Hero } from "./Hero";
 import { AboutMe } from "./AboutMe";
 import { Navbar } from "./Navbar";
@@ -8,6 +10,18 @@ import { Projects } from "./Projects";
 import { Reveal } from "./Reveal";
 
 export const Home = () => {
+    const location = useLocation();
+
+    // The /about, /resume, etc. routes redirect to "/#about", "/#resume" (see
+    // App.tsx). React Router updates the hash but never scrolls, so do it here.
+    // Plain scrollIntoView() inherits `scroll-behavior: smooth` from CSS, which
+    // matches a native anchor click and respects prefers-reduced-motion.
+    useEffect(() => {
+        if (!location.hash) return;
+        const el = document.getElementById(location.hash.slice(1));
+        if (el) requestAnimationFrame(() => el.scrollIntoView());
+    }, [location.hash]);
+
     return (
         <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
             <Navbar></Navbar>
