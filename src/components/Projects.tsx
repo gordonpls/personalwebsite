@@ -4,7 +4,7 @@
 // re-draws, peg pulses) plus a card-wide lift + "open in new tab" hint.
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface Project {
     title: string;
@@ -276,9 +276,6 @@ const FeaturedHero = () => (
     </a>
 );
 
-// Round-robin carousel: auto-scrolls slowly with all cards in a loop. Hover
-// any card pauses the scroll and lifts/expands it. Arrows snap into a
-// spotlight mode that centers one card with peeks of its neighbors.
 const ChevronIcon = ({ dir }: { dir: "left" | "right" }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5" aria-hidden="true">
         {dir === "left"
@@ -298,177 +295,105 @@ const ArrowButton = ({ dir, onClick, side }: { dir: "left" | "right"; onClick: (
     </button>
 );
 
-const AutoCarousel = ({ projects, onArrowClick }: { projects: Project[]; onArrowClick: (dir: "prev" | "next") => void }) => {
-    const [paused, setPaused] = useState(false);
-    // Duplicate once so a 50% translate loops seamlessly.
-    const items = [...projects, ...projects];
-    return (
-        <div className="relative max-w-7xl mx-auto">
-            <div className="overflow-hidden rounded-2xl project-carousel-fade">
-                <div
-                    data-paused={paused}
-                    className="flex gap-4 md:gap-6 project-carousel-track py-1"
-                    onMouseEnter={() => setPaused(true)}
-                    onMouseLeave={() => setPaused(false)}
-                >
-                    {items.map((p, i) => (
-                        <div
-                            key={`${p.title}-${i}`}
-                            className="flex-shrink-0 w-[22rem] md:w-[32rem] transition-transform duration-300 hover:scale-[1.02] hover:z-10 relative"
-                        >
-                            <ProjectCard p={p} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <ArrowButton dir="left" side="left" onClick={() => onArrowClick("prev")} />
-            <ArrowButton dir="right" side="right" onClick={() => onArrowClick("next")} />
-        </div>
-    );
-};
+// Project carousel: auto-advances through the cards, pauses on hover or while
+// a touch is in progress. Navigate with the arrow buttons, a swipe on mobile,
+// or by tapping a dot in the pill indicator.
+const AUTO_ADVANCE_MS = 4500;
+const SWIPE_THRESHOLD = 40; // px of horizontal travel that counts as a swipe
 
-// After this many ms of no hover, the spotlight rewinds back into auto mode.
-const SPOTLIGHT_IDLE_MS = 5000;
-
-const SpotlightCarousel = ({
-    projects,
-    centerIndex,
-    onNavigate,
-    onResume,
-}: {
-    projects: Project[];
-    centerIndex: number;
-    onNavigate: (dir: "prev" | "next") => void;
-    onResume: () => void;
-}) => {
+const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
     const n = projects.length;
-    const prev = projects[(centerIndex - 1 + n) % n];
-    const center = projects[centerIndex];
-    const next = projects[(centerIndex + 1) % n];
-    const [hovering, setHovering] = useState(false);
-    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [index, setIndex] = useState(0);
+    const [paused, setPaused] = useState(false);
+    const touchStartX = useRef<number | null>(null);
 
-    // Reset the idle timer whenever the user navigates or stops hovering.
-    // When the timer fires without being reset, switch back to auto mode.
+    const go = (dir: "prev" | "next") =>
+        setIndex((i) => (dir === "next" ? (i + 1) % n : (i - 1 + n) % n));
+
+    // Auto-advance unless paused (hover or an in-progress touch).
     useEffect(() => {
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        if (hovering) return;
-        idleTimerRef.current = setTimeout(() => onResume(), SPOTLIGHT_IDLE_MS);
-        return () => {
-            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        };
-    }, [hovering, centerIndex, onResume]);
+        if (paused || n <= 1) return;
+        const id = setInterval(() => setIndex((i) => (i + 1) % n), AUTO_ADVANCE_MS);
+        return () => clearInterval(id);
+    }, [paused, n]);
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        setPaused(true);
+    };
+    const onTouchEnd = (e: React.TouchEvent) => {
+        const startX = touchStartX.current;
+        touchStartX.current = null;
+        setPaused(false);
+        if (startX == null) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) > SWIPE_THRESHOLD) go(dx < 0 ? "next" : "prev");
+    };
+
+    const prev = projects[(index - 1 + n) % n];
+    const center = projects[index];
+    const next = projects[(index + 1) % n];
 
     return (
-        <motion.div
+        <div
             className="relative max-w-7xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.35 }}
-            onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => setHovering(false)}
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
         >
-            {/* Desktop: 3-column layout with center spotlight + peeks */}
+            {/* Desktop: 3-column layout with the active card centered between dimmed peeks */}
             <div className="hidden md:grid grid-cols-[1fr_2fr_1fr] gap-4 lg:gap-6 items-stretch">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.7, x: 30 }}
-                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
-                    transition={{ duration: 0.55, ease: "easeOut" }}
-                    className="origin-right pointer-events-none"
-                >
+                <div className="origin-right pointer-events-none opacity-50 scale-90 transition-all duration-500">
                     <ProjectCard p={prev} />
-                </motion.div>
+                </div>
+                {/* Keyed (no AnimatePresence) so a click swaps the card instantly and
+                    replays the enter animation — no exit window to swallow clicks. */}
                 <motion.div
                     key={center.title}
-                    initial={{ opacity: 0.5, scale: 0.92 }}
+                    initial={{ opacity: 0.4, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
                     className="z-10"
                 >
                     <ProjectCard p={center} />
                 </motion.div>
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.7, x: -30 }}
-                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
-                    transition={{ duration: 0.55, ease: "easeOut" }}
-                    className="origin-left pointer-events-none"
-                >
+                <div className="origin-left pointer-events-none opacity-50 scale-90 transition-all duration-500">
                     <ProjectCard p={next} />
+                </div>
+            </div>
+
+            {/* Mobile: a single swipeable card */}
+            <div className="md:hidden touch-pan-y select-none">
+                <motion.div
+                    key={`m-${center.title}`}
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                >
+                    <ProjectCard p={center} />
                 </motion.div>
             </div>
-            {/* Mobile: just the center card, peeks hidden */}
-            <motion.div
-                key={`m-${center.title}`}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="md:hidden"
-            >
-                <ProjectCard p={center} />
-            </motion.div>
 
-            <ArrowButton dir="left" side="left" onClick={() => onNavigate("prev")} />
-            <ArrowButton dir="right" side="right" onClick={() => onNavigate("next")} />
+            <ArrowButton dir="left" side="left" onClick={() => go("prev")} />
+            <ArrowButton dir="right" side="right" onClick={() => go("next")} />
 
-            <div className="flex justify-center mt-4">
-                <button
-                    type="button"
-                    onClick={onResume}
-                    className="btn btn-ghost btn-xs gap-1.5 text-base-content/70"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                        <polygon points="5 3 19 12 5 21 5 3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Resume auto-play
-                </button>
+            {/* Pill / dot position indicator */}
+            <div className="flex justify-center items-center gap-2 mt-5">
+                {projects.map((p, i) => (
+                    <button
+                        key={p.title}
+                        type="button"
+                        onClick={() => setIndex(i)}
+                        aria-label={`Show ${p.title}`}
+                        aria-current={i === index}
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                            i === index ? "w-6 bg-primary" : "w-2 bg-base-content/25 hover:bg-base-content/40"
+                        }`}
+                    />
+                ))}
             </div>
-        </motion.div>
-    );
-};
-
-const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
-    const [mode, setMode] = useState<"auto" | "spotlight">("auto");
-    const [centerIndex, setCenterIndex] = useState(0);
-
-    const navigate = (dir: "prev" | "next") => {
-        setCenterIndex((i) => (dir === "next" ? (i + 1) % projects.length : (i - 1 + projects.length) % projects.length));
-    };
-
-    return (
-        <AnimatePresence mode="wait">
-            {mode === "spotlight" ? (
-                <motion.div
-                    key="spotlight"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <SpotlightCarousel
-                        projects={projects}
-                        centerIndex={centerIndex}
-                        onNavigate={navigate}
-                        onResume={() => setMode("auto")}
-                    />
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="auto"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <AutoCarousel
-                        projects={projects}
-                        onArrowClick={(dir) => {
-                            setMode("spotlight");
-                            navigate(dir);
-                        }}
-                    />
-                </motion.div>
-            )}
-        </AnimatePresence>
+        </div>
     );
 };
 
@@ -480,7 +405,7 @@ export const Projects = () => (
                 <h2 className="text-2xl md:text-3xl font-bold text-base-content mt-1">Things I&apos;ve been building</h2>
             </div>
             <p className="text-sm text-base-content/60 flex-1 min-w-[16rem]">
-                Three interactive apps; each one opens in a new tab. Hover any card to pause the carousel; click an arrow for one-at-a-time browsing.
+                A few interactive apps; each one opens in a new tab. Hover to pause, swipe on mobile, or tap a dot to jump between them.
             </p>
         </div>
 

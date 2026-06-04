@@ -15,10 +15,31 @@ const RAPID_HOST = "fortune-cookie4.p.rapidapi.com";
 const RAPID_URL = `https://${RAPID_HOST}/slack`;
 const FETCH_TIMEOUT_MS = 2500;
 
+// Strip the upstream preamble + quotes that wrap the actual aphorism.
+// Variants seen / handled:
+//   "Your fortune reads: '...'"
+//   "Your fortune reads '...'"   (no colon)
+//   "Your fortune cookie reads: '...'"
+//   "Your fortune says/is/sez: '...'"
+//   "Fortune: '...'"
+//   "Today's fortune: '...'"
+// Also strips wrapping single, double, or typographic quotes.
+function cleanFortune(s) {
+    if (!s) return s;
+    let out = s.trim();
+    // Specific preambles, most-likely first. Each is safe in isolation.
+    out = out.replace(/^your\s+fortune(?:\s+cookie)?\s+\w+\s*:?\s*/i, ""); // "Your fortune reads/says/is/..."
+    out = out.replace(/^today['’]?s?\s+fortune\s*:?\s*/i, "");              // "Today's fortune:"
+    out = out.replace(/^fortune\s*:\s*/i, "");                              // "Fortune:"
+    // Wrapping single, double, or typographic quotes around the whole thing.
+    out = out.replace(/^["'‘’“”](.+)["'‘’“”]\s*\.?$/s, "$1");
+    return out.trim();
+}
+
 // Best-effort extraction: RapidAPI's fortune-cookie4 /slack endpoint returns
-// a Slack-style payload. Try the common shapes before giving up, then strip
-// the "your fortune reads: '...'" wrapper the upstream tends to add so the
-// rendered slip is just the aphorism itself.
+// a Slack-style payload. Pull the message string out of whatever shape we
+// got, then run it through cleanFortune so the rendered slip is just the
+// aphorism itself with no upstream wrapper text.
 function extractMessage(payload) {
     if (!payload) return null;
     let raw = null;
@@ -28,12 +49,8 @@ function extractMessage(payload) {
     else if (payload.data && typeof payload.data.message === "string") raw = payload.data.message;
     else if (Array.isArray(payload.attachments) && payload.attachments[0]?.text) raw = String(payload.attachments[0].text);
     if (!raw) return null;
-    let s = raw.trim();
-    // Strip a leading "your fortune reads:" preamble (case-insensitive).
-    s = s.replace(/^your fortune reads:\s*/i, "");
-    // Strip wrapping single or double quotes if the entire string is quoted.
-    s = s.replace(/^["'‘’“”](.+)["'‘’“”]$/s, "$1");
-    return s.trim() || null;
+    const cleaned = cleanFortune(raw);
+    return cleaned || null;
 }
 
 async function fetchFromRapidApi() {
@@ -98,7 +115,10 @@ router.get("/fortune", async (req, res) => {
     let source = null;
     if (dayCache.has(seed)) {
         const cached = dayCache.get(seed);
-        message = cached.message;
+        // Re-clean on the way out so any cached value that was stored before
+        // the cleanFortune helper existed gets fixed without waiting for a
+        // server restart to clear the cache.
+        message = cleanFortune(cached.message);
         source = cached.source;
     }
     if (!message) {
