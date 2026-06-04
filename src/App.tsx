@@ -5,7 +5,6 @@ import Stablecoin from "./components/Stablecoin";
 import Portfolio from "./components/Portfolio";
 import AllocationPage from "./components/AllocationPage";
 import Fortune from "./components/Fortune";
-import CarouselPreviews from "./components/CarouselPreviews";
 import NotFound from "./components/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -15,13 +14,15 @@ function App() {
             <CommandPalette />
             <Routes>
                 <Route path="/" element={<Home />} />
-                {/* /about → the About section on Home (production also has a 302 in .htaccess). */}
+                {/* Top-level anchor aliases — also 302'd by .htaccess in production. */}
                 <Route path="/about" element={<Navigate to="/#about" replace />} />
+                <Route path="/resume" element={<Navigate to="/#resume" replace />} />
+                <Route path="/projects" element={<Navigate to="/#projects" replace />} />
+                <Route path="/gallery" element={<Navigate to="/#gallery" replace />} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/allocation" element={<AllocationPage />} />
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="/fortune" element={<Fortune />} />
-                <Route path="/preview/carousel" element={<CarouselPreviews />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </BrowserRouter>

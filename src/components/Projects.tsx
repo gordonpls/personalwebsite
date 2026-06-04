@@ -135,7 +135,7 @@ const PegPreview = () => (
     </svg>
 );
 
-export const PROJECTS: Project[] = [
+const PROJECTS: Project[] = [
     {
         title: "Allocation",
         href: "/allocation",
@@ -182,7 +182,7 @@ export const PROJECTS: Project[] = [
     },
 ];
 
-export const ProjectCard = ({ p }: { p: Project }) => (
+const ProjectCard = ({ p }: { p: Project }) => (
     <a
         href={p.href}
         target="_blank"
