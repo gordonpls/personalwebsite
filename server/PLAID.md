@@ -232,3 +232,31 @@ node server/scripts/inspect-tokens.mjs --remove \
 The removal step prompts for `YES` before calling `itemRemove`. Dead tokens
 (`ITEM_NOT_FOUND` / `INVALID_ACCESS_TOKEN`) are listed separately — Plaid
 has already cleaned those up; no action needed.
+
+## Querying Plaid Dashboard via MCP
+
+For questions whose answers aren't in the public docs (Trial Plan counter
+math, undocumented Item state recovery, etc.), use
+[server/scripts/plaid-mcp.py](scripts/plaid-mcp.py) — a one-shot CLI that
+exchanges Plaid client credentials for a short-lived `mcp:dashboard` OAuth
+token, then asks Claude a question with Plaid's Dashboard MCP server attached
+as a live tool.
+
+```sh
+pip install anthropic requests          # one-time
+export ANTHROPIC_API_KEY=sk-ant-...      # one-time
+
+cd server
+python3 scripts/plaid-mcp.py "List every Item on my account: item_id, institution, created_at, status."
+python3 scripts/plaid-mcp.py "How is the Trial Plan 'Item Adds' counter computed? Does itemRemove decrement it?"
+python3 scripts/plaid-mcp.py "I have 9/10 trial Item adds used and only need 2 active. Strategies to stay free?"
+```
+
+The script prints the assistant's text, the tool calls it made against the
+Plaid MCP server, and the tool results — in order — so you can audit what
+came from Plaid vs. the model's interpretation. Each invocation mints a
+fresh OAuth token; nothing persists to disk.
+
+Treat the tool-result output like access_tokens: item_ids, account_ids, and
+institution metadata may surface, and pasting them into chat or committing
+them is a leak. Stay local-only.
