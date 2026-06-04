@@ -20,11 +20,16 @@
 </head>
 <body>
   <h2>Plaid Link — One-Time Account Setup</h2>
-  <p>Run this page once to connect your brokerage and get your <code>PLAID_ACCESS_TOKEN</code>.</p>
+  <p>Two separate flows below. Read carefully before clicking:</p>
+  <ul style="line-height:1.7">
+    <li>If your existing Item just needs to be re-authed (e.g. <code>ITEM_LOGIN_REQUIRED</code>), scroll down to <strong>Update mode</strong>. The same access_token keeps working — no new Item is created, no extra trial-cap slot is used.</li>
+    <li>The flow below is for adding a <strong>brand-new institution</strong>. It will create a new Item and consume a trial-cap slot. Only use it the first time.</li>
+  </ul>
 
   <div class="step active" id="step1">
-    <div class="label">Step 1 — Connect your brokerage</div>
-    <button id="linkBtn" onclick="startLink()">Open Plaid Link</button>
+    <div class="label">Step 1 — Connect a NEW brokerage (creates a new Item)</div>
+    <button id="linkBtn" onclick="confirmAndStartLink()" style="background:#c75c30">⚠ Create new Item</button>
+    <p style="font-size:13px;color:#ff9800;margin-top:8px;">This uses one of your 10 trial connections. Don't click this if you're trying to refresh an existing connection — use Update mode below instead.</p>
     <p id="step1Status"></p>
   </div>
 
@@ -58,6 +63,17 @@
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
     const API = "http://localhost:3000/api";
+
+    async function confirmAndStartLink() {
+      const ok = confirm(
+        "This creates a NEW Plaid Item and consumes one of your 10 trial-cap slots.\n\n" +
+        "Only proceed if you're connecting a brand-new institution for the first time.\n\n" +
+        "If your existing Item is stuck (e.g. ITEM_LOGIN_REQUIRED), close this dialog and use Update mode at the bottom of the page instead — that doesn't create a new Item.\n\n" +
+        "Continue?"
+      );
+      if (!ok) return;
+      await startLink();
+    }
 
     async function startLink() {
       document.getElementById("linkBtn").disabled = true;
