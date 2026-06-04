@@ -212,15 +212,19 @@ export const ProjectCard = ({ p }: { p: Project }) => (
         {/* Body */}
         <div className="p-5 relative flex-1 flex flex-col">
             <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                <h3 className="text-lg font-bold text-base-content group-hover:text-primary transition-colors">{p.title}</h3>
-                <span className={`text-[10px] uppercase tracking-widest font-semibold ${p.accent}`}>{p.tag}</span>
+                {/* truncate → title is always one line, so a narrow peek column
+                    can't make it wrap and grow the card. */}
+                <h3 className="text-lg font-bold text-base-content group-hover:text-primary transition-colors truncate min-w-0">{p.title}</h3>
+                <span className={`shrink-0 text-[10px] uppercase tracking-widest font-semibold ${p.accent}`}>{p.tag}</span>
             </div>
-            {/* Reserve a constant 3-line block (clamp caps the max, min-h sets the
-                floor) so cards are the same height regardless of copy length. */}
+            {/* Each text region is a fixed height (title 1 line, description a
+                3-line block, tags a single non-wrapping row) so the card is the
+                same height regardless of how wide its column is or how long the
+                copy is — otherwise the grid row, and the page, shift on nav. */}
             <p className="text-sm text-base-content/70 leading-snug line-clamp-3 min-h-[3.6rem]">{p.description}</p>
-            <div className="flex flex-wrap gap-1.5 mt-auto pt-3">
+            <div className="flex flex-nowrap gap-1.5 mt-auto pt-3 overflow-hidden">
                 {p.tags.map((t) => (
-                    <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
+                    <span key={t} className="badge badge-sm badge-ghost text-[10px] shrink-0">{t}</span>
                 ))}
             </div>
         </div>
@@ -465,20 +469,23 @@ const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
                 <ArrowButton dir="right" side="right" onClick={() => handleNav("next")} />
             </div>
 
-            {mode === "spotlight" && (
-                <div className="flex justify-center mt-2">
-                    <button
-                        type="button"
-                        onClick={() => setMode("auto")}
-                        className="btn btn-ghost btn-xs gap-1.5 text-base-content/70"
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                            <polygon points="5 3 19 12 5 21 5 3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Resume auto-play
-                    </button>
-                </div>
-            )}
+            {/* Always rendered so its height is reserved in both modes — toggling
+                only opacity/interactivity avoids a vertical jump when entering or
+                leaving spotlight (via arrows or the idle timeout). */}
+            <div className="flex justify-center mt-2">
+                <button
+                    type="button"
+                    onClick={() => setMode("auto")}
+                    aria-hidden={mode !== "spotlight"}
+                    tabIndex={mode === "spotlight" ? 0 : -1}
+                    className={`btn btn-ghost btn-xs gap-1.5 text-base-content/70 transition-opacity duration-200 ${mode === "spotlight" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <polygon points="5 3 19 12 5 21 5 3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Resume auto-play
+                </button>
+            </div>
         </div>
     );
 };
