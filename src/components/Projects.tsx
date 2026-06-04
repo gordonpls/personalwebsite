@@ -215,8 +215,10 @@ export const ProjectCard = ({ p }: { p: Project }) => (
                 <h3 className="text-lg font-bold text-base-content group-hover:text-primary transition-colors">{p.title}</h3>
                 <span className={`text-[10px] uppercase tracking-widest font-semibold ${p.accent}`}>{p.tag}</span>
             </div>
-            <p className="text-sm text-base-content/70 leading-snug line-clamp-3">{p.description}</p>
-            <div className="flex flex-wrap gap-1.5 mt-3">
+            {/* Reserve a constant 3-line block (clamp caps the max, min-h sets the
+                floor) so cards are the same height regardless of copy length. */}
+            <p className="text-sm text-base-content/70 leading-snug line-clamp-3 min-h-[3.6rem]">{p.description}</p>
+            <div className="flex flex-wrap gap-1.5 mt-auto pt-3">
                 {p.tags.map((t) => (
                     <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
                 ))}
@@ -284,115 +286,199 @@ const ChevronIcon = ({ dir }: { dir: "left" | "right" }) => (
     </svg>
 );
 
+// A positioning wrapper centers the button via flex (no transform), so the
+// button's own hover/active transforms can't clobber the vertical centering —
+// otherwise DaisyUI's :active transform drops the button on click ("bounce").
 const ArrowButton = ({ dir, onClick, side }: { dir: "left" | "right"; onClick: () => void; side: "left" | "right" }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        aria-label={dir === "left" ? "Previous project" : "Next project"}
-        className={`absolute top-1/2 -translate-y-1/2 z-20 ${side === "left" ? "left-1 md:left-2" : "right-1 md:right-2"} btn btn-circle btn-sm md:btn-md bg-base-100/95 border border-base-300 shadow-md hover:bg-base-100 hover:scale-110 transition-transform`}
-    >
-        <ChevronIcon dir={dir} />
-    </button>
+    <div className={`absolute inset-y-0 z-20 flex items-center ${side === "left" ? "left-1 md:left-2" : "right-1 md:right-2"}`}>
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={dir === "left" ? "Previous project" : "Next project"}
+            className="btn btn-circle btn-sm md:btn-md bg-base-100/95 border border-base-300 shadow-md hover:bg-base-100 hover:scale-110 transition-transform"
+        >
+            <ChevronIcon dir={dir} />
+        </button>
+    </div>
 );
 
-// Project carousel: auto-advances through the cards, pauses on hover or while
-// a touch is in progress. Navigate with the arrow buttons, a swipe on mobile,
-// or by tapping a dot in the pill indicator.
-const AUTO_ADVANCE_MS = 4500;
 const SWIPE_THRESHOLD = 40; // px of horizontal travel that counts as a swipe
+// After this many ms of no interaction, the spotlight rewinds back into auto mode.
+const SPOTLIGHT_IDLE_MS = 5000;
 
-const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
-    const n = projects.length;
-    const [index, setIndex] = useState(0);
+// Default mode: a continuous auto-scrolling marquee of all cards that pauses on
+// hover. Arrows + swipe live in ProjectsCarousel so they sit above this and are
+// never remounted when the mode switches.
+const AutoCarousel = ({ projects }: { projects: Project[] }) => {
     const [paused, setPaused] = useState(false);
-    const touchStartX = useRef<number | null>(null);
+    // Duplicate once so a 50% translate loops seamlessly.
+    const items = [...projects, ...projects];
+    return (
+        <div className="overflow-hidden rounded-2xl project-carousel-fade">
+            <div
+                data-paused={paused}
+                className="flex gap-4 md:gap-6 project-carousel-track py-1"
+                onMouseEnter={() => setPaused(true)}
+                onMouseLeave={() => setPaused(false)}
+            >
+                {items.map((p, i) => (
+                    <div
+                        key={`${p.title}-${i}`}
+                        className="flex-shrink-0 w-[22rem] md:w-[32rem] transition-transform duration-300 hover:scale-[1.02] hover:z-10 relative"
+                    >
+                        <ProjectCard p={p} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
-    const go = (dir: "prev" | "next") =>
-        setIndex((i) => (dir === "next" ? (i + 1) % n : (i - 1 + n) % n));
+// Spotlight: the focused card centered between dimmed peeks. Clicking a peek
+// shifts focus to it (onFocus) instead of opening it — only the centered card's
+// link opens. Arrows / swipe are handled by the parent.
+const SpotlightCarousel = ({
+    projects,
+    centerIndex,
+    onFocus,
+}: {
+    projects: Project[];
+    centerIndex: number;
+    onFocus: (dir: "prev" | "next") => void;
+}) => {
+    const n = projects.length;
+    const prev = projects[(centerIndex - 1 + n) % n];
+    const center = projects[centerIndex];
+    const next = projects[(centerIndex + 1) % n];
 
-    // Auto-advance unless paused (hover or an in-progress touch).
-    useEffect(() => {
-        if (paused || n <= 1) return;
-        const id = setInterval(() => setIndex((i) => (i + 1) % n), AUTO_ADVANCE_MS);
-        return () => clearInterval(id);
-    }, [paused, n]);
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        setPaused(true);
+    // Intercept a peek click in the capture phase so the card's <a> never
+    // navigates; shift focus to that card instead.
+    const focusOnClick = (dir: "prev" | "next") => (e: React.MouseEvent) => {
+        e.preventDefault();
+        onFocus(dir);
     };
-    const onTouchEnd = (e: React.TouchEvent) => {
-        const startX = touchStartX.current;
-        touchStartX.current = null;
-        setPaused(false);
-        if (startX == null) return;
-        const dx = e.changedTouches[0].clientX - startX;
-        if (Math.abs(dx) > SWIPE_THRESHOLD) go(dx < 0 ? "next" : "prev");
-    };
-
-    const prev = projects[(index - 1 + n) % n];
-    const center = projects[index];
-    const next = projects[(index + 1) % n];
 
     return (
-        <div
-            className="relative max-w-7xl mx-auto"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-        >
-            {/* Desktop: 3-column layout with the active card centered between dimmed peeks */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+            {/* Desktop: 3-column layout with center spotlight + clickable peeks */}
             <div className="hidden md:grid grid-cols-[1fr_2fr_1fr] gap-4 lg:gap-6 items-stretch">
-                <div className="origin-right pointer-events-none opacity-50 scale-90 transition-all duration-500">
+                <motion.div
+                    onClickCapture={focusOnClick("prev")}
+                    role="button"
+                    aria-label={`Focus ${prev.title}`}
+                    initial={{ opacity: 0, scale: 0.7, x: 30 }}
+                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
+                    whileHover={{ opacity: 0.85, scale: 0.92 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    className="origin-right cursor-pointer"
+                >
                     <ProjectCard p={prev} />
-                </div>
-                {/* Keyed (no AnimatePresence) so a click swaps the card instantly and
-                    replays the enter animation — no exit window to swallow clicks. */}
+                </motion.div>
                 <motion.div
                     key={center.title}
-                    initial={{ opacity: 0.4, scale: 0.92 }}
+                    initial={{ opacity: 0.5, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
                     className="z-10"
                 >
                     <ProjectCard p={center} />
                 </motion.div>
-                <div className="origin-left pointer-events-none opacity-50 scale-90 transition-all duration-500">
-                    <ProjectCard p={next} />
-                </div>
-            </div>
-
-            {/* Mobile: a single swipeable card */}
-            <div className="md:hidden touch-pan-y select-none">
                 <motion.div
-                    key={`m-${center.title}`}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    onClickCapture={focusOnClick("next")}
+                    role="button"
+                    aria-label={`Focus ${next.title}`}
+                    initial={{ opacity: 0, scale: 0.7, x: -30 }}
+                    animate={{ opacity: 0.5, scale: 0.9, x: 0 }}
+                    whileHover={{ opacity: 0.85, scale: 0.92 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    className="origin-left cursor-pointer"
                 >
-                    <ProjectCard p={center} />
+                    <ProjectCard p={next} />
                 </motion.div>
             </div>
+            {/* Mobile: just the center card, peeks hidden */}
+            <motion.div
+                key={`m-${center.title}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="md:hidden select-none"
+            >
+                <ProjectCard p={center} />
+            </motion.div>
+        </motion.div>
+    );
+};
 
-            <ArrowButton dir="left" side="left" onClick={() => go("prev")} />
-            <ArrowButton dir="right" side="right" onClick={() => go("next")} />
+const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
+    const n = projects.length;
+    const [mode, setMode] = useState<"auto" | "spotlight">("auto");
+    const [centerIndex, setCenterIndex] = useState(0);
+    const [hovering, setHovering] = useState(false);
+    const touchStartX = useRef<number | null>(null);
+    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-            {/* Pill / dot position indicator */}
-            <div className="flex justify-center items-center gap-2 mt-5">
-                {projects.map((p, i) => (
-                    <button
-                        key={p.title}
-                        type="button"
-                        onClick={() => setIndex(i)}
-                        aria-label={`Show ${p.title}`}
-                        aria-current={i === index}
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                            i === index ? "w-6 bg-primary" : "w-2 bg-base-content/25 hover:bg-base-content/40"
-                        }`}
-                    />
-                ))}
+    const navigate = (dir: "prev" | "next") =>
+        setCenterIndex((i) => (dir === "next" ? (i + 1) % n : (i - 1 + n) % n));
+
+    // Arrows, swipe, and peek clicks all route here: enter spotlight + move focus.
+    const handleNav = (dir: "prev" | "next") => {
+        setMode("spotlight");
+        navigate(dir);
+    };
+
+    // In spotlight, rewind to the marquee after a spell of no interaction.
+    useEffect(() => {
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+        if (mode !== "spotlight" || hovering) return;
+        idleTimerRef.current = setTimeout(() => setMode("auto"), SPOTLIGHT_IDLE_MS);
+        return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); };
+    }, [mode, hovering, centerIndex]);
+
+    const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+    const onTouchEnd = (e: React.TouchEvent) => {
+        const startX = touchStartX.current;
+        touchStartX.current = null;
+        if (startX == null) return;
+        const dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) > SWIPE_THRESHOLD) handleNav(dx < 0 ? "next" : "prev");
+    };
+
+    return (
+        <div>
+            {/* The arrows are rendered here, outside the swapped carousels, so they
+                are the same DOM node in both modes — never remounted, so a click
+                immediately after entering spotlight always lands. */}
+            <div
+                className="relative max-w-7xl mx-auto touch-pan-y"
+                onMouseEnter={() => setHovering(true)}
+                onMouseLeave={() => setHovering(false)}
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+            >
+                {mode === "spotlight" ? (
+                    <SpotlightCarousel projects={projects} centerIndex={centerIndex} onFocus={navigate} />
+                ) : (
+                    <AutoCarousel projects={projects} />
+                )}
+                <ArrowButton dir="left" side="left" onClick={() => handleNav("prev")} />
+                <ArrowButton dir="right" side="right" onClick={() => handleNav("next")} />
             </div>
+
+            {mode === "spotlight" && (
+                <div className="flex justify-center mt-2">
+                    <button
+                        type="button"
+                        onClick={() => setMode("auto")}
+                        className="btn btn-ghost btn-xs gap-1.5 text-base-content/70"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                            <polygon points="5 3 19 12 5 21 5 3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Resume auto-play
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
@@ -405,7 +491,7 @@ export const Projects = () => (
                 <h2 className="text-2xl md:text-3xl font-bold text-base-content mt-1">Things I&apos;ve been building</h2>
             </div>
             <p className="text-sm text-base-content/60 flex-1 min-w-[16rem]">
-                A few interactive apps; each one opens in a new tab. Hover to pause, swipe on mobile, or tap a dot to jump between them.
+                A few interactive apps; each one opens in a new tab. Hover to pause the carousel, use the arrows, or swipe on mobile.
             </p>
         </div>
 
