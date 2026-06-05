@@ -1,89 +1,213 @@
 import { useEffect, useMemo, useState } from "react";
-import { IMAGES } from "./GalleryImages";
+import { ALBUM_NAMES, IMAGES, type GalleryImage } from "./GalleryImages";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 // Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 5), so the browser
 // can pick the smallest adequate thumbnail from srcset.
 const GRID_SIZES = "(min-width:1280px) 20vw, (min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw";
 
-const CATEGORIES = ["All", "Denver", "Thailand", "Vegas", "New York", "Japan"];
+const CATEGORIES = ["All", ...ALBUM_NAMES];
+const POPULATED = [...new Set(IMAGES.map((i) => i.category))]; // albums that have photos
+const PREVIEW_N = 12; // photos shown inline before "View full gallery"
 
-// Page size per breakpoint: kept a multiple of that breakpoint's column count so
-// every row stays full (no lonely thumbnail), and smaller on mobile so the
-// gallery isn't so tall. Matches the grid's 2 / 3 / 4 / 5 columns.
-function pageSizeFor(width: number): number {
-    if (width >= 1280) return 15; // 5 cols × 3 rows
-    if (width >= 640) return 12;  // 3–4 cols × 3–4 rows
-    return 8;                     // 2 cols × 4 rows
+// Interleave one photo per album in turn so the "All" preview shows a spread
+// across locations instead of whatever the shuffle happened to front-load.
+function spreadAcrossAlbums(images: GalleryImage[], n: number): GalleryImage[] {
+    const buckets = new Map<string, GalleryImage[]>();
+    for (const img of images) {
+        const b = buckets.get(img.category) ?? [];
+        b.push(img);
+        buckets.set(img.category, b);
+    }
+    const queues = [...buckets.values()];
+    const out: GalleryImage[] = [];
+    let i = 0;
+    while (out.length < n && queues.some((q) => q.length)) {
+        const q = queues[i % queues.length];
+        if (q.length) out.push(q.shift()!);
+        i++;
+    }
+    return out;
 }
-function usePageSize(): number {
-    const [n, setN] = useState(() => (typeof window !== "undefined" ? pageSizeFor(window.innerWidth) : 15));
+
+// Responsive column count for the fixed-column masonry (matches 2 / 3 / 4 / 5).
+function useColumnCount(): number {
+    const get = (w: number) => (w >= 1280 ? 5 : w >= 1024 ? 4 : w >= 640 ? 3 : 2);
+    const [n, setN] = useState(() => (typeof window !== "undefined" ? get(window.innerWidth) : 4));
     useEffect(() => {
-        const onResize = () => setN(pageSizeFor(window.innerWidth));
+        const onResize = () => setN(get(window.innerWidth));
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
     return n;
 }
 
-// Compact page list with ellipses (e.g. 1 … 5 6 7 … 13). The block containing
-// the current page always shows at least 3 numbers — so on page 1 you get
-// "1 2 3 … 14", not "1 2 … 14".
-function getPageItems(current: number, total: number): (number | "…")[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    let start = Math.max(1, current - 1);
-    let end = Math.min(total, current + 1);
-    if (start === 1) end = Math.max(end, 3);             // extend at the start
-    if (end === total) start = Math.min(start, total - 2); // extend at the end
-    const items: (number | "…")[] = [1];
-    if (start > 2) items.push("…");
-    for (let p = Math.max(2, start); p <= Math.min(total - 1, end); p++) items.push(p);
-    if (end < total - 1) items.push("…");
-    items.push(total);
-    return items;
+// ─── Album pill ─────────────────────────────────────────────────────────────
+// Small bottom-right indicator of which album a photo came from. Shown only on
+// the "All" view (redundant once filtered to a single album).
+function AlbumPill({ category }: { category: string }) {
+    return (
+        <span className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-medium text-white shadow backdrop-blur-sm">
+            {category}
+        </span>
+    );
+}
+
+// ─── Masonry grid ─────────────────────────────────────────────────────────────
+// Fixed-column layout: images are distributed into N columns (shortest-column
+// first, using known aspect ratios) and each tile reserves its aspect ratio
+// up-front, so nothing reflows as images lazy-load.
+type OpenFn = (list: GalleryImage[], index: number) => void;
+
+function MasonryGrid({
+    images,
+    showAlbum,
+    onOpen,
+}: {
+    images: GalleryImage[];
+    showAlbum: boolean;
+    onOpen: OpenFn;
+}) {
+    const columnCount = useColumnCount();
+    const columns = useMemo(() => {
+        const cols: { img: GalleryImage; index: number }[][] = Array.from(
+            { length: columnCount },
+            () => [],
+        );
+        const heights = new Array(columnCount).fill(0);
+        images.forEach((img, index) => {
+            const relHeight = img.aspect ? 1 / img.aspect : 1; // height for unit width
+            let target = 0;
+            for (let c = 1; c < columnCount; c++) if (heights[c] < heights[target]) target = c;
+            cols[target].push({ img, index });
+            heights[target] += relHeight;
+        });
+        return cols;
+    }, [images, columnCount]);
+
+    return (
+        <div className="flex gap-3 sm:gap-4">
+            {columns.map((col, ci) => (
+                <div key={ci} className="flex min-w-0 flex-1 flex-col gap-3 sm:gap-4">
+                    {col.map(({ img, index }) => (
+                        <button
+                            key={img.id}
+                            type="button"
+                            aria-label={`View ${img.alt} from ${img.category}`}
+                            onClick={() => onOpen(images, index)}
+                            style={{ aspectRatio: img.aspect ?? 1 }}
+                            className="group relative block w-full overflow-hidden rounded-xl border border-base-300 bg-base-100 p-0 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                            <img
+                                src={img.src}
+                                srcSet={img.srcset}
+                                sizes={GRID_SIZES}
+                                alt={img.alt}
+                                loading="lazy"
+                                decoding="async"
+                                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                            />
+                            {showAlbum && <AlbumPill category={img.category} />}
+                        </button>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ─── Coming Soon (empty album) ───────────────────────────────────────────────
+const SKELETON_ASPECTS = [1, 0.75, 1.3, 0.66, 1, 1.5, 0.8, 1.1, 0.7, 1.25, 0.9, 1];
+function ComingSoon({ album }: { album: string }) {
+    return (
+        <div className="relative">
+            <div className="flex gap-3 sm:gap-4" aria-hidden="true">
+                {[0, 1, 2, 3].map((col) => (
+                    <div key={col} className="flex flex-1 flex-col gap-3 sm:gap-4">
+                        {SKELETON_ASPECTS.filter((_, i) => i % 4 === col).map((ar, i) => (
+                            <div key={i} className="skeleton w-full rounded-xl" style={{ aspectRatio: ar }} />
+                        ))}
+                    </div>
+                ))}
+            </div>
+            <div className="absolute inset-0 bg-base-200/55" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-base-100 shadow-md ring-1 ring-base-300">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-8 w-8 text-primary"
+                    >
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
+                        <circle cx="12" cy="13" r="3.5" />
+                    </svg>
+                </div>
+                <h3 className="text-2xl font-bold">Coming Soon</h3>
+                <p className="max-w-xs text-sm text-base-content/70">
+                    Photos from <span className="font-semibold text-base-content">{album}</span> are on
+                    the way — check back soon.
+                </p>
+            </div>
+        </div>
+    );
 }
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
-function Lightbox({ image, onClose, onPrev, onNext }) {
+function Lightbox({
+    image,
+    onClose,
+    onPrev,
+    onNext,
+}: {
+    image: GalleryImage | null;
+    onClose: () => void;
+    onPrev: () => void;
+    onNext: () => void;
+}) {
     if (!image) return null;
     return (
-        <dialog className="modal modal-open">
-            {/* Transparent stage centered in the viewport; the inner wrapper shrinks
-                to the image so the controls hug the photo (no grey panels, no empty
-                floating space) for any aspect ratio. */}
-            <div className="modal-box bg-transparent shadow-none p-0 w-fit max-w-none h-fit max-h-none overflow-visible">
+        // z above the full-gallery modal (DaisyUI .modal is z-index:999).
+        <dialog className="modal modal-open z-[1000]">
+            <div className="modal-box h-fit max-h-none w-fit max-w-none overflow-visible bg-transparent p-0 shadow-none">
                 <div className="relative inline-block">
                     <img
                         src={image.src}
                         alt={image.alt}
                         decoding="async"
-                        className="block max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
+                        className="block max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
                     />
-
-                    {/* Arrows are vertically centered by a flex wrapper (NOT a transform),
-                        so DaisyUI's :active press transform can't shift their position. */}
                     <button
-                        className="btn btn-sm btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow absolute top-2 right-2 z-10"
+                        className="btn btn-circle btn-sm absolute right-2 top-2 z-10 border-none bg-base-100/80 shadow hover:bg-base-100"
                         onClick={onClose}
                         aria-label="Close"
-                    >✕</button>
-                    <div className="absolute inset-y-0 left-2 z-10 flex items-center pointer-events-none">
+                    >
+                        ✕
+                    </button>
+                    <div className="pointer-events-none absolute inset-y-0 left-2 z-10 flex items-center">
                         <button
-                            className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                            className="btn btn-circle pointer-events-auto border-none bg-base-100/80 shadow hover:bg-base-100"
                             onClick={onPrev}
                             aria-label="Previous"
-                        >‹</button>
+                        >
+                            ‹
+                        </button>
                     </div>
-                    <div className="absolute inset-y-0 right-2 z-10 flex items-center pointer-events-none">
+                    <div className="pointer-events-none absolute inset-y-0 right-2 z-10 flex items-center">
                         <button
-                            className="btn btn-circle bg-base-100/80 hover:bg-base-100 border-none shadow pointer-events-auto"
+                            className="btn btn-circle pointer-events-auto border-none bg-base-100/80 shadow hover:bg-base-100"
                             onClick={onNext}
                             aria-label="Next"
-                        >›</button>
+                        >
+                            ›
+                        </button>
                     </div>
                 </div>
             </div>
-
             <form method="dialog" className="modal-backdrop">
                 <button onClick={onClose}>close</button>
             </form>
@@ -91,185 +215,179 @@ function Lightbox({ image, onClose, onPrev, onNext }) {
     );
 }
 
+// ─── Location filter ──────────────────────────────────────────────────────────
+function LocationFilter({
+    active,
+    onChange,
+    size,
+}: {
+    active: string;
+    onChange: (cat: string) => void;
+    size: string;
+}) {
+    return (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            {CATEGORIES.map((cat) => (
+                <button
+                    key={cat}
+                    type="button"
+                    onClick={() => onChange(cat)}
+                    className={`btn ${size} rounded-full ${
+                        active === cat ? "btn-primary" : "btn-outline btn-ghost"
+                    }`}
+                >
+                    {cat}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 // ─── Gallery ──────────────────────────────────────────────────────────────────
 export const Gallery = () => {
     const [active, setActive] = useState("All");
-    const [lightbox, setLightbox] = useState<number | null>(null)
-    const [page, setPage] = useState(1);
-    const perPage = usePageSize();
+    const [modalOpen, setModalOpen] = useState(false);
+    // Lightbox tracks the list it's navigating + the active index.
+    const [lb, setLb] = useState<{ list: GalleryImage[]; index: number } | null>(null);
 
-    const filtered = useMemo(
-        () => (active === "All" ? IMAGES : IMAGES.filter((img) => img.category === active)),
+    const full = useMemo(
+        () => (active === "All" ? IMAGES : IMAGES.filter((i) => i.category === active)),
         [active],
     );
-
-    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-    const paginated = useMemo(
-        () => filtered.slice((page - 1) * perPage, page * perPage),
-        [filtered, page, perPage],
+    const preview = useMemo(
+        () => (active === "All" ? spreadAcrossAlbums(full, PREVIEW_N) : full.slice(0, PREVIEW_N)),
+        [active, full],
     );
+    const truncated = full.length > preview.length;
+    const isEmpty = full.length === 0;
+    const showAlbum = active === "All";
 
-    // Keep the current page valid when the page size shrinks (e.g. on resize).
-    useEffect(() => {
-        if (page > totalPages) setPage(totalPages);
-    }, [page, totalPages]);
+    const open: OpenFn = (list, index) => setLb({ list, index });
+    const close = () => setLb(null);
+    const prev = () =>
+        setLb((s) => (s ? { ...s, index: (s.index - 1 + s.list.length) % s.list.length } : s));
+    const next = () => setLb((s) => (s ? { ...s, index: (s.index + 1) % s.list.length } : s));
+    // Preview clicks navigate the full set (preview order ≠ full order once spread).
+    const openFromPreview: OpenFn = (list, i) => open(full, full.indexOf(list[i]));
 
-    // Preload the neighbouring full-res images so lightbox arrow navigation is instant.
+    // Single keyboard handler with clear Escape priority: an open lightbox closes
+    // first (leaving the modal underneath); only then does Escape close the modal.
     useEffect(() => {
-        if (lightbox === null) return;
-        for (const j of [lightbox - 1, lightbox + 1]) {
-            const neighbor = filtered[(j + filtered.length) % filtered.length];
-            if (neighbor) new Image().src = neighbor.src;
-        }
-    }, [lightbox, filtered]);
-
-    // Keyboard controls while the lightbox is open: Esc closes, arrows navigate.
-    useEffect(() => {
-        if (lightbox === null) return;
+        if (!lb && !modalOpen) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setLightbox(null);
-            else if (e.key === "ArrowLeft") setLightbox((i) => i !== null ? (i - 1 + filtered.length) % filtered.length : 0);
-            else if (e.key === "ArrowRight") setLightbox((i) => i !== null ? (i + 1) % filtered.length : 0);
+            if (e.key === "Escape") {
+                if (lb) close();
+                else if (modalOpen) setModalOpen(false);
+            } else if (lb && e.key === "ArrowLeft") prev();
+            else if (lb && e.key === "ArrowRight") next();
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [lightbox, filtered.length]);
+    }, [lb, modalOpen]);
 
-    const open = (i) => setLightbox((page - 1) * perPage + i); // global index
-    const close = () => setLightbox(null);
-    const prev = () => setLightbox((i) => i !== null ? (i - 1 + filtered.length) % filtered.length : 0);
-    const next = () => setLightbox((i) => i !== null ? (i + 1) % filtered.length : 0);
+    // Lock background scroll while the full-gallery modal is open.
+    useEffect(() => {
+        if (!modalOpen) return;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [modalOpen]);
 
-    const changeCategory = (cat) => {
+    const changeCategory = (cat: string) => {
         setActive(cat);
-        setPage(1);
-        setLightbox(null);
-    };
-
-    const goToPage = (p) => {
-        setPage(p);
-        setLightbox(null);
+        close();
     };
 
     return (
         <section className="p-6 md:p-10 bg-base-200 border-2 border-secondary rounded-md">
-
-            {/* ── Category filter ── */}
-            <div className="flex items-center justify-center py-4 md:py-8 flex-wrap gap-y-3" id="gallery">
-                {CATEGORIES.map((cat) => (
-                    <button
-                        key={cat}
-                        type="button"
-                        onClick={() => changeCategory(cat)}
-                        className={[
-                            "btn btn-sm md:btn-md rounded-full me-3 mb-1",
-                            active === cat ? "btn-primary" : "btn-outline btn-ghost",
-                        ].join(" ")}
-                    >
-                        {cat}
-                    </button>
-                ))}
+            {/* ── Location filter ── */}
+            <div className="py-4 md:py-8" id="gallery">
+                <LocationFilter active={active} onChange={changeCategory} size="btn-sm md:btn-md" />
             </div>
 
-            {/* ── "Coming Soon" placeholder for categories with no photos yet ──
-                Mirrors the real grid: same responsive columns + square tiles,
-                but renders skeletons in place of images. */}
-            {filtered.length === 0 ? (
-                <div>
-                    <p className="text-center text-lg font-semibold text-base-content/70 mb-6">Coming Soon</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                        {Array.from({ length: perPage }).map((_, i) => (
-                            <div key={i} className="skeleton aspect-square w-full rounded-xl"></div>
-                        ))}
+            {/* ── Preview ── */}
+            {isEmpty ? (
+                <ComingSoon album={active === "All" ? "this album" : active} />
+            ) : truncated ? (
+                <div className="relative">
+                    <div className="max-h-[58vh] overflow-hidden">
+                        <MasonryGrid images={preview} showAlbum={showAlbum} onOpen={openFromPreview} />
+                    </div>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-base-200 via-base-200/80 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-5 flex justify-center">
+                        <button
+                            type="button"
+                            className="btn btn-primary gap-2 shadow-lg"
+                            onClick={() => setModalOpen(true)}
+                        >
+                            View full gallery
+                            <span className="badge badge-sm badge-ghost">{full.length}</span>
+                        </button>
                     </div>
                 </div>
             ) : (
-            <>
-            {/* ── Image grid ── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                {paginated.map((img, i) => (
-                    <button
-                        key={img.id}
-                        type="button"
-                        aria-label={`View ${img.alt}`}
-                        className="group relative p-0 overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        onClick={() => open(i)}
-                    >
-                        <img
-                            src={img.src}
-                            srcSet={img.srcset}
-                            sizes={GRID_SIZES}
-                            alt={img.alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                        />
-                        {/* hover overlay + expand affordance */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-base-content/0 group-hover:bg-base-content/25 transition-colors duration-300">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="w-7 h-7 text-white drop-shadow opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300"
-                            >
-                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                            </svg>
-                        </div>
-                    </button>
-                ))}
-            </div>
-
-            {/* ── Pagination (windowed, stays compact on mobile) ── */}
-            {totalPages > 1 && (
-                <div className="flex justify-center mt-8">
-                    <div className="join">
+                <>
+                    <MasonryGrid images={preview} showAlbum={showAlbum} onOpen={openFromPreview} />
+                    <div className="mt-5 flex justify-center">
                         <button
-                            className="join-item btn btn-sm"
-                            onClick={() => goToPage(page - 1)}
-                            disabled={page === 1}
-                            aria-label="Previous page"
-                        >«</button>
-
-                        {getPageItems(page, totalPages).map((p, idx) =>
-                            p === "…" ? (
-                                <button key={`gap-${idx}`} className="join-item btn btn-sm btn-disabled pointer-events-none" tabIndex={-1}>…</button>
-                            ) : (
-                                <button
-                                    key={p}
-                                    className={`join-item btn btn-sm ${p === page ? "btn-primary" : ""}`}
-                                    onClick={() => goToPage(p)}
-                                    aria-current={p === page ? "page" : undefined}
-                                >
-                                    {p}
-                                </button>
-                            ),
-                        )}
-
-                        <button
-                            className="join-item btn btn-sm"
-                            onClick={() => goToPage(page + 1)}
-                            disabled={page === totalPages}
-                            aria-label="Next page"
-                        >»</button>
+                            type="button"
+                            className="btn btn-outline gap-2"
+                            onClick={() => setModalOpen(true)}
+                        >
+                            Open in full view
+                            <span className="badge badge-sm badge-ghost">{full.length}</span>
+                        </button>
                     </div>
-                </div>
+                </>
             )}
-            </>
+
+            {/* ── Full gallery modal — scrollable, filterable ── */}
+            {modalOpen && (
+                <dialog className="modal modal-open">
+                    <div className="modal-box max-h-[90vh] w-11/12 max-w-6xl p-0">
+                        <div className="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 px-4 py-3 backdrop-blur">
+                            <div className="mb-2 flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="font-bold">Photo gallery</h3>
+                                    <p className="text-xs text-base-content/60">
+                                        {full.length} photos
+                                        {active !== "All" ? ` · ${active}` : ` · ${POPULATED.length} albums`}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-circle btn-sm btn-ghost"
+                                    onClick={() => setModalOpen(false)}
+                                    aria-label="Close"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <LocationFilter active={active} onChange={changeCategory} size="btn-xs" />
+                        </div>
+                        <div className="p-4">
+                            {isEmpty ? (
+                                <ComingSoon album={active === "All" ? "this album" : active} />
+                            ) : (
+                                <MasonryGrid images={full} showAlbum={showAlbum} onOpen={open} />
+                            )}
+                        </div>
+                    </div>
+                    <form method="dialog" className="modal-backdrop">
+                        <button onClick={() => setModalOpen(false)}>close</button>
+                    </form>
+                </dialog>
             )}
 
             {/* ── Lightbox ── */}
-            {lightbox !== null && (
-                <Lightbox
-                    image={filtered[lightbox]}
-                    onClose={close}
-                    onPrev={prev}
-                    onNext={next}
-                />
-            )}
+            <Lightbox
+                image={lb ? lb.list[lb.index] : null}
+                onClose={close}
+                onPrev={prev}
+                onNext={next}
+            />
         </section>
     );
 };
