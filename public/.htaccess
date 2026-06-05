@@ -12,6 +12,7 @@ RewriteEngine On
 RewriteRule ^about/?$    /#about    [R=302,L]
 RewriteRule ^resume/?$   /#resume   [R=302,L]
 RewriteRule ^projects/?$ /#projects [R=302,L]
+RewriteRule ^highlights/?$ /#highlights [R=302,L]
 RewriteRule ^gallery/?$  /#gallery  [R=302,L]
 
 # /stablecoin → the live dashboard (kept reachable via gordonzhong.com/stablecoin)

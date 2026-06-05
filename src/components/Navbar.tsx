@@ -72,6 +72,7 @@ export const Navbar = () => {
                 </ul>
               </details>
             </li>
+            <li><a className="link link-hover link-info" href="/#highlights">Highlights</a></li>
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           </ul>
         </div>
@@ -112,6 +113,7 @@ export const Navbar = () => {
               </ul>
             )}
           </li>
+          <li><a className="link link-hover link-info" href="/#highlights">Highlights</a></li>
           <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
         </ul>
       </div>
