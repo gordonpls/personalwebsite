@@ -5,6 +5,7 @@ import { AboutMe } from "./AboutMe";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
+import { Highlights } from "./Highlights";
 import { Resume } from "./Resume";
 import { Projects } from "./Projects";
 import { Reveal } from "./Reveal";
@@ -41,6 +42,10 @@ export const Home = () => {
                     <div className="divider divider-primary" />
                     <section id="projects" className="scroll-mt-24">
                         <Reveal><Projects /></Reveal>
+                    </section>
+                    <div className="divider divider-primary" />
+                    <section id="highlights" className="scroll-mt-24">
+                        <Reveal><Highlights /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
                     <section id="gallery" className="scroll-mt-24">

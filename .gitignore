@@ -12,3 +12,6 @@ dist
 node_modules
 server/node_modules
 keys/
+
+# Highlights: keep heavy phone .MOV originals out of git (optimized .mp4 committed instead)
+src/assets/highlights/*.MOV
