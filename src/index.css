@@ -173,6 +173,20 @@
 }
 .project-peg-pulse { transform-origin: 170px 60px; animation: project-peg-pulse 1.6s ease-out infinite; }
 
+/* About-Me photo deck carets: a gentle horizontal nudge hinting navigation.
+   These animate `transform` only; vertical centering uses Tailwind's separate
+   `translate` property, so the two compose without clobbering each other. */
+@keyframes deck-caret-left {
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(-4px); }
+}
+@keyframes deck-caret-right {
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(4px); }
+}
+.deck-caret-left  { animation: deck-caret-left 1.5s ease-in-out infinite; }
+.deck-caret-right { animation: deck-caret-right 1.5s ease-in-out infinite; }
+
 /* Spotify "now playing" equalizer bars. */
 @keyframes eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
 .eq-bar { width: 2px; height: 100%; background: currentColor; border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
@@ -189,6 +203,8 @@
     .group:hover .project-line,
     .project-peg-pulse,
     .eq-bar,
+    .deck-caret-left,
+    .deck-caret-right,
     .typing-greeting-refined .caret.idle {
         animation: none !important;
     }

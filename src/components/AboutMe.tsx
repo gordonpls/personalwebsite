@@ -1,4 +1,5 @@
-import avatar2 from "../assets/avatar2.webp";
+import { PhotoDeck } from "./PhotoDeck";
+import { SectionHeading } from "./SectionHeading";
 
 // Body prose uses a serif stack so it reads like a personal essay set apart
 // from the dashboard typography of the rest of the page.
@@ -19,11 +20,7 @@ export const AboutMe = () => {
     return (
         <div className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 lg:p-14">
             <div className="max-w-5xl mx-auto">
-                {/* Eyebrow */}
-                <div className="flex items-center gap-3 mb-8 lg:mb-12">
-                    <span className="h-px w-10 bg-primary/60" />
-                    <span className="text-[11px] uppercase tracking-[0.3em] text-primary font-semibold">About me</span>
-                </div>
+                <SectionHeading eyebrow="About me" className="mb-8 lg:mb-12" />
 
                 {/* Body grid: prose on the left, portrait on the right */}
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-8 lg:gap-14">
@@ -65,17 +62,9 @@ export const AboutMe = () => {
                         <p className="text-base-content italic">{PARAGRAPHS[5]}</p>
                     </article>
 
-                    {/* Right rail: portrait */}
+                    {/* Right rail: navigable photo deck (portrait is the first card) */}
                     <aside className="lg:sticky lg:top-24 self-start order-1 lg:order-2">
-                        <div className="relative w-44 h-44 lg:w-72 lg:h-72 mx-auto lg:mx-0">
-                            {/* Primary-tinted offset block sits behind the portrait but above the section bg */}
-                            <div aria-hidden="true" className="absolute -bottom-3 -right-3 hidden lg:block h-24 w-24 rounded-2xl bg-primary/20" />
-                            <img
-                                src={avatar2}
-                                alt="Portrait of Gordon Zhong"
-                                className="relative w-full h-full rounded-2xl object-cover shadow-xl ring-1 ring-base-300"
-                            />
-                        </div>
+                        <PhotoDeck />
                     </aside>
                 </div>
             </div>
