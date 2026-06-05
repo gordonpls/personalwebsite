@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { SectionHeading } from "./SectionHeading";
 
 interface Project {
     title: string;
@@ -454,7 +455,7 @@ const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
                 are the same DOM node in both modes — never remounted, so a click
                 immediately after entering spotlight always lands. */}
             <div
-                className="relative max-w-7xl mx-auto touch-pan-y"
+                className="relative touch-pan-y"
                 onMouseEnter={() => setHovering(true)}
                 onMouseLeave={() => setHovering(false)}
                 onTouchStart={onTouchStart}
@@ -491,20 +492,14 @@ const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
 };
 
 export const Projects = () => (
-    <section className="space-y-5">
-        <div className="flex items-end flex-wrap gap-x-6 gap-y-2">
-            <div className="shrink-0">
-                <p className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Projects</p>
-                <h2 className="text-2xl md:text-3xl font-bold text-base-content mt-1">Things I&apos;ve been building</h2>
-            </div>
-            <p className="text-sm text-base-content/60 flex-1 min-w-[16rem]">
-                A few interactive apps; each one opens in a new tab. Hover to pause the carousel, use the arrows, or swipe on mobile.
-            </p>
-        </div>
+    <section className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 space-y-5">
+        <SectionHeading
+            eyebrow="Projects"
+            title="Things I've been building"
+            description="A few interactive apps; each one opens in a new tab. Hover to pause the carousel, use the arrows, or swipe on mobile."
+        />
 
-        <div className="max-w-7xl mx-auto">
-            <FeaturedHero />
-        </div>
+        <FeaturedHero />
 
         <ProjectsCarousel projects={otherProjects} />
     </section>
