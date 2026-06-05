@@ -114,11 +114,13 @@ const CookiePreview = () => (
     </div>
 );
 
-// Inline peg: dashed $1 reference + a near-flat wobble line + pulsing dot on hover.
+// Inline peg: dashed $1 reference + a near-flat peg line that redraws on hover
+// (same treatment as the Portfolio line chart) + a pulsing dot.
 const PegPreview = () => (
     <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
         <line x1="20" y1="60" x2="180" y2="60" stroke="currentColor" strokeOpacity="0.25" strokeDasharray="3 4" />
         <text x="183" y="63" fontSize="9" fill="currentColor" opacity="0.45" fontFamily="ui-monospace, monospace">$1</text>
+        {/* Peg line redraws on hover (project-line: stroke-dashoffset sweep). */}
         <path
             d="M 20 62 L 35 58 L 50 61 L 65 57 L 80 60 L 95 63 L 110 58 L 125 61 L 140 59 L 155 61 L 170 60"
             stroke="#378ADD"
@@ -126,13 +128,11 @@ const PegPreview = () => (
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="group-hover:opacity-100 opacity-90 transition-opacity"
+            className="project-line"
         />
-        {/* pulsing latest point */}
-        <g className="opacity-70 group-hover:opacity-100">
-            <circle cx="170" cy="60" r="3" fill="#378ADD" />
-            <circle cx="170" cy="60" r="3" fill="#378ADD" className="project-peg-pulse" />
-        </g>
+        {/* Pulsing latest point, revealed on hover like the portfolio dot. */}
+        <circle cx="170" cy="60" r="3" fill="#378ADD" className="opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <circle cx="170" cy="60" r="3" fill="#378ADD" className="project-peg-pulse opacity-0 group-hover:opacity-100" />
     </svg>
 );
 

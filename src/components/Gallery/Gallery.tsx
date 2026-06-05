@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ALBUM_NAMES, IMAGES, type GalleryImage } from "./GalleryImages";
+import { SectionHeading } from "../SectionHeading";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 // Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 5), so the browser
@@ -302,8 +303,10 @@ export const Gallery = () => {
 
     return (
         <section className="p-6 md:p-10 bg-base-200 border-2 border-secondary rounded-md">
+            <SectionHeading eyebrow="Gallery" description="the camera eats first!" />
+
             {/* ── Location filter ── */}
-            <div className="py-4 md:py-8" id="gallery">
+            <div className="py-4 md:py-8">
                 <LocationFilter active={active} onChange={changeCategory} size="btn-sm md:btn-md" />
             </div>
 
