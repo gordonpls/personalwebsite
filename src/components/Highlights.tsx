@@ -157,14 +157,31 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
 
     const go = (d: number) => setIndex((i) => (i + d + n) % n);
 
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [inView, setInView] = useState(false);
+
+    // Track whether the deck is on screen.
     useEffect(() => {
         const el = ref.current;
-        if (!el || !hasStack) return;
-        let inView = false;
-        const io = new IntersectionObserver(([e]) => (inView = e.isIntersecting), { threshold: 0.4 });
+        if (!el) return;
+        const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.4 });
         io.observe(el);
+        return () => io.disconnect();
+    }, []);
+
+    // Auto-play the front clip whenever the deck enters view — covers scrolling
+    // it into view and jumping to #highlights from the navbar; pause off-screen.
+    useEffect(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        if (inView) v.play().catch(() => {});
+        else v.pause();
+    }, [inView, index]);
+
+    // Arrow-key navigation only while on screen.
+    useEffect(() => {
+        if (!hasStack || !inView) return;
         const onKey = (e: KeyboardEvent) => {
-            if (!inView) return;
             if (e.key === "ArrowLeft") {
                 e.preventDefault();
                 go(-1);
@@ -174,12 +191,9 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
             }
         };
         window.addEventListener("keydown", onKey);
-        return () => {
-            io.disconnect();
-            window.removeEventListener("keydown", onKey);
-        };
+        return () => window.removeEventListener("keydown", onKey);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasStack, n]);
+    }, [hasStack, inView, n]);
 
     const swipe = useSwipeable({
         onSwipedLeft: () => go(1),
@@ -224,12 +238,12 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
                     >
                         <video
                             key={index}
+                            ref={videoRef}
                             src={CLIPS[index].src}
                             poster={CLIPS[index].poster}
                             muted
                             loop
                             playsInline
-                            autoPlay
                             tabIndex={-1}
                             className="absolute inset-0 h-full w-full object-cover"
                         />
