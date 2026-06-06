@@ -44,11 +44,12 @@ function useColumnCount(): number {
 }
 
 // ─── Album pill ─────────────────────────────────────────────────────────────
-// Small bottom-right indicator of which album a photo came from. Shown only on
-// the "All" view (redundant once filtered to a single album).
+// Small indicator of which album a photo came from. Shown only on the "All"
+// view (redundant once filtered to a single album). Top-right on mobile,
+// bottom-right on sm+.
 function AlbumPill({ category }: { category: string }) {
     return (
-        <span className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-medium text-white shadow backdrop-blur-sm">
+        <span className="pointer-events-none absolute right-2 top-2 z-10 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-medium text-white shadow backdrop-blur-sm sm:bottom-2 sm:top-auto">
             {category}
         </span>
     );
@@ -349,8 +350,8 @@ export const Gallery = () => {
             {/* ── Full gallery modal — scrollable, filterable ── */}
             {modalOpen && (
                 <dialog className="modal modal-open">
-                    <div className="modal-box max-h-[90vh] w-11/12 max-w-6xl p-0">
-                        <div className="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 px-4 py-3 backdrop-blur">
+                    <div className="modal-box flex max-h-[90vh] w-11/12 max-w-6xl flex-col overflow-hidden p-0">
+                        <div className="border-b border-base-300 bg-base-100 px-4 py-3">
                             <div className="mb-2 flex items-start justify-between gap-3">
                                 <div>
                                     <h3 className="font-bold">Photo gallery</h3>
@@ -370,7 +371,7 @@ export const Gallery = () => {
                             </div>
                             <LocationFilter active={active} onChange={changeCategory} size="btn-xs" />
                         </div>
-                        <div className="p-4">
+                        <div className="flex-1 overflow-y-auto p-4">
                             {isEmpty ? (
                                 <ComingSoon album={active === "All" ? "this album" : active} />
                             ) : (
