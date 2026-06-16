@@ -171,17 +171,40 @@ function Lightbox({
     onPrev: () => void;
     onNext: () => void;
 }) {
+    // Hooks must run unconditionally, before the early return below.
+    const [loaded, setLoaded] = useState(false);
+    const src = image?.src;
+    useEffect(() => setLoaded(false), [src]);
+
     if (!image) return null;
     return (
         // z above the full-gallery modal (DaisyUI .modal is z-index:999).
         <dialog className="modal modal-open z-[1000]">
             <div className="modal-box h-fit max-h-none w-fit max-w-none overflow-visible bg-transparent p-0 shadow-none">
-                <div className="relative inline-block">
+                {/* Box is reserved from the baked-in dimensions so there's no jump;
+                    the grid's cached thumbnail (same srcset+sizes → no new request)
+                    shows instantly, blurred, until the full-res fades in on top. */}
+                <div className="relative inline-block overflow-hidden rounded-lg">
+                    <img
+                        aria-hidden="true"
+                        src={image.src}
+                        srcSet={image.srcset}
+                        sizes={GRID_SIZES}
+                        className={`absolute inset-0 h-full w-full scale-105 object-cover blur-xl transition-opacity duration-300 ${loaded ? "opacity-0" : "opacity-100"}`}
+                    />
+                    {!loaded && (
+                        <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+                            <span className="loading loading-spinner loading-lg text-white/80" />
+                        </span>
+                    )}
                     <img
                         src={image.src}
                         alt={image.alt}
+                        width={image.width}
+                        height={image.height}
                         decoding="async"
-                        className="block max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+                        onLoad={() => setLoaded(true)}
+                        className={`block h-auto max-h-[85vh] w-auto max-w-[90vw] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
                     />
                     <button
                         className="btn btn-circle btn-sm absolute right-2 top-2 z-10 border-none bg-base-100/80 shadow hover:bg-base-100"
@@ -286,6 +309,19 @@ export const Gallery = () => {
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [lb, modalOpen]);
+
+    // Preload the neighbouring full-res images so arrow navigation is instant.
+    useEffect(() => {
+        if (!lb) return;
+        const { list, index } = lb;
+        for (const j of [index - 1, index + 1]) {
+            const neighbor = list[(j + list.length) % list.length];
+            if (neighbor) {
+                const img = new Image();
+                img.src = neighbor.src;
+            }
+        }
+    }, [lb]);
 
     // Lock background scroll while the full-gallery modal is open.
     useEffect(() => {
