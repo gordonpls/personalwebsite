@@ -291,6 +291,32 @@ async function fetchHoldingsPayload() {
         }
         logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resp.data?.item?.item_id });
         if (resp.data?.item?.item_id) items.markSynced(resp.data.item.item_id);
+
+        // Self-heal a missing/"Unknown" institution label (which would otherwise
+        // mis-bucket this item's holdings into "Core"). Resolve the real name from
+        // Plaid once and persist it; subsequent fetches use the catalog value.
+        let inst = institution;
+        if (!inst || inst === "Unknown") {
+            const instId = resp.data?.item?.institution_id;
+            const realItemId = itemId ?? resp.data?.item?.item_id;
+            if (instId) {
+                try {
+                    const ir = await plaidClient.institutionsGetById({
+                        institution_id: instId,
+                        country_codes: [CountryCode.Us],
+                    });
+                    const name = ir.data?.institution?.name;
+                    if (name) {
+                        inst = name;
+                        if (realItemId) items.setInstitution(realItemId, name);
+                        logPlaid({ level: "info", event: "items.institution.resolved", item_id: realItemId, institution: name });
+                    }
+                } catch (e) {
+                    logPlaidError("institutions.get_by_id", e, { item_id: realItemId });
+                }
+            }
+        }
+
         const { holdings, securities, accounts } = resp.data;
         const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
         const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
@@ -309,7 +335,7 @@ async function fetchHoldingsPayload() {
             const lotCost = override != null ? override * (h.quantity ?? 0) : h.cost_basis;
             const hasCost = lotCost != null && lotCost > 0;
             if (hasCost) { costSum += lotCost; costValueSum += value; }
-            const portfolio = PORTFOLIO_OVERRIDE[tkr] ?? portfolioOf(institution, acctSubtype[h.account_id]);
+            const portfolio = PORTFOLIO_OVERRIDE[tkr] ?? portfolioOf(inst, acctSubtype[h.account_id]);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
             const key = `${portfolio}|${ticker}`;
             const cur = agg.get(key) ?? {

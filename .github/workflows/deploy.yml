@@ -89,6 +89,7 @@ jobs:
         run: |
           rsync -az --delete \
             --exclude node_modules --exclude .env --exclude .htaccess \
+            --exclude .plaid-items.json \
             --exclude spotify-last.json --exclude spotify-tokens.json \
             --exclude spotify-needs-reauth.flag \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \

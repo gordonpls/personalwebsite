@@ -146,6 +146,23 @@ function clearError(itemId) {
     writeCatalog(existing);
 }
 
+// Set/correct an item's institution label (and its derived key). Used to
+// self-heal items that were linked without a proper institution name (stored as
+// "Unknown"), which otherwise mis-buckets their holdings.
+function setInstitution(itemId, institution) {
+    const existing = readCatalog();
+    if (!existing) return false; // legacy env-only mode; nothing to persist
+    const idx = existing.findIndex((i) => i.itemId === itemId);
+    if (idx < 0) return false;
+    existing[idx] = {
+        ...existing[idx],
+        institution,
+        key: institution.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    };
+    writeCatalog(existing);
+    return true;
+}
+
 // Public-safe view: itemId + institution + timestamps + error state, no tokens.
 function listPublic() {
     return loadItems().map((i) => {
@@ -155,4 +172,4 @@ function listPublic() {
     });
 }
 
-module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, listPublic, CATALOG_PATH };
+module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, setInstitution, listPublic, CATALOG_PATH };
