@@ -1,37 +1,30 @@
 // Email notifications for server-side action-required events.
 //
-// Uses Gmail SMTP with an App Password (not your regular password).
-// To set up: Google Account → Security → 2-Step Verification → App passwords
-//   → generate one for "Portfolio Server" → paste into GMAIL_APP_PASSWORD.
+// Uses the server's local sendmail binary (available on all cPanel hosts) —
+// no SMTP credentials or app passwords needed. Mail is sent as the hosting
+// account and delivered directly, which also means it originates from your
+// own domain rather than Gmail.
 //
 // Required env vars:
-//   GMAIL_USER         — the Gmail address that sends the email
-//   GMAIL_APP_PASSWORD — the 16-char App Password (not your login password)
-//   NOTIFY_TO          — recipient address (defaults to GMAIL_USER)
+//   NOTIFY_TO   — recipient address (e.g. maplesomeone@gmail.com)
 //
 // Optional env vars:
-//   SITE_URL           — base URL for action links (default: https://gordonzhong.com)
+//   NOTIFY_FROM — sender address shown in the From header
+//                 (default: noreply@gordonzhong.com)
+//   SITE_URL    — base URL for action links (default: https://gordonzhong.com)
 
 const nodemailer = require("nodemailer");
 
-function getTransport() {
-    const user = process.env.GMAIL_USER;
-    const pass = process.env.GMAIL_APP_PASSWORD;
-    if (!user || !pass) return null;
-    return nodemailer.createTransport({
-        service: "gmail",
-        auth: { user, pass },
-    });
-}
+const transport = nodemailer.createTransport({ sendmail: true, newline: "unix" });
 
 async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
-    const transport = getTransport();
-    if (!transport) {
-        console.warn("[notify] GMAIL_USER or GMAIL_APP_PASSWORD not set — skipping email for Plaid relink.");
+    const to = process.env.NOTIFY_TO;
+    if (!to) {
+        console.warn("[notify] NOTIFY_TO not set — skipping Plaid relink email.");
         return;
     }
 
-    const to = process.env.NOTIFY_TO || process.env.GMAIL_USER;
+    const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
     const base = (process.env.SITE_URL || "https://gordonzhong.com").replace(/\/$/, "");
     const secret = process.env.PLAID_RELINK_SECRET || "<PLAID_RELINK_SECRET>";
     const relinkUrl = `${base}/api/plaid/relink?secret=${encodeURIComponent(secret)}${itemId ? `&item_id=${encodeURIComponent(itemId)}` : ""}`;
@@ -46,8 +39,7 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
         ``,
         `Steps to fix:`,
         ``,
-        `  1. Open this URL in your browser (stay logged out of Spotify etc. — this`,
-        `     goes to Plaid, not Spotify):`,
+        `  1. Open this URL in your browser:`,
         ``,
         `     ${relinkUrl}`,
         ``,
@@ -87,7 +79,7 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
 <p style="color:#999;font-size:.85em">Portfolio Server</p>`;
 
     await transport.sendMail({
-        from: `"Portfolio Server" <${process.env.GMAIL_USER}>`,
+        from: `"Portfolio Server" <${from}>`,
         to,
         subject: `Action needed: Plaid relink required for ${institution}`,
         text,
