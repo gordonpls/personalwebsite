@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require("plaid");
 const items = require("../lib/plaid-items");
 const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
@@ -34,9 +35,10 @@ function getTokens() {
 //  2. serve-stale-on-error — a failed/rate-limited refresh returns the last good
 //     data rather than erroring (which would invite immediate client retries).
 // Together with the TTLs, this bounds upstream calls to ~one batch per TTL.
+// The returned function also has an .invalidate() method for post-relink cache busting.
 function cached(ttlMs) {
     const s = { at: 0, data: null, inFlight: null };
-    return (fetcher) => {
+    const fn = (fetcher) => {
         if (s.data && Date.now() - s.at < ttlMs) return Promise.resolve(s.data);
         if (s.inFlight) return s.inFlight;
         s.inFlight = Promise.resolve()
@@ -46,9 +48,14 @@ function cached(ttlMs) {
             .finally(() => { s.inFlight = null; });
         return s.inFlight;
     };
+    fn.invalidate = () => { s.at = 0; s.data = null; };
+    return fn;
 }
 const getHoldings = cached(6 * 60 * 60 * 1000); // 6h — Plaid is billed per call
 const getQuotes = cached(2 * 60 * 1000);        // 2 min — Finnhub free is 60/min
+
+// One-time nonce for the relink completion handshake (prevents CSRF on the callback).
+let _relinkNonce = null;
 
 // Plaid reports each security's name as the brokerage labels it, which is
 // sometimes cryptically abbreviated (VXUS -> "Vng Ttl Intl St Shs") or simply
@@ -261,7 +268,15 @@ async function fetchHoldingsPayload() {
         try {
             resp = await plaidClient.investmentsHoldingsGet({ access_token: token });
         } catch (err) {
+            const code = err.response?.data?.error_code;
             logPlaidError("investments.holdings.get", err, { institution, item_id: itemId });
+            if (code === "ITEM_LOGIN_REQUIRED" || code === "PENDING_EXPIRATION") {
+                console.error(
+                    `[plaid] ${code} on item ${itemId} (${institution}).\n` +
+                    `        Relink required: visit /api/plaid/relink?secret=<PLAID_RELINK_SECRET>`
+                );
+                if (itemId) items.markError(itemId, code);
+            }
             throw err;
         }
         logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resp.data?.item?.item_id });
@@ -359,6 +374,116 @@ router.get("/quotes", async (_req, res) => {
         console.error("[quotes]", err.response?.data ?? err.message);
         res.status(500).json({ error: "Failed to fetch quotes" });
     }
+});
+
+// ── Relink flow ──────────────────────────────────────────────────────────────
+// When a Plaid Item enters ITEM_LOGIN_REQUIRED (bank credentials changed, MFA
+// changed, institution revoked access), the same access_token can be recovered
+// without relinking from scratch — Plaid Link's "update mode" re-authenticates
+// the user at the institution and clears the error, keeping the same token.
+//
+// Usage (no PLAID_SETUP_ENABLED flag needed — gated by PLAID_RELINK_SECRET):
+//   GET /api/plaid/relink?secret=<PLAID_RELINK_SECRET>[&item_id=<itemId>]
+//   → opens Plaid Link in update mode for the specified item (or the first
+//     item in error state, or the first item in the catalog if none are errored).
+//   After Link completes, the page POSTs to /api/plaid/relink/complete automatically.
+//
+// One-time setup: set PLAID_RELINK_SECRET in server/.env.
+
+router.get("/plaid/relink", async (req, res) => {
+    const secret = process.env.PLAID_RELINK_SECRET;
+    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+
+    const allItems = items.loadItems();
+    if (!allItems.length) return res.status(404).send("No items in catalog.");
+
+    let target;
+    if (req.query.item_id) {
+        target = allItems.find((i) => i.itemId === req.query.item_id);
+        if (!target) return res.status(404).send(`item_id ${req.query.item_id} not found in catalog.`);
+    } else {
+        // Prefer an item already flagged as errored; fall back to first item.
+        target = allItems.find((i) => i.error) ?? allItems[0];
+    }
+
+    let link_token;
+    try {
+        const response = await plaidClient.linkTokenCreate({
+            user: { client_user_id: "owner" },
+            client_name: "Gordon Zhong Portfolio",
+            country_codes: [CountryCode.Us],
+            language: "en",
+            access_token: target.accessToken,
+        });
+        logPlaidResponse("link.token.create", response, { mode: "relink", institution: target.institution });
+        link_token = response.data.link_token;
+    } catch (err) {
+        logPlaidError("link.token.create", err);
+        return res.status(500).send("Failed to create link token: " + (err.response?.data?.error_message ?? err.message));
+    }
+
+    // Generate a one-time nonce so the completion endpoint doesn't need the secret in HTML.
+    _relinkNonce = crypto.randomBytes(16).toString("hex");
+    setTimeout(() => { _relinkNonce = null; }, 30 * 60 * 1000); // expires in 30 min
+
+    // Escape values embedded in HTML.
+    const safeInstitution = target.institution.replace(/[<>"'&]/g, "");
+    const safeItemId = (target.itemId ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeLinkToken = link_token.replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeNonce = _relinkNonce;
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Relink ${safeInstitution}</title>
+  <style>body{font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;padding:1rem}</style>
+</head>
+<body>
+  <h2>Relink ${safeInstitution}</h2>
+  <p id="status">Opening Plaid Link…</p>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script>
+    const handler = Plaid.create({
+      token: "${safeLinkToken}",
+      onSuccess: async function(_pub, _meta) {
+        document.getElementById("status").textContent = "Completing relink…";
+        const r = await fetch("/api/plaid/relink/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nonce: "${safeNonce}", item_id: "${safeItemId}" }),
+        });
+        const j = await r.json();
+        document.getElementById("status").textContent = r.ok
+          ? "✅ Relink complete. Holdings will refresh on the next poll (up to 6 h)."
+          : "❌ " + (j.error || "Unknown error completing relink.");
+      },
+      onExit: function(err) {
+        document.getElementById("status").textContent = err
+          ? "❌ " + (err.error_message || "Plaid Link error.")
+          : "Cancelled — close this tab and try again if needed.";
+      },
+    });
+    handler.open();
+  </script>
+</body>
+</html>`);
+});
+
+router.post("/plaid/relink/complete", async (req, res) => {
+    const { nonce, item_id } = req.body || {};
+    if (!nonce || !_relinkNonce || nonce !== _relinkNonce) {
+        return res.status(400).json({ error: "Invalid or expired nonce — restart the flow via /api/plaid/relink." });
+    }
+    _relinkNonce = null; // consume nonce
+
+    if (!item_id) return res.status(400).json({ error: "item_id required" });
+
+    items.clearError(item_id);
+    getHoldings.invalidate(); // bust the 6h cache so the next /api/holdings gets fresh data
+
+    console.log(`[plaid] Relink complete for item ${item_id}. Holdings cache invalidated.`);
+    res.json({ ok: true, item_id });
 });
 
 module.exports = router;

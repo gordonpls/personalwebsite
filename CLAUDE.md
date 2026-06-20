@@ -74,8 +74,16 @@ There are **two separate cache-builder scripts** — keep them from drifting:
 ## Environment variables
 
 Frontend `.env` (Vite, must be `VITE_`-prefixed; see `.env.example`): `VITE_ALPHAVANTAGE_KEY`, `VITE_WEATHER_API_KEY`.
-Backend `server/.env`: `PLAID_CLIENT_ID`, `PLAID_SECRET_SANDBOX`, `PLAID_SECRET_PRODUCTION`, `PLAID_ENV`, `PLAID_ACCESS_TOKEN`, `ALLOWED_ORIGINS`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN` (seed value; runtime rotations are auto-persisted to `server/data/spotify-tokens.json`), `SPOTIFY_REAUTH_SECRET` (a secret string you pick; gates the `/api/spotify/reauth` endpoint), `SPOTIFY_REDIRECT_URI` (defaults to `http://127.0.0.1:3000/api/spotify/callback`; set to `https://gordonzhong.com/api/spotify/callback` in production and add it to the Spotify app's Redirect URIs).
+Backend `server/.env`: `PLAID_CLIENT_ID`, `PLAID_SECRET_SANDBOX`, `PLAID_SECRET_PRODUCTION`, `PLAID_ENV`, `PLAID_ACCESS_TOKEN`, `ALLOWED_ORIGINS`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN` (seed value; runtime rotations are auto-persisted to `server/data/spotify-tokens.json`), `SPOTIFY_REAUTH_SECRET` (a secret string you pick; gates the `/api/spotify/reauth` endpoint), `SPOTIFY_REDIRECT_URI` (defaults to `http://127.0.0.1:3000/api/spotify/callback`; set to `https://gordonzhong.com/api/spotify/callback` in production and add it to the Spotify app's Redirect URIs), `PLAID_RELINK_SECRET` (a secret string you pick; gates the `/api/plaid/relink` endpoint).
 All `.env` files and `keys/` are gitignored.
+
+### Plaid reauthorization (ITEM_LOGIN_REQUIRED)
+Plaid access tokens don't expire on a schedule, but an Item enters `ITEM_LOGIN_REQUIRED` when bank credentials change or the institution kicks the connection. The server detects this on any `investmentsHoldingsGet` failure, logs it, and marks the item in `.plaid-items.json` with `{ error, errorAt }`. To relink without `PLAID_SETUP_ENABLED`:
+1. Set `PLAID_RELINK_SECRET=<your secret>` in `server/.env` (one-time setup).
+2. Visit `https://gordonzhong.com/api/plaid/relink?secret=<PLAID_RELINK_SECRET>` in your browser.
+3. Complete the Plaid Link flow (re-authenticate at the institution).
+4. The server clears the error flag and busts the holdings cache automatically. No token exchange needed — the same access token resumes working.
+   Pass `&item_id=<itemId>` to target a specific item; omitted defaults to the first errored item (or first item if none are errored).
 
 ### Spotify reauthorization (refresh token expiry)
 Spotify refresh tokens expire after 6 months (policy effective July 20 2026). When one expires, the server logs an `invalid_grant` error, writes `server/data/spotify-needs-reauth.flag`, and falls back to the last-played track. To reauthorize without touching the server:

@@ -116,11 +116,37 @@ function markSynced(itemId) {
     if (!existing) return; // legacy env-only mode; nothing to update
     const idx = existing.findIndex((i) => i.itemId === itemId);
     if (idx < 0) return;
-    existing[idx] = { ...existing[idx], lastSyncedAt: new Date().toISOString() };
+    const updated = { ...existing[idx], lastSyncedAt: new Date().toISOString() };
+    delete updated.error;
+    delete updated.errorAt;
+    existing[idx] = updated;
     writeCatalog(existing);
 }
 
-// Public-safe view: itemId + institution + timestamps, no tokens.
+// Record a Plaid error code against an item (e.g. ITEM_LOGIN_REQUIRED).
+function markError(itemId, errorCode) {
+    const existing = readCatalog();
+    if (!existing) return;
+    const idx = existing.findIndex((i) => i.itemId === itemId);
+    if (idx < 0) return;
+    existing[idx] = { ...existing[idx], error: errorCode, errorAt: new Date().toISOString() };
+    writeCatalog(existing);
+}
+
+// Clear a previously recorded error after a successful relink.
+function clearError(itemId) {
+    const existing = readCatalog();
+    if (!existing) return;
+    const idx = existing.findIndex((i) => i.itemId === itemId);
+    if (idx < 0) return;
+    const updated = { ...existing[idx] };
+    delete updated.error;
+    delete updated.errorAt;
+    existing[idx] = updated;
+    writeCatalog(existing);
+}
+
+// Public-safe view: itemId + institution + timestamps + error state, no tokens.
 function listPublic() {
     return loadItems().map((i) => {
         const copy = { ...i };
@@ -129,4 +155,4 @@ function listPublic() {
     });
 }
 
-module.exports = { loadItems, addItem, removeItem, markSynced, listPublic, CATALOG_PATH };
+module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, listPublic, CATALOG_PATH };
