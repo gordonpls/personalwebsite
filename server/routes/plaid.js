@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require("plaid");
 const items = require("../lib/plaid-items");
 const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
+const { sendPlaidRelinkEmail } = require("../lib/notify");
 
 const router = express.Router();
 
@@ -275,7 +276,16 @@ async function fetchHoldingsPayload() {
                     `[plaid] ${code} on item ${itemId} (${institution}).\n` +
                     `        Relink required: visit /api/plaid/relink?secret=<PLAID_RELINK_SECRET>`
                 );
-                if (itemId) items.markError(itemId, code);
+                if (itemId) {
+                    // Only email on the first detection — not on every retry while the
+                    // error persists (the catalog already has error+errorAt at that point).
+                    const alreadyFlagged = items.loadItems().find((i) => i.itemId === itemId)?.error;
+                    items.markError(itemId, code);
+                    if (!alreadyFlagged) {
+                        sendPlaidRelinkEmail({ institution, itemId, errorCode: code })
+                            .catch((e) => console.error("[notify] email failed:", e.message));
+                    }
+                }
             }
             throw err;
         }
