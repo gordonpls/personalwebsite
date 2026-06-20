@@ -9,6 +9,7 @@ server/logs/
 server/data/spotify-last.json
 server/data/spotify-tokens.json
 server/data/spotify-needs-reauth.flag
+server/data/spotify-reauth-state.json
 dist
 .DS_Store
 node_modules

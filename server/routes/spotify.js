@@ -35,6 +35,7 @@ const STORE = path.join(DATA_DIR, "spotify-last.json");
 const FALLBACK = path.join(DATA_DIR, "spotify-fallback.json");
 const TOKEN_STORE = path.join(DATA_DIR, "spotify-tokens.json");
 const REAUTH_FLAG = path.join(DATA_DIR, "spotify-needs-reauth.flag");
+const REAUTH_STATE = path.join(DATA_DIR, "spotify-reauth-state.json");
 
 const readJson = (p) => {
     try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; }
@@ -54,8 +55,6 @@ if (needsReauth) {
     );
 }
 
-// Short-lived PKCE-style nonce to prevent CSRF on the callback.
-let _reauthState = null;
 
 function getRefreshToken() {
     return storedRefreshToken || process.env.SPOTIFY_REFRESH_TOKEN || null;
@@ -219,7 +218,7 @@ router.get("/now-playing", async (_req, res) => {
 // http://127.0.0.1:3000/api/spotify/callback for local) to your Spotify app's
 // Redirect URIs at developer.spotify.com/dashboard.
 
-router.get("/spotify/reauth", (req, res) => {
+router.get("/spotify/reauth", async (req, res) => {
     const secret = process.env.SPOTIFY_REAUTH_SECRET;
     if (!secret || req.query.secret !== secret) {
         return res.status(401).send("Unauthorized — set SPOTIFY_REAUTH_SECRET in server/.env");
@@ -227,9 +226,13 @@ router.get("/spotify/reauth", (req, res) => {
     if (!process.env.SPOTIFY_CLIENT_ID) {
         return res.status(500).send("SPOTIFY_CLIENT_ID not configured in server/.env");
     }
-    // Store a short-lived nonce to verify the callback isn't forged.
-    _reauthState = crypto.randomBytes(16).toString("hex");
-    setTimeout(() => { _reauthState = null; }, 10 * 60 * 1000); // expires in 10 min
+    // Persist the nonce to disk so any Passenger worker can validate the callback.
+    const state = crypto.randomBytes(16).toString("hex");
+    await fs.promises.mkdir(DATA_DIR, { recursive: true });
+    await fs.promises.writeFile(
+        REAUTH_STATE,
+        JSON.stringify({ state, exp: Date.now() + 10 * 60 * 1000 })
+    );
 
     const url =
         "https://accounts.spotify.com/authorize?" +
@@ -238,8 +241,8 @@ router.get("/spotify/reauth", (req, res) => {
             response_type: "code",
             redirect_uri: REDIRECT_URI,
             scope: SCOPES,
-            state: _reauthState,
-            show_dialog: "true", // force the consent screen even if already authorized
+            state,
+            show_dialog: "true",
         });
     res.redirect(url);
 });
@@ -248,10 +251,13 @@ router.get("/spotify/callback", async (req, res) => {
     const { code, state, error } = req.query;
     if (error) return res.status(400).send(`Spotify auth error: ${error}`);
     if (!code) return res.status(400).send("No authorization code in callback.");
-    if (!_reauthState || state !== _reauthState) {
+
+    // Validate nonce from disk — works across all Passenger worker processes.
+    const stored = readJson(REAUTH_STATE);
+    if (!stored || state !== stored.state || Date.now() > stored.exp) {
         return res.status(400).send("Invalid or expired state — restart the flow via /api/spotify/reauth.");
     }
-    _reauthState = null; // consume nonce
+    await fs.promises.unlink(REAUTH_STATE).catch(() => {}); // consume nonce
 
     try {
         const basic = Buffer.from(
