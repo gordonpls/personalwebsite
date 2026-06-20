@@ -5,8 +5,10 @@ server/.env
 server/.plaid-items.json
 # Plaid structured logs (request_id, item_id, etc.) — local-only.
 server/logs/
-# Spotify last-played snapshot — runtime state, regenerated on play.
+# Spotify runtime state — regenerated/rotated at runtime, never commit.
 server/data/spotify-last.json
+server/data/spotify-tokens.json
+server/data/spotify-needs-reauth.flag
 dist
 .DS_Store
 node_modules

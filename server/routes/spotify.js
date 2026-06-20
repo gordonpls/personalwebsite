@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 const router = express.Router();
 
@@ -8,52 +9,136 @@ const router = express.Router();
 // short-lived access tokens server-side; the client only ever sees the track.
 // Env: SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN.
 //
+// Refresh token persistence:
+//   Runtime tokens are written to TOKEN_STORE (gitignored) and take priority over
+//   the .env value. This lets the server survive Spotify's rotating-token policy
+//   (new token issued on each refresh) without touching .env at runtime.
+//
+// Token expiry (Spotify policy, effective July 20 2026):
+//   Refresh tokens expire after 6 months of non-use. When Spotify returns
+//   invalid_grant, we set a reauth flag and serve the last-played fallback.
+//   Reauth is a single browser visit: GET /api/spotify/reauth?secret=<SPOTIFY_REAUTH_SECRET>
+//
 // The bar must never vanish once we've seen any track, so we remember the last
 // resolved track on disk and serve it (as "last played") whenever Spotify says
-// nothing is playing or an API call fails — including when the refresh token
-// lacks the user-read-recently-played scope and that endpoint 403s.
+// nothing is playing or an API call fails.
+
+const SCOPES = "user-read-currently-playing user-read-recently-played";
+const REDIRECT_URI =
+    process.env.SPOTIFY_REDIRECT_URI || "http://127.0.0.1:3000/api/spotify/callback";
+
 let tokenCache = { token: null, exp: 0 };
 let npCache = { at: 0, data: null };
 
-const STORE = path.join(__dirname, "..", "data", "spotify-last.json");
-// Committed seed so the bar always has something — even on a cold server that
-// has never resolved a live track (e.g. right after a fresh deploy).
-const FALLBACK = path.join(__dirname, "..", "data", "spotify-fallback.json");
+const DATA_DIR = path.join(__dirname, "..", "data");
+const STORE = path.join(DATA_DIR, "spotify-last.json");
+const FALLBACK = path.join(DATA_DIR, "spotify-fallback.json");
+const TOKEN_STORE = path.join(DATA_DIR, "spotify-tokens.json");
+const REAUTH_FLAG = path.join(DATA_DIR, "spotify-needs-reauth.flag");
+
 const readJson = (p) => {
     try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; }
 };
-// Prefer the runtime cache (last track we actually resolved); fall back to the
-// committed seed until the first live resolution overwrites it.
 let lastTrack = readJson(STORE) || readJson(FALLBACK);
 
-// Persist the most recently resolved track, but only write to disk when the
-// track actually changes (keyed by url) so we don't churn the disk every poll.
+// Load persisted refresh token — takes priority over .env so the server can
+// survive rotating tokens without the operator touching .env manually.
+let storedRefreshToken = readJson(TOKEN_STORE)?.refreshToken || null;
+
+// Reauth state (persisted across restarts via flag file).
+let needsReauth = fs.existsSync(REAUTH_FLAG);
+if (needsReauth) {
+    console.error(
+        "[spotify] Refresh token expired. Now-playing widget will serve last-played fallback.\n" +
+        `         To fix: visit /api/spotify/reauth?secret=<SPOTIFY_REAUTH_SECRET>`
+    );
+}
+
+// Short-lived PKCE-style nonce to prevent CSRF on the callback.
+let _reauthState = null;
+
+function getRefreshToken() {
+    return storedRefreshToken || process.env.SPOTIFY_REFRESH_TOKEN || null;
+}
+
+async function persistRefreshToken(token) {
+    storedRefreshToken = token;
+    await fs.promises.mkdir(DATA_DIR, { recursive: true });
+    await fs.promises.writeFile(
+        TOKEN_STORE,
+        JSON.stringify({ refreshToken: token, updatedAt: new Date().toISOString() })
+    );
+}
+
+async function markNeedsReauth() {
+    needsReauth = true;
+    tokenCache = { token: null, exp: 0 };
+    storedRefreshToken = null;
+    await fs.promises.mkdir(DATA_DIR, { recursive: true });
+    await fs.promises.writeFile(REAUTH_FLAG, new Date().toISOString());
+}
+
+async function clearNeedsReauth() {
+    needsReauth = false;
+    try { await fs.promises.unlink(REAUTH_FLAG); } catch { /* already gone */ }
+}
+
 function remember(track) {
     if (!track?.title) return track;
     const changed = !lastTrack || lastTrack.url !== track.url;
     lastTrack = track;
     if (changed) {
         fs.promises
-            .mkdir(path.dirname(STORE), { recursive: true })
+            .mkdir(DATA_DIR, { recursive: true })
             .then(() => fs.promises.writeFile(STORE, JSON.stringify(track)))
             .catch((e) => console.error("[now-playing] persist", e.message));
     }
     return track;
 }
 
-// The remembered track, always presented as not-currently-playing.
 const asLastPlayed = () => (lastTrack ? { ...lastTrack, isPlaying: false } : { isPlaying: false });
 
 async function getAccessToken() {
+    if (needsReauth) throw new Error("spotify needs reauth — visit /api/spotify/reauth");
     if (tokenCache.token && Date.now() < tokenCache.exp) return tokenCache.token;
-    const basic = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64");
+
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) throw new Error("no refresh token configured");
+
+    const basic = Buffer.from(
+        `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+    ).toString("base64");
+
     const res = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: process.env.SPOTIFY_REFRESH_TOKEN }),
+        body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }),
     });
-    if (!res.ok) throw new Error(`spotify token ${res.status}`);
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === "invalid_grant") {
+            console.error(
+                "[spotify] invalid_grant — refresh token expired or revoked.\n" +
+                `         Discarding token and halting Spotify calls.\n` +
+                `         To reauthorize: visit /api/spotify/reauth?secret=<SPOTIFY_REAUTH_SECRET>`
+            );
+            await markNeedsReauth().catch(() => {});
+        }
+        throw new Error(`spotify token ${res.status}: ${body.error || ""}`);
+    }
+
     const j = await res.json();
+
+    // Spotify may rotate the refresh token on each use. Capture it so we never
+    // lose access between restarts without updating .env.
+    if (j.refresh_token && j.refresh_token !== refreshToken) {
+        console.log("[spotify] Received rotated refresh token — persisting to disk.");
+        await persistRefreshToken(j.refresh_token).catch((e) =>
+            console.error("[spotify] persist rotated token:", e.message)
+        );
+    }
+
     tokenCache = { token: j.access_token, exp: Date.now() + (j.expires_in - 60) * 1000 };
     return tokenCache.token;
 }
@@ -71,9 +156,11 @@ function shape(item, isPlaying, progressMs) {
     };
 }
 
-// Last item from recently-played; null if unavailable (e.g. missing scope).
 async function recentlyPlayed(token) {
-    const r = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=1",
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
     if (!r.ok) return null;
     const j = await r.json();
     const it = j.items?.[0];
@@ -82,18 +169,19 @@ async function recentlyPlayed(token) {
 }
 
 router.get("/now-playing", async (_req, res) => {
-    if (!process.env.SPOTIFY_REFRESH_TOKEN) return res.json({ isPlaying: false, configured: false });
-    if (npCache.data && Date.now() - npCache.at < 10_000) return res.json(npCache.data); // 10s shared cache
+    if (!getRefreshToken() && !needsReauth) return res.json({ isPlaying: false, configured: false });
+    if (npCache.data && Date.now() - npCache.at < 10_000) return res.json(npCache.data);
 
     let data;
     try {
         const token = await getAccessToken();
-        const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", { headers: { Authorization: `Bearer ${token}` } });
+        const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+            headers: { Authorization: `Bearer ${token}` },
+        });
         if (r.ok) {
-            const j = await r.json(); // 200: a track is loaded (playing or paused)
+            const j = await r.json();
             if (j?.item) data = remember(shape(j.item, j.is_playing, j.progress_ms));
         }
-        // 204 (nothing loaded) or 200 without an item → fall back to recently-played.
         if (!data) {
             const recent = await recentlyPlayed(token);
             if (recent) data = remember(recent);
@@ -102,12 +190,85 @@ router.get("/now-playing", async (_req, res) => {
         console.error("[now-playing]", err.message);
     }
 
-    // Nothing live and recently-played unavailable → serve the remembered track
-    // so the bar persists. Only truly empty before we've ever resolved a track.
     if (!data) data = asLastPlayed();
-
     npCache = { at: Date.now(), data };
     res.json(data);
+});
+
+// ── Reauth flow ──────────────────────────────────────────────────────────────
+// Gate with SPOTIFY_REAUTH_SECRET so only you can trigger it.
+// Step 1: visit /api/spotify/reauth?secret=<your secret> → redirects to Spotify.
+// Step 2: Spotify redirects to /api/spotify/callback with a one-time code.
+//         The server exchanges the code, persists the new refresh token, and
+//         the now-playing widget resumes automatically.
+//
+// One-time setup: add https://gordonzhong.com/api/spotify/callback (and
+// http://127.0.0.1:3000/api/spotify/callback for local) to your Spotify app's
+// Redirect URIs at developer.spotify.com/dashboard.
+
+router.get("/spotify/reauth", (req, res) => {
+    const secret = process.env.SPOTIFY_REAUTH_SECRET;
+    if (!secret || req.query.secret !== secret) {
+        return res.status(401).send("Unauthorized — set SPOTIFY_REAUTH_SECRET in server/.env");
+    }
+    if (!process.env.SPOTIFY_CLIENT_ID) {
+        return res.status(500).send("SPOTIFY_CLIENT_ID not configured in server/.env");
+    }
+    // Store a short-lived nonce to verify the callback isn't forged.
+    _reauthState = crypto.randomBytes(16).toString("hex");
+    setTimeout(() => { _reauthState = null; }, 10 * 60 * 1000); // expires in 10 min
+
+    const url =
+        "https://accounts.spotify.com/authorize?" +
+        new URLSearchParams({
+            client_id: process.env.SPOTIFY_CLIENT_ID,
+            response_type: "code",
+            redirect_uri: REDIRECT_URI,
+            scope: SCOPES,
+            state: _reauthState,
+            show_dialog: "true", // force the consent screen even if already authorized
+        });
+    res.redirect(url);
+});
+
+router.get("/spotify/callback", async (req, res) => {
+    const { code, state, error } = req.query;
+    if (error) return res.status(400).send(`Spotify auth error: ${error}`);
+    if (!code) return res.status(400).send("No authorization code in callback.");
+    if (!_reauthState || state !== _reauthState) {
+        return res.status(400).send("Invalid or expired state — restart the flow via /api/spotify/reauth.");
+    }
+    _reauthState = null; // consume nonce
+
+    try {
+        const basic = Buffer.from(
+            `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
+        ).toString("base64");
+        const r = await fetch("https://accounts.spotify.com/api/token", {
+            method: "POST",
+            headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                grant_type: "authorization_code",
+                code,
+                redirect_uri: REDIRECT_URI,
+            }),
+        });
+        const j = await r.json();
+        if (!j.refresh_token) throw new Error(JSON.stringify(j));
+
+        await persistRefreshToken(j.refresh_token);
+        await clearNeedsReauth();
+        tokenCache = { token: null, exp: 0 }; // force a clean refresh on next /now-playing
+
+        console.log("[spotify] Reauthorization successful — new refresh token stored.");
+        res.send(
+            "<h2>Spotify reauthorized successfully.</h2>" +
+            "<p>The now-playing widget will resume on the next poll. You can close this tab.</p>"
+        );
+    } catch (e) {
+        console.error("[spotify] Reauth callback failed:", e.message);
+        res.status(500).send("Token exchange failed: " + e.message);
+    }
 });
 
 module.exports = router;

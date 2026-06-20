@@ -74,5 +74,11 @@ There are **two separate cache-builder scripts** — keep them from drifting:
 ## Environment variables
 
 Frontend `.env` (Vite, must be `VITE_`-prefixed; see `.env.example`): `VITE_ALPHAVANTAGE_KEY`, `VITE_WEATHER_API_KEY`.
-Backend `server/.env`: `PLAID_CLIENT_ID`, `PLAID_SECRET_SANDBOX`, `PLAID_SECRET_PRODUCTION`, `PLAID_ENV`, `PLAID_ACCESS_TOKEN`, `ALLOWED_ORIGINS`.
+Backend `server/.env`: `PLAID_CLIENT_ID`, `PLAID_SECRET_SANDBOX`, `PLAID_SECRET_PRODUCTION`, `PLAID_ENV`, `PLAID_ACCESS_TOKEN`, `ALLOWED_ORIGINS`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN` (seed value; runtime rotations are auto-persisted to `server/data/spotify-tokens.json`), `SPOTIFY_REAUTH_SECRET` (a secret string you pick; gates the `/api/spotify/reauth` endpoint), `SPOTIFY_REDIRECT_URI` (defaults to `http://127.0.0.1:3000/api/spotify/callback`; set to `https://gordonzhong.com/api/spotify/callback` in production and add it to the Spotify app's Redirect URIs).
 All `.env` files and `keys/` are gitignored.
+
+### Spotify reauthorization (refresh token expiry)
+Spotify refresh tokens expire after 6 months (policy effective July 20 2026). When one expires, the server logs an `invalid_grant` error, writes `server/data/spotify-needs-reauth.flag`, and falls back to the last-played track. To reauthorize without touching the server:
+1. Visit `https://gordonzhong.com/api/spotify/reauth?secret=<SPOTIFY_REAUTH_SECRET>` in your browser.
+2. Approve in the Spotify consent screen.
+3. The server writes the new token to `server/data/spotify-tokens.json` automatically and resumes live polling.
