@@ -6,7 +6,6 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Gallery } from "./Gallery/Gallery";
 import { Highlights } from "./Highlights";
-import { Resume } from "./Resume";
 import { ResumeTimeline } from "./ResumeTimeline";
 import { Projects } from "./Projects";
 import { Reveal } from "./Reveal";
@@ -38,10 +37,6 @@ export const Home = () => {
                     </section>
                     <div className="divider divider-primary" />
                     <section id="resume" className="scroll-mt-24">
-                        <Reveal><Resume /></Reveal>
-                    </section>
-                    <div className="divider divider-primary" />
-                    <section id="timeline" className="scroll-mt-24">
                         <Reveal><ResumeTimeline /></Reveal>
                     </section>
                     <div className="divider divider-primary" />

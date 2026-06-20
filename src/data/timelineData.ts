@@ -13,7 +13,7 @@ export type TimelineEntry = {
 export const TIMELINE_ENTRIES: TimelineEntry[] = [
     {
         type: "education",
-        title: "M.S. in Finance",
+        title: "M.S. in Finance, with High Honors",
         org: "Boston University, Questrom School of Business",
         period: "Aug 2025 – May 2026",
         location: "Boston, MA",
@@ -41,10 +41,10 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
     },
     {
         type: "break",
-        title: "Travel — Asia",
+        title: "Travel — (Japan, South Korea, Thailand)",
         org: "Career Break",
         period: "Jan 2023 – Aug 2023 · 8 mos",
-        note: "Travelled through Japan, South Korea, and Thailand — immersing in diverse cultures, adapting to new environments, and gaining fresh perspectives.",
+        note: "Travelled through Asia, immersing in diverse cultures, adapting to new environments, and gaining fresh perspectives.",
     },
     {
         type: "role",
