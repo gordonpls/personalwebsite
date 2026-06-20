@@ -16,9 +16,15 @@ let tokenCache = { token: null, exp: 0 };
 let npCache = { at: 0, data: null };
 
 const STORE = path.join(__dirname, "..", "data", "spotify-last.json");
-let lastTrack = (() => {
-    try { return JSON.parse(fs.readFileSync(STORE, "utf8")); } catch { return null; }
-})();
+// Committed seed so the bar always has something — even on a cold server that
+// has never resolved a live track (e.g. right after a fresh deploy).
+const FALLBACK = path.join(__dirname, "..", "data", "spotify-fallback.json");
+const readJson = (p) => {
+    try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; }
+};
+// Prefer the runtime cache (last track we actually resolved); fall back to the
+// committed seed until the first live resolution overwrites it.
+let lastTrack = readJson(STORE) || readJson(FALLBACK);
 
 // Persist the most recently resolved track, but only write to disk when the
 // track actually changes (keyed by url) so we don't churn the disk every poll.

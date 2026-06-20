@@ -81,11 +81,15 @@ jobs:
             dist/ "$SSH_USER@$SSH_HOST:$WEB_ROOT"
 
       # Backend: same excludes as the old .cpanel.yml — never overwrite the
-      # server's .env, .htaccess, or installed node_modules.
+      # server's .env, .htaccess, or installed node_modules. Also keep the
+      # runtime Spotify last-played cache (gitignored, so absent from CI) — without
+      # this exclude, --delete would wipe it on every deploy and the now-playing
+      # bar would go empty until a track resolves live again.
       - name: Deploy backend
         run: |
           rsync -az --delete \
             --exclude node_modules --exclude .env --exclude .htaccess \
+            --exclude spotify-last.json \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             server/ "$SSH_USER@$SSH_HOST:$SERVER_ROOT"
 
