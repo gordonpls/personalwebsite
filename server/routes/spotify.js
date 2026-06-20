@@ -83,6 +83,18 @@ async function clearNeedsReauth() {
     try { await fs.promises.unlink(REAUTH_FLAG); } catch { /* already gone */ }
 }
 
+// Re-derive auth state from disk on each poll. In-memory flags get stale when
+// the reauth callback runs in a different worker process (Passenger may run more
+// than one) or simply after the flag/token files change — without this, a worker
+// that once hit invalid_grant keeps logging "needs reauth" and keeps using the
+// old token until it restarts. The flag file is the source of truth for reauth
+// state; the token store for the current (possibly rotated/reauthed) token.
+function syncAuthFromDisk() {
+    needsReauth = fs.existsSync(REAUTH_FLAG);
+    const onDisk = readJson(TOKEN_STORE)?.refreshToken;
+    if (onDisk) storedRefreshToken = onDisk;
+}
+
 function remember(track) {
     if (!track?.title) return track;
     const changed = !lastTrack || lastTrack.url !== track.url;
@@ -169,6 +181,7 @@ async function recentlyPlayed(token) {
 }
 
 router.get("/now-playing", async (_req, res) => {
+    syncAuthFromDisk(); // pick up a reauth/token change from the callback (any worker)
     if (!getRefreshToken() && !needsReauth) return res.json({ isPlaying: false, configured: false });
     if (npCache.data && Date.now() - npCache.at < 10_000) return res.json(npCache.data);
 
