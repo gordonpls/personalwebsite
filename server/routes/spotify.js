@@ -75,6 +75,9 @@ async function markNeedsReauth() {
     storedRefreshToken = null;
     await fs.promises.mkdir(DATA_DIR, { recursive: true });
     await fs.promises.writeFile(REAUTH_FLAG, new Date().toISOString());
+    // Remove the persisted token too — otherwise syncAuthFromDisk() reloads it
+    // on the next poll and causes another invalid_grant, re-writing the flag.
+    await fs.promises.unlink(TOKEN_STORE).catch(() => {});
 }
 
 async function clearNeedsReauth() {
@@ -90,8 +93,12 @@ async function clearNeedsReauth() {
 // state; the token store for the current (possibly rotated/reauthed) token.
 function syncAuthFromDisk() {
     needsReauth = fs.existsSync(REAUTH_FLAG);
-    const onDisk = readJson(TOKEN_STORE)?.refreshToken;
-    if (onDisk) storedRefreshToken = onDisk;
+    // Don't load a persisted token while in reauth mode — it's the bad token
+    // that caused the invalid_grant in the first place.
+    if (!needsReauth) {
+        const onDisk = readJson(TOKEN_STORE)?.refreshToken;
+        if (onDisk) storedRefreshToken = onDisk;
+    }
 }
 
 function remember(track) {
