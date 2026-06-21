@@ -169,8 +169,8 @@ export function ResumeTimeline() {
             className="text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary scroll-mt-24"
             id="resume"
         >
-            {/* Breadcrumbs + download: side-by-side on sm+, stacked below on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            {/* Breadcrumbs + download: snug right of breadcrumbs on sm+, stacked below on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
                 <div className="breadcrumbs max-w-fit">
                     <ul>
                         <li className="pointer-events-none">
@@ -200,13 +200,11 @@ export function ResumeTimeline() {
                     </ul>
                 </div>
 
-                {/* Ping ring wraps the button for a visible pulse effect */}
-                <div className="relative inline-flex shrink-0 sm:ml-4">
-                    <span className="absolute inset-0 rounded animate-ping bg-primary/40" />
+                <div className="btn-rgb-border shrink-0">
                     <a
                         href={resumePDF}
                         download
-                        className="btn btn-primary btn-sm gap-2 relative shadow-md shadow-primary/30"
+                        className="btn btn-primary btn-sm gap-2"
                     >
                         <DownloadIcon />
                         Download Resume

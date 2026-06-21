@@ -22,7 +22,7 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
     {
         type: "role",
         title: "Shift Supervisor",
-        org: "7 Leaves Café",
+        org: "7Leaves Café",
         period: "Mar 2024 – Dec 2024 · 10 mos",
         location: "Las Vegas, NV",
         bullets: [

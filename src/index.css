@@ -192,6 +192,87 @@
 .eq-bar { width: 2px; height: 100%; background: currentColor; border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
 
 
+/* ── Button animation demo variants ─────────────────────────────────────────── */
+
+/* 1. Glint sweep — diagonal highlight slides across then pauses */
+@keyframes btn-glint {
+    0%, 60%  { transform: translateX(-130%) skewX(-15deg); }
+    100%     { transform: translateX(280%) skewX(-15deg); }
+}
+.btn-anim-glint { position: relative; overflow: hidden; }
+.btn-anim-glint::after {
+    content: '';
+    position: absolute;
+    top: -20%; bottom: -20%; width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+    animation: btn-glint 2.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* 2. Glow pulse — box-shadow breathes with the primary color */
+@keyframes btn-glow {
+    0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0 transparent; }
+    50%      { box-shadow: 0 1px 3px rgba(0,0,0,0.12),
+                           0 0 0 3px  color-mix(in oklch, var(--color-primary) 30%, transparent),
+                           0 0 18px 2px color-mix(in oklch, var(--color-primary) 55%, transparent); }
+}
+.btn-anim-glow { animation: btn-glow 2s ease-in-out infinite; }
+
+/* 3. Rotating border — conic-gradient arc sweeps the perimeter */
+@property --btn-border-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+@keyframes btn-border-spin { to { --btn-border-angle: 360deg; } }
+.btn-anim-border-wrap {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 0.35rem;
+    background: conic-gradient(
+        from var(--btn-border-angle),
+        var(--color-primary) 0deg,
+        transparent 70deg,
+        transparent 290deg,
+        var(--color-primary) 360deg
+    );
+    animation: btn-border-spin 1.8s linear infinite;
+}
+
+/* 4. Soft scale throb — button swells very slightly on a slow loop */
+@keyframes btn-throb {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+}
+.btn-anim-throb { animation: btn-throb 2.2s ease-in-out infinite; }
+
+/* 5. Icon nudge — only the arrow moves; button stays still */
+@keyframes btn-icon-nudge {
+    0%, 30%, 100% { transform: translateY(0); }
+    60%           { transform: translateY(4px); }
+}
+.btn-anim-icon-nudge { display: inline-flex; animation: btn-icon-nudge 2.2s ease-in-out infinite; }
+
+/* ── RGB floating border (download CTA) ──────────────────────────────────────── */
+@property --rgb-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+@keyframes rgb-spin { to { --rgb-angle: 360deg; } }
+.btn-rgb-border {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 2px;
+    border-radius: calc(var(--radius-selector, 0.25rem) + 2px);
+    background: conic-gradient(
+        from var(--rgb-angle),
+        #ffb3c6, #ffd6a5, #fdffb6, #caffbf, #9bf6ff, #c8b6ff, #ffafcc, #ffb3c6
+    );
+    animation: rgb-spin 3s linear infinite;
+    filter: drop-shadow(0 0 7px rgba(200, 182, 255, 0.65));
+}
+
 /* Timeline: line draws top-to-bottom on mount; entries fade+slide up in sequence. */
 @keyframes timeline-line-grow {
     from { transform: scaleY(0); }
