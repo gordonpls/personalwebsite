@@ -169,52 +169,48 @@ export function ResumeTimeline() {
             className="text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary scroll-mt-24"
             id="resume"
         >
-            {/* Breadcrumbs — matching the PDF Resume section style */}
-            <div className="breadcrumbs max-w-fit mb-4">
-                <ul>
-                    <li className="pointer-events-none">
-                        <span className="inline-flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                            <span>Home</span>
-                        </span>
-                    </li>
-                    <li className="pointer-events-none">
-                        <span className="inline-flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                            <span>Resume</span>
-                        </span>
-                    </li>
-                    <li className="pointer-events-none">
-                        <span className="inline-flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                            </svg>
-                            <span>Career Timeline</span>
-                        </span>
-                    </li>
-                </ul>
-            </div>
+            {/* Breadcrumbs row with download button on the right */}
+            <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="breadcrumbs max-w-fit">
+                    <ul>
+                        <li className="pointer-events-none">
+                            <span className="inline-flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span>Home</span>
+                            </span>
+                        </li>
+                        <li className="pointer-events-none">
+                            <span className="inline-flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span>Resume</span>
+                            </span>
+                        </li>
+                        <li className="pointer-events-none">
+                            <span className="inline-flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                                </svg>
+                                <span>Career Timeline</span>
+                            </span>
+                        </li>
+                    </ul>
+                </div>
 
-            {/* Heading + download button in the same row */}
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6">
-                <SectionHeading eyebrow="Experience" title="Career Timeline" className="flex-1" />
-
-                {/* Prominent download CTA */}
                 <a
                     href={resumePDF}
                     download
-                    className="btn btn-primary gap-2 shrink-0 shadow-md shadow-primary/30"
+                    className="download-shine btn btn-primary btn-sm gap-2 shrink-0 relative overflow-hidden shadow-md shadow-primary/30"
                 >
-                    <span className="animate-bounce">
-                        <DownloadIcon />
-                    </span>
-                    Download Full Resume
+                    <DownloadIcon />
+                    Download Resume
                 </a>
             </div>
+
+            <SectionHeading eyebrow="Experience" title="Career Timeline" className="mb-6" />
 
             {/* Filter tabs — the interactive flashy feature */}
             <div className="join mb-8">

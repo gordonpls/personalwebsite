@@ -191,6 +191,20 @@
 @keyframes eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
 .eq-bar { width: 2px; height: 100%; background: currentColor; border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
 
+/* Download button: repeating diagonal shine sweep. */
+@keyframes download-shine {
+    from { transform: translateX(-100%) skewX(-20deg); }
+    to   { transform: translateX(350%) skewX(-20deg); }
+}
+.download-shine::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+    animation: download-shine 2.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
 /* Timeline: line draws top-to-bottom on mount; entries fade+slide up in sequence. */
 @keyframes timeline-line-grow {
     from { transform: scaleY(0); }
