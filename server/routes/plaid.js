@@ -293,8 +293,14 @@ async function fetchHoldingsPayload() {
             if (!firstError) firstError = err;
             continue;
         }
-        logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resp.data?.item?.item_id });
-        if (resp.data?.item?.item_id) items.markSynced(resp.data.item.item_id);
+        const resolvedItemId = resp.data?.item?.item_id;
+        logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resolvedItemId });
+        if (resolvedItemId) {
+            // Self-heal a missing/stale catalog itemId so this item can be
+            // flagged on future errors and auto-targeted for relink.
+            if (resolvedItemId !== itemId) items.setItemId(token, resolvedItemId);
+            items.markSynced(resolvedItemId);
+        }
 
         // Self-heal a missing/"Unknown" institution label (which would otherwise
         // mis-bucket this item's holdings into "Core"). Resolve the real name from
@@ -435,6 +441,67 @@ router.get("/quotes", async (_req, res) => {
 //
 // One-time setup: set PLAID_RELINK_SECRET in server/.env.
 
+const escHtml = (s) => String(s ?? "").replace(/[<>"'&]/g, "");
+
+// Resolve an item's live health via Plaid itemGet — and as a side effect,
+// backfill a missing itemId and sync the catalog error flag, so the chooser,
+// email alerts, and auto-targeting all reflect reality.
+async function relinkItemHealth(it) {
+    try {
+        const r = await plaidClient.itemGet({ access_token: it.accessToken });
+        const realId = r.data?.item?.item_id;
+        if (realId && realId !== it.itemId) { items.setItemId(it.accessToken, realId); it.itemId = realId; }
+        const errCode = r.data?.item?.error?.error_code || null;
+        if (it.itemId) {
+            if (errCode) items.markError(it.itemId, errCode);
+            else items.clearError(it.itemId);
+        }
+        return { errorCode: errCode };
+    } catch (e) {
+        return { errorCode: e.response?.data?.error_code || "ITEM_GET_FAILED" };
+    }
+}
+
+// Chooser page: lists every catalogued institution with its live Plaid status
+// and a per-item relink link, so there's never ambiguity about which one you're
+// fixing (and it self-heals missing itemIds / stale error flags on the way).
+async function renderRelinkChooser(allItems, secret) {
+    const health = await Promise.all(allItems.map(relinkItemHealth));
+    const rows = allItems.map((it, i) => {
+        const code = health[i].errorCode;
+        const status = code
+            ? `<span style="color:#c0392b">⚠️ ${escHtml(code)}</span>`
+            : `<span style="color:#0a7d28">✅ healthy</span>`;
+        const sel = it.itemId
+            ? `item_id=${encodeURIComponent(it.itemId)}`
+            : `institution=${encodeURIComponent(it.institution || "")}`;
+        const href = `/api/plaid/relink?secret=${encodeURIComponent(secret)}&${sel}`;
+        const btn = code
+            ? `<a class="btn" href="${href}">Relink</a>`
+            : `<a class="btn ghost" href="${href}">Relink anyway</a>`;
+        return `<tr><td>${escHtml(it.institution || "Unknown")}</td><td>${status}</td><td>${btn}</td></tr>`;
+    }).join("");
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Relink — choose an institution</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:560px;margin:3rem auto;padding:1rem}
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    td,th{text-align:left;padding:.6em .4em;border-bottom:1px solid #eee}
+    a.btn{display:inline-block;padding:.4em 1em;background:#0070f3;color:#fff;border-radius:6px;text-decoration:none;font-size:.9em}
+    a.btn.ghost{background:#eee;color:#333}
+  </style>
+</head>
+<body>
+  <h2>Relink a Plaid item</h2>
+  <p>Live status from Plaid — click <b>Relink</b> on the institution that needs attention.</p>
+  <table><thead><tr><th>Institution</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+</body>
+</html>`;
+}
+
 router.get("/plaid/relink", async (req, res) => {
     const secret = process.env.PLAID_RELINK_SECRET;
     if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
@@ -442,18 +509,34 @@ router.get("/plaid/relink", async (req, res) => {
     const allItems = items.loadItems();
     if (!allItems.length) return res.status(404).send("No items in catalog.");
 
+    // No explicit selection → show the chooser (with live status) instead of
+    // guessing a default, so the wrong institution is never relinked.
+    if (!req.query.item_id && !req.query.institution) {
+        return res.send(await renderRelinkChooser(allItems, secret));
+    }
+
     let target;
     if (req.query.item_id) {
         target = allItems.find((i) => i.itemId === req.query.item_id);
         if (!target) return res.status(404).send(`item_id ${req.query.item_id} not found in catalog.`);
-    } else if (req.query.institution) {
+    } else {
         // Target by institution name — needed when an item's catalog entry is
         // missing its itemId (so it can't be flagged/auto-targeted by error).
         const want = String(req.query.institution).toLowerCase();
         target = allItems.find((i) => (i.institution || "").toLowerCase() === want);
         if (!target) return res.status(404).send(`institution "${req.query.institution}" not found in catalog.`);
-    } else {
-        target = allItems.find((i) => i.error) ?? allItems[0];
+    }
+
+    // Backfill a missing itemId (matched by access token) so relink completion,
+    // error-flagging, and auto-targeting work for items linked without one.
+    if (!target.itemId) {
+        try {
+            const ig = await plaidClient.itemGet({ access_token: target.accessToken });
+            const realId = ig.data?.item?.item_id;
+            if (realId) { items.setItemId(target.accessToken, realId); target.itemId = realId; }
+        } catch (e) {
+            logPlaidError("item.get", e, { institution: target.institution });
+        }
     }
 
     // Count how many items (including this one) still need relinking.

@@ -163,6 +163,20 @@ function setInstitution(itemId, institution) {
     return true;
 }
 
+// Backfill/repair an item's itemId, matched by access token (unique). Items
+// linked without an itemId can't be flagged on error, alerted on, or
+// auto-targeted for relink; resolving it once via Plaid and persisting fixes
+// all of that. No-ops if the item already has this id.
+function setItemId(accessToken, itemId) {
+    const existing = readCatalog();
+    if (!existing) return false;
+    const idx = existing.findIndex((i) => i.accessToken === accessToken);
+    if (idx < 0 || existing[idx].itemId === itemId) return false;
+    existing[idx] = { ...existing[idx], itemId };
+    writeCatalog(existing);
+    return true;
+}
+
 // Public-safe view: itemId + institution + timestamps + error state, no tokens.
 function listPublic() {
     return loadItems().map((i) => {
@@ -172,4 +186,4 @@ function listPublic() {
     });
 }
 
-module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, setInstitution, listPublic, CATALOG_PATH };
+module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, setInstitution, setItemId, listPublic, CATALOG_PATH };
