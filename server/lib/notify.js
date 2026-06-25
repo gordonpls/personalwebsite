@@ -36,8 +36,7 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
         return;
     }
     if (!process.env.SMTP_PASS) {
-        console.warn("[notify] SMTP_PASS not set — skipping Plaid relink email.");
-        return;
+        throw new Error("SMTP_PASS not set in server/.env — email not configured");
     }
 
     const from = process.env.SMTP_USER || process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
