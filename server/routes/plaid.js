@@ -513,13 +513,13 @@ router.post("/plaid/relink/complete", async (req, res) => {
     }
     _relinkNonce = null; // consume nonce
 
-    if (!item_id) return res.status(400).json({ error: "item_id required" });
+    // item_id is null for legacy env-var tokens (no catalog entry); clearError
+    // is a no-op in that case, but we still must bust the holdings cache.
+    if (item_id) items.clearError(item_id);
+    getHoldings.invalidate();
 
-    items.clearError(item_id);
-    getHoldings.invalidate(); // bust the 6h cache so the next /api/holdings gets fresh data
-
-    console.log(`[plaid] Relink complete for item ${item_id}. Holdings cache invalidated.`);
-    res.json({ ok: true, item_id });
+    console.log(`[plaid] Relink complete${item_id ? ` for item ${item_id}` : " (legacy token, no item_id)"}. Holdings cache invalidated.`);
+    res.json({ ok: true, item_id: item_id || null });
 });
 
 // ── Test: fire a sample notification email ────────────────────────────────────
