@@ -1,29 +1,26 @@
 // Email notifications for server-side action-required events.
 //
-// Uses the server's local sendmail binary (available on all cPanel hosts) —
-// no SMTP credentials or app passwords needed. Mail is sent as the hosting
-// account and delivered directly, which also means it originates from your
-// own domain rather than Gmail.
+// Uses the local Exim MTA via SMTP on 127.0.0.1:25 — cPanel/Exim trusts
+// connections from the same server without credentials or a real mailbox for
+// the sender. The sendmail binary approach (tried first) exits with code 1 on
+// cPanel because Exim's sendmail wrapper validates that the envelope sender is
+// a real local mailbox.
 //
 // Required env vars:
 //   NOTIFY_TO   — recipient address (e.g. maplesomeone@gmail.com)
 //
 // Optional env vars:
-//   NOTIFY_FROM — sender address shown in the From header
+//   NOTIFY_FROM — sender address in the From header
 //                 (default: noreply@gordonzhong.com)
 //   SITE_URL    — base URL for action links (default: https://gordonzhong.com)
 
 const nodemailer = require("nodemailer");
 
-// Specify the full sendmail path — Passenger/LiteSpeed restricts PATH so the
-// binary isn't auto-discovered by nodemailer. -f sets the envelope sender,
-// which improves deliverability and avoids "From: unknown" rejections.
-const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
 const transport = nodemailer.createTransport({
-    sendmail: true,
-    newline: "unix",
-    path: "/usr/sbin/sendmail",
-    args: ["-f", from],
+    host: "127.0.0.1",
+    port: 25,
+    secure: false,
+    tls: { rejectUnauthorized: false },
 });
 
 async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
@@ -33,6 +30,7 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
         return;
     }
 
+    const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
     const base = (process.env.SITE_URL || "https://gordonzhong.com").replace(/\/$/, "");
     const secret = process.env.PLAID_RELINK_SECRET || "<PLAID_RELINK_SECRET>";
     const relinkUrl = `${base}/api/plaid/relink?secret=${encodeURIComponent(secret)}${itemId ? `&item_id=${encodeURIComponent(itemId)}` : ""}`;
