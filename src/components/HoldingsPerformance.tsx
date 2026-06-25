@@ -344,7 +344,7 @@ export const HoldingsPerformance = ({
 
             {/* Chart */}
             {error ? (
-                <p className="text-sm text-base-content/50 py-10 text-center">Connect your brokerage to see performance.</p>
+                <p className="text-sm text-base-content/50 py-10 text-center">Holdings are temporarily unavailable.</p>
             ) : loading ? (
                 <div className="h-[260px] rounded bg-base-200 animate-pulse" aria-hidden="true" />
             ) : data.length < 2 ? (

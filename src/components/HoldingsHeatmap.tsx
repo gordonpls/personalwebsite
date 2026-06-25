@@ -169,7 +169,7 @@ export const HoldingsHeatmap = ({
             </div>
 
             {error ? (
-                <p className="text-sm text-base-content/50 flex-1 flex items-center justify-center text-center">Connect your brokerage to see the heatmap.</p>
+                <p className="text-sm text-base-content/50 flex-1 flex items-center justify-center text-center">Holdings are temporarily unavailable.</p>
             ) : !holdings ? (
                 <div className="rounded bg-base-200 animate-pulse h-[320px] lg:h-auto lg:flex-1 lg:min-h-0" aria-hidden="true" />
             ) : data.length === 0 ? (

@@ -15,7 +15,16 @@
 
 const nodemailer = require("nodemailer");
 
-const transport = nodemailer.createTransport({ sendmail: true, newline: "unix" });
+// Specify the full sendmail path — Passenger/LiteSpeed restricts PATH so the
+// binary isn't auto-discovered by nodemailer. -f sets the envelope sender,
+// which improves deliverability and avoids "From: unknown" rejections.
+const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
+const transport = nodemailer.createTransport({
+    sendmail: true,
+    newline: "unix",
+    path: "/usr/sbin/sendmail",
+    args: ["-f", from],
+});
 
 async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
     const to = process.env.NOTIFY_TO;
@@ -24,7 +33,6 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
         return;
     }
 
-    const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
     const base = (process.env.SITE_URL || "https://gordonzhong.com").replace(/\/$/, "");
     const secret = process.env.PLAID_RELINK_SECRET || "<PLAID_RELINK_SECRET>";
     const relinkUrl = `${base}/api/plaid/relink?secret=${encodeURIComponent(secret)}${itemId ? `&item_id=${encodeURIComponent(itemId)}` : ""}`;

@@ -522,4 +522,28 @@ router.post("/plaid/relink/complete", async (req, res) => {
     res.json({ ok: true, item_id });
 });
 
+// ── Test: fire a sample notification email ────────────────────────────────────
+// Gated by PLAID_RELINK_SECRET. Visit in a browser to verify email delivery
+// after deploy — especially useful after server changes to the notify module.
+// GET /api/plaid/notify-test?secret=<PLAID_RELINK_SECRET>
+router.get("/plaid/notify-test", async (req, res) => {
+    const secret = process.env.PLAID_RELINK_SECRET;
+    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+
+    const to = process.env.NOTIFY_TO;
+    if (!to) return res.status(503).send("NOTIFY_TO not set in server/.env — no recipient configured.");
+
+    try {
+        await sendPlaidRelinkEmail({
+            institution: "Test Institution",
+            itemId: "test-item-id",
+            errorCode: "TEST_NOTIFICATION",
+        });
+        res.send(`✅ Test email sent to ${to}. Check your inbox (and spam folder).`);
+    } catch (err) {
+        console.error("[notify] test email failed:", err.message);
+        res.status(500).send(`❌ Email failed: ${err.message}`);
+    }
+});
+
 module.exports = router;
