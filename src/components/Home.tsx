@@ -1,14 +1,26 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Hero } from "./Hero";
 import { AboutMe } from "./AboutMe";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
-import { Gallery } from "./Gallery/Gallery";
-import { Highlights } from "./Highlights";
 import { ResumeTimeline } from "./ResumeTimeline";
 import { Projects } from "./Projects";
 import { Reveal } from "./Reveal";
+
+// Heavy, below-the-fold sections kept off the initial critical path. The gallery
+// alone eager-imports ~600 image modules (204 photos × srcset/full/metadata);
+// importing it synchronously blocks first paint (long white screen) until all of
+// them resolve. Lazy-loading lets the page render immediately and these stream
+// in afterward — and code-splits them out of the initial bundle in production.
+const Highlights = lazy(() => import("./Highlights").then((m) => ({ default: m.Highlights })));
+const Gallery = lazy(() => import("./Gallery/Gallery").then((m) => ({ default: m.Gallery })));
+
+const SectionLoading = () => (
+    <div className="flex min-h-[40vh] items-center justify-center rounded-md border-2 border-secondary bg-base-200">
+        <span className="loading loading-spinner loading-lg text-primary" />
+    </div>
+);
 
 export const Home = () => {
     const location = useLocation();
@@ -45,11 +57,19 @@ export const Home = () => {
                     </section>
                     <div className="divider divider-primary" />
                     <section id="highlights" className="scroll-mt-24">
-                        <Reveal><Highlights /></Reveal>
+                        <Reveal>
+                            <Suspense fallback={<SectionLoading />}>
+                                <Highlights />
+                            </Suspense>
+                        </Reveal>
                     </section>
                     <div className="divider divider-primary" />
                     <section id="gallery" className="scroll-mt-24">
-                        <Reveal><Gallery /></Reveal>
+                        <Reveal>
+                            <Suspense fallback={<SectionLoading />}>
+                                <Gallery />
+                            </Suspense>
+                        </Reveal>
                     </section>
 
                 </div>
