@@ -197,7 +197,7 @@ router.get("/now-playing", async (_req, res) => {
         const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
             headers: { Authorization: `Bearer ${token}` },
         });
-        if (r.ok) {
+        if (r.ok && r.status !== 204) {
             const j = await r.json();
             if (j?.item) data = remember(shape(j.item, j.is_playing, j.progress_ms));
         }
