@@ -427,9 +427,10 @@ router.get("/quotes", async (_req, res) => {
 // the user at the institution and clears the error, keeping the same token.
 //
 // Usage (no PLAID_SETUP_ENABLED flag needed — gated by PLAID_RELINK_SECRET):
-//   GET /api/plaid/relink?secret=<PLAID_RELINK_SECRET>[&item_id=<itemId>]
-//   → opens Plaid Link in update mode for the specified item (or the first
-//     item in error state, or the first item in the catalog if none are errored).
+//   GET /api/plaid/relink?secret=<PLAID_RELINK_SECRET>[&item_id=<itemId>|&institution=<name>]
+//   → opens Plaid Link in update mode for the specified item (by item_id, or by
+//     institution name, or the first item in error state, or the first item in
+//     the catalog if none are errored).
 //   After Link completes, the page POSTs to /api/plaid/relink/complete automatically.
 //
 // One-time setup: set PLAID_RELINK_SECRET in server/.env.
@@ -445,6 +446,12 @@ router.get("/plaid/relink", async (req, res) => {
     if (req.query.item_id) {
         target = allItems.find((i) => i.itemId === req.query.item_id);
         if (!target) return res.status(404).send(`item_id ${req.query.item_id} not found in catalog.`);
+    } else if (req.query.institution) {
+        // Target by institution name — needed when an item's catalog entry is
+        // missing its itemId (so it can't be flagged/auto-targeted by error).
+        const want = String(req.query.institution).toLowerCase();
+        target = allItems.find((i) => (i.institution || "").toLowerCase() === want);
+        if (!target) return res.status(404).send(`institution "${req.query.institution}" not found in catalog.`);
     } else {
         target = allItems.find((i) => i.error) ?? allItems[0];
     }
