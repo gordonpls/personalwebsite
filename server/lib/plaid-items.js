@@ -77,6 +77,14 @@ function loadItems() {
     return legacyEnvItems();
 }
 
+// Rows to mutate-and-persist. In legacy env-var mode (no catalog file yet) this
+// returns the env-derived items, so the FIRST successful write materializes a
+// real catalog file — after which itemIds, error flags, and sync timestamps all
+// persist (and survive deploys, since .plaid-items.json is excluded from rsync).
+function mutableItems() {
+    return readCatalog() ?? legacyEnvItems();
+}
+
 function addItem({ institution, accessToken, itemId, notes }) {
     if (!accessToken) throw new Error("addItem: accessToken is required");
     if (!itemId) throw new Error("addItem: itemId is required (Plaid returns it from itemPublicTokenExchange)");
@@ -112,8 +120,7 @@ function removeItem(itemId) {
 }
 
 function markSynced(itemId) {
-    const existing = readCatalog();
-    if (!existing) return; // legacy env-only mode; nothing to update
+    const existing = mutableItems();
     const idx = existing.findIndex((i) => i.itemId === itemId);
     if (idx < 0) return;
     const updated = { ...existing[idx], lastSyncedAt: new Date().toISOString() };
@@ -125,8 +132,7 @@ function markSynced(itemId) {
 
 // Record a Plaid error code against an item (e.g. ITEM_LOGIN_REQUIRED).
 function markError(itemId, errorCode) {
-    const existing = readCatalog();
-    if (!existing) return;
+    const existing = mutableItems();
     const idx = existing.findIndex((i) => i.itemId === itemId);
     if (idx < 0) return;
     existing[idx] = { ...existing[idx], error: errorCode, errorAt: new Date().toISOString() };
@@ -135,8 +141,7 @@ function markError(itemId, errorCode) {
 
 // Clear a previously recorded error after a successful relink.
 function clearError(itemId) {
-    const existing = readCatalog();
-    if (!existing) return;
+    const existing = mutableItems();
     const idx = existing.findIndex((i) => i.itemId === itemId);
     if (idx < 0) return;
     const updated = { ...existing[idx] };
@@ -150,8 +155,7 @@ function clearError(itemId) {
 // self-heal items that were linked without a proper institution name (stored as
 // "Unknown"), which otherwise mis-buckets their holdings.
 function setInstitution(itemId, institution) {
-    const existing = readCatalog();
-    if (!existing) return false; // legacy env-only mode; nothing to persist
+    const existing = mutableItems();
     const idx = existing.findIndex((i) => i.itemId === itemId);
     if (idx < 0) return false;
     existing[idx] = {
@@ -168,8 +172,7 @@ function setInstitution(itemId, institution) {
 // auto-targeted for relink; resolving it once via Plaid and persisting fixes
 // all of that. No-ops if the item already has this id.
 function setItemId(accessToken, itemId) {
-    const existing = readCatalog();
-    if (!existing) return false;
+    const existing = mutableItems();
     const idx = existing.findIndex((i) => i.accessToken === accessToken);
     if (idx < 0 || existing[idx].itemId === itemId) return false;
     existing[idx] = { ...existing[idx], itemId };

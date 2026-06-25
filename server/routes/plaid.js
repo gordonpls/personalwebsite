@@ -472,10 +472,9 @@ async function renderRelinkChooser(allItems, secret) {
         const status = code
             ? `<span style="color:#c0392b">⚠️ ${escHtml(code)}</span>`
             : `<span style="color:#0a7d28">✅ healthy</span>`;
-        const sel = it.itemId
-            ? `item_id=${encodeURIComponent(it.itemId)}`
-            : `institution=${encodeURIComponent(it.institution || "")}`;
-        const href = `/api/plaid/relink?secret=${encodeURIComponent(secret)}&${sel}`;
+        // Select by institution — robust even when an item's itemId hasn't been
+        // persisted yet (legacy env-var mode), where item_id= would 404.
+        const href = `/api/plaid/relink?secret=${encodeURIComponent(secret)}&institution=${encodeURIComponent(it.institution || "")}`;
         const btn = code
             ? `<a class="btn" href="${href}">Relink</a>`
             : `<a class="btn ghost" href="${href}">Relink anyway</a>`;
