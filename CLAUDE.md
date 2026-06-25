@@ -56,7 +56,7 @@ PassengerStartupFile app.js
 Express API mounted at `/api`, sole purpose is **Plaid** investment data (`server/routes/plaid.js`). The Plaid access-token setup is a manual one-time flow (`/api/link/token/create` → authorize in Plaid Link → `/api/link/token/exchange`, then paste the printed `access_token` into `PLAID_ACCESS_TOKEN`). Ongoing endpoints: `/api/investments`, `/api/balances`, `/api/health`. CORS is an explicit allowlist via `ALLOWED_ORIGINS`. Responses are deliberately reshaped to expose only display fields — never return raw Plaid objects.
 
 ### Frontend ↔ backend
-The frontend calls the backend through **relative `/api/...` paths**, which production routes to Express. **There is no Vite dev proxy**, so `/api/*`-backed features (Plaid, the horoscope endpoint) won't resolve against a locally-running `server/` in `npm run dev` without one. Note the horoscope fetches use a doubled prefix (`/api/api/v1/get-horoscope/...`) — that reflects the production proxy layout, not a typo.
+The frontend calls the backend through **relative `/api/...` paths**, which production routes to Express. Vite dev server proxies `/api/*` to `http://127.0.0.1:3000` (see `vite.config.js`), so running both `npm run dev` (port 5173) and `cd server && npm run dev` (port 3000) gives a fully working local setup. Note the horoscope fetches use a doubled prefix (`/api/api/v1/get-horoscope/...`) — that reflects the production proxy layout, not a typo.
 
 ### Ticker/finance data layer (the most intricate part)
 The finance section charts return data for VT/VXUS/BND/BNDX. `src/services/tickerService.ts` (`getTickerSeries`) resolves data through a **four-tier fallback**, in order:

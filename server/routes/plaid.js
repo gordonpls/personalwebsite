@@ -438,9 +438,13 @@ router.get("/plaid/relink", async (req, res) => {
         target = allItems.find((i) => i.itemId === req.query.item_id);
         if (!target) return res.status(404).send(`item_id ${req.query.item_id} not found in catalog.`);
     } else {
-        // Prefer an item already flagged as errored; fall back to first item.
         target = allItems.find((i) => i.error) ?? allItems[0];
     }
+
+    // Count how many items (including this one) still need relinking.
+    const erroredItems = allItems.filter((i) => i.error);
+    const totalErrored = erroredItems.length;
+    const positionInQueue = erroredItems.findIndex((i) => i.itemId === target.itemId) + 1;
 
     let link_token;
     try {
@@ -458,25 +462,24 @@ router.get("/plaid/relink", async (req, res) => {
         return res.status(500).send("Failed to create link token: " + (err.response?.data?.error_message ?? err.message));
     }
 
-    // Generate a one-time nonce so the completion endpoint doesn't need the secret in HTML.
     _relinkNonce = crypto.randomBytes(16).toString("hex");
-    setTimeout(() => { _relinkNonce = null; }, 30 * 60 * 1000); // expires in 30 min
+    setTimeout(() => { _relinkNonce = null; }, 30 * 60 * 1000);
 
-    // Escape values embedded in HTML.
     const safeInstitution = target.institution.replace(/[<>"'&]/g, "");
     const safeItemId = (target.itemId ?? "").replace(/[^a-zA-Z0-9_-]/g, "");
     const safeLinkToken = link_token.replace(/[^a-zA-Z0-9_-]/g, "");
     const safeNonce = _relinkNonce;
+    const queueNote = totalErrored > 1 ? ` (${positionInQueue} of ${totalErrored})` : "";
 
     res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Relink ${safeInstitution}</title>
-  <style>body{font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;padding:1rem}</style>
+  <style>body{font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;padding:1rem}a.btn{display:inline-block;margin-top:1em;padding:.5em 1.2em;background:#0070f3;color:#fff;border-radius:6px;text-decoration:none}</style>
 </head>
 <body>
-  <h2>Relink ${safeInstitution}</h2>
+  <h2>Relink ${safeInstitution}${queueNote}</h2>
   <p id="status">Opening Plaid Link…</p>
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
@@ -490,9 +493,16 @@ router.get("/plaid/relink", async (req, res) => {
           body: JSON.stringify({ nonce: "${safeNonce}", item_id: "${safeItemId}" }),
         });
         const j = await r.json();
-        document.getElementById("status").textContent = r.ok
-          ? "✅ Relink complete. Holdings will refresh on the next poll (up to 6 h)."
-          : "❌ " + (j.error || "Unknown error completing relink.");
+        if (r.ok) {
+          if (j.nextRelinkUrl) {
+            document.getElementById("status").innerHTML =
+              '✅ ${safeInstitution} relinked. <a class="btn" href="' + j.nextRelinkUrl + '">Relink ' + j.nextInstitution + ' →</a>';
+          } else {
+            document.getElementById("status").textContent = "✅ All done. Holdings will refresh on the next request.";
+          }
+        } else {
+          document.getElementById("status").textContent = "❌ " + (j.error || "Unknown error completing relink.");
+        }
       },
       onExit: function(err) {
         document.getElementById("status").textContent = err
@@ -511,15 +521,23 @@ router.post("/plaid/relink/complete", async (req, res) => {
     if (!nonce || !_relinkNonce || nonce !== _relinkNonce) {
         return res.status(400).json({ error: "Invalid or expired nonce — restart the flow via /api/plaid/relink." });
     }
-    _relinkNonce = null; // consume nonce
+    _relinkNonce = null;
 
-    // item_id is null for legacy env-var tokens (no catalog entry); clearError
-    // is a no-op in that case, but we still must bust the holdings cache.
     if (item_id) items.clearError(item_id);
     getHoldings.invalidate();
 
-    console.log(`[plaid] Relink complete${item_id ? ` for item ${item_id}` : " (legacy token, no item_id)"}. Holdings cache invalidated.`);
-    res.json({ ok: true, item_id: item_id || null });
+    // Check whether other items still need relinking and hand back a direct URL.
+    const remaining = items.loadItems().filter((i) => i.error && i.itemId !== item_id);
+    const next = remaining[0] ?? null;
+    const response = { ok: true, item_id: item_id || null };
+    if (next?.itemId && process.env.PLAID_RELINK_SECRET) {
+        // Relative URL so it works on both localhost and production.
+        response.nextRelinkUrl = `/api/plaid/relink?secret=${encodeURIComponent(process.env.PLAID_RELINK_SECRET)}&item_id=${encodeURIComponent(next.itemId)}`;
+        response.nextInstitution = next.institution;
+    }
+
+    console.log(`[plaid] Relink complete${item_id ? ` for item ${item_id}` : " (legacy token, no item_id)"}. Holdings cache invalidated.${next ? ` Next errored item: ${next.institution}.` : ""}`);
+    res.json(response);
 });
 
 // ── Test: fire a sample notification email ────────────────────────────────────
