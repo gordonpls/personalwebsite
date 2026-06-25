@@ -1,27 +1,33 @@
 // Email notifications for server-side action-required events.
 //
-// Uses the local Exim MTA via SMTP on 127.0.0.1:25 — cPanel/Exim trusts
-// connections from the same server without credentials or a real mailbox for
-// the sender. The sendmail binary approach (tried first) exits with code 1 on
-// cPanel because Exim's sendmail wrapper validates that the envelope sender is
-// a real local mailbox.
+// Uses cPanel's SMTP server with a real mailbox — the local relay approaches
+// (sendmail binary, localhost:25) both fail on this host: the sendmail wrapper
+// rejects senders that aren't real mailboxes, and the local MTA blocks relay
+// to external addresses without auth.
+//
+// One-time setup: create the sender mailbox in cPanel → Email Accounts, then
+// add its password to server/.env as SMTP_PASS.
 //
 // Required env vars:
 //   NOTIFY_TO   — recipient address (e.g. maplesomeone@gmail.com)
+//   SMTP_PASS   — password for the SMTP_USER mailbox
 //
 // Optional env vars:
-//   NOTIFY_FROM — sender address in the From header
-//                 (default: noreply@gordonzhong.com)
+//   NOTIFY_FROM / SMTP_USER — sender address (default: noreply@gordonzhong.com)
+//   SMTP_HOST   — mail server hostname (default: mail.gordonzhong.com)
+//   SMTP_PORT   — 465 (SSL, default) or 587 (STARTTLS)
 //   SITE_URL    — base URL for action links (default: https://gordonzhong.com)
 
 const nodemailer = require("nodemailer");
 
-const transport = nodemailer.createTransport({
-    host: "127.0.0.1",
-    port: 25,
-    secure: false,
-    tls: { rejectUnauthorized: false },
-});
+function makeTransport() {
+    const user = process.env.SMTP_USER || process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
+    const pass = process.env.SMTP_PASS;
+    const host = process.env.SMTP_HOST || "mail.gordonzhong.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    const secure = port === 465;
+    return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+}
 
 async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
     const to = process.env.NOTIFY_TO;
@@ -29,8 +35,12 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
         console.warn("[notify] NOTIFY_TO not set — skipping Plaid relink email.");
         return;
     }
+    if (!process.env.SMTP_PASS) {
+        console.warn("[notify] SMTP_PASS not set — skipping Plaid relink email.");
+        return;
+    }
 
-    const from = process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
+    const from = process.env.SMTP_USER || process.env.NOTIFY_FROM || "noreply@gordonzhong.com";
     const base = (process.env.SITE_URL || "https://gordonzhong.com").replace(/\/$/, "");
     const secret = process.env.PLAID_RELINK_SECRET || "<PLAID_RELINK_SECRET>";
     const relinkUrl = `${base}/api/plaid/relink?secret=${encodeURIComponent(secret)}${itemId ? `&item_id=${encodeURIComponent(itemId)}` : ""}`;
@@ -84,7 +94,7 @@ async function sendPlaidRelinkEmail({ institution, itemId, errorCode }) {
 <hr style="border:none;border-top:1px solid #eee;margin:1.5em 0">
 <p style="color:#999;font-size:.85em">Portfolio Server</p>`;
 
-    await transport.sendMail({
+    await makeTransport().sendMail({
         from: `"Portfolio Server" <${from}>`,
         to,
         subject: `Action needed: Plaid relink required for ${institution}`,
