@@ -263,6 +263,7 @@ router.get("/items/inspect", async (_req, res) => {
 async function fetchHoldingsPayload() {
     const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }
     let total = 0, costSum = 0, costValueSum = 0;
+    let firstError = null; // remember a per-item failure to surface only if ALL fail
 
     for (const { institution, token, itemId } of getTokens()) {
         let resp;
@@ -287,7 +288,10 @@ async function fetchHoldingsPayload() {
                     }
                 }
             }
-            throw err;
+            // Skip this item rather than throwing — one broken brokerage
+            // shouldn't blank every other (working / just-re-authed) holding.
+            if (!firstError) firstError = err;
+            continue;
         }
         logPlaidResponse("investments.holdings.get", resp, { institution, item_id: itemId ?? resp.data?.item?.item_id });
         if (resp.data?.item?.item_id) items.markSynced(resp.data.item.item_id);
@@ -352,6 +356,10 @@ async function fetchHoldingsPayload() {
             agg.set(key, cur);
         }
     }
+
+    // Only fail the whole request (→ 500, not cached) if NOTHING resolved. A
+    // partial success is returned so working items still show.
+    if (agg.size === 0 && firstError) throw firstError;
 
     const holdings = [...agg.values()]
         .map((h) => ({
