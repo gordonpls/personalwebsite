@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { themeChange } from 'theme-change';
 
 export const ThemeChanger = () => {
-  // Get the theme from localStorage or default to 'corporate'
-  const storedTheme = localStorage.getItem('theme') || 'corporate';
+  // Get the theme from localStorage or default to 'business' (dark)
+  const storedTheme = localStorage.getItem('theme') || 'business';
   const [theme, setTheme] = useState(storedTheme);
 
   useEffect(() => {

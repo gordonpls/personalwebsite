@@ -265,11 +265,13 @@
     align-self: flex-start;
     padding: 2px;
     border-radius: calc(var(--radius-selector, 0.25rem) + 2px);
+    /* Pastel palette, but ordered so each neighbour is a big hue jump
+       (warm↔cool) — adjacent pastels otherwise blend and hide the spin. */
     background: conic-gradient(
         from var(--rgb-angle),
-        #ffb3c6, #ffd6a5, #fdffb6, #caffbf, #9bf6ff, #c8b6ff, #ffafcc, #ffb3c6
+        #ffadad, #9bf6ff, #fdffb6, #bdb2ff, #caffbf, #ffc6ff, #a0c4ff, #ffd6a5, #ffadad
     );
-    animation: rgb-spin 3s linear infinite;
+    animation: rgb-spin 1.6s linear infinite;
     filter: drop-shadow(0 0 7px rgba(200, 182, 255, 0.65));
 }
 
