@@ -77,7 +77,7 @@ const TypingGreetingRefined = ({ caret = "block" }: { caret?: CaretShape } = {})
     const caretIdle = phase === "hold" || phase === "rest";
 
     return (
-        <div className="typing-greeting-refined text-center flex flex-col text-secondary w-full">
+        <div className="typing-greeting-refined text-center flex flex-col text-secondary business:text-[#2f6fe0] w-full">
             <span className="text-xl lg:text-3xl font-bold w-full inline-flex items-center justify-center min-h-[1.4em]">
                 <span className="whitespace-pre">{text}</span>
                 <span className={`caret caret-${caret} ${caretIdle ? "idle" : "active"}`} aria-hidden="true" />

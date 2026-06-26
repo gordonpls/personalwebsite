@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+/* `business:` variant → applies only under the dark (business) theme. Lets the
+   Hero override its colors for the dark sky while leaving light mode untouched. */
+@custom-variant business (&:where([data-theme="business"] *));
+
 @plugin "daisyui" {
     themes: business, corporate
   }
@@ -43,26 +48,29 @@
     default: false;
     prefersdark: false;
     color-scheme: "dark";
-    --color-base-100: oklch(24.353% 0 0);
-    --color-base-200: oklch(22.648% 0 0);
-    --color-base-300: oklch(20.944% 0 0);
-    --color-base-content: oklch(84.87% 0 0);
-    --color-primary: oklch(41.703% 0.099 251.473);
-    --color-primary-content: oklch(88.34% 0.019 251.473);
-    --color-secondary: oklch(64.092% 0.027 229.389);
-    --color-secondary-content: oklch(12.818% 0.005 229.389);
-    --color-accent: oklch(67.271% 0.167 35.791);
-    --color-accent-content: oklch(13.454% 0.033 35.791);
-    --color-neutral: oklch(27.441% 0.013 253.041);
-    --color-neutral-content: oklch(85.488% 0.002 253.041);
-    --color-info: oklch(62.616% 0.143 240.033);
-    --color-info-content: oklch(12.523% 0.028 240.033);
-    --color-success: oklch(70.226% 0.094 156.596);
-    --color-success-content: oklch(14.045% 0.018 156.596);
-    --color-warning: oklch(77.482% 0.115 81.519);
-    --color-warning-content: oklch(15.496% 0.023 81.519);
-    --color-error: oklch(51.61% 0.146 29.674);
-    --color-error-content: oklch(90.322% 0.029 29.674);
+    /* "Twilight Pastels" dark theme — soft cool slate-violet base (near-neutral
+       so pastels pop), analogous periwinkle/lavender with a mint complement.
+       Card text/content colors are dark so light pastel surfaces read clearly. */
+    --color-base-100: oklch(26% 0.014 256);   /* page / outer container */
+    --color-base-200: oklch(23% 0.016 256);   /* section cards */
+    --color-base-300: oklch(20% 0.018 256);   /* mockup window / deepest layer */
+    --color-base-content: oklch(91% 0.012 262); /* soft off-white, faint cool tint */
+    --color-primary: oklch(80% 0.1 242);      /* clear sky-blue */
+    --color-primary-content: oklch(26% 0.05 242);
+    --color-secondary: oklch(73% 0.05 244);   /* soft blue-grey — gentle card borders */
+    --color-secondary-content: oklch(24% 0.04 244);
+    --color-accent: oklch(84% 0.085 178);     /* pastel mint — occasional pop */
+    --color-accent-content: oklch(28% 0.05 178);
+    --color-neutral: oklch(38% 0.02 256);     /* cool slate */
+    --color-neutral-content: oklch(91% 0.012 262);
+    --color-info: oklch(82% 0.08 232);        /* pastel sky */
+    --color-info-content: oklch(26% 0.05 232);
+    --color-success: oklch(83% 0.095 152);    /* pastel green */
+    --color-success-content: oklch(27% 0.05 152);
+    --color-warning: oklch(86% 0.10 86);      /* pastel amber */
+    --color-warning-content: oklch(30% 0.06 86);
+    --color-error: oklch(76% 0.11 18);        /* soft coral */
+    --color-error-content: oklch(25% 0.05 18);
     --radius-selector: 0.25rem;
     --radius-field: 0.25rem;
     --radius-box: 0.25rem;

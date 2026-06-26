@@ -1,6 +1,6 @@
 export const emailIcon = (
     <svg
-        className="w-[24px] h-[24px] text-gray-800 fill-primary"
+        className="w-[24px] h-[24px] text-gray-800 fill-primary business:fill-[#2f6fe0]"
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -12,7 +12,7 @@ export const emailIcon = (
 
 export const locationIcon = (
     <svg
-        className="w-[24px] h-[24px] text-gray-800 fill-primary"
+        className="w-[24px] h-[24px] text-gray-800 fill-primary business:fill-[#2f6fe0]"
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -27,7 +27,7 @@ export const locationIcon = (
 
 export const linkedInIcon = (
     <svg
-        className="w-[24px] h-[24px] text-gray-800 fill-primary"
+        className="w-[24px] h-[24px] text-gray-800 fill-primary business:fill-[#2f6fe0]"
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"

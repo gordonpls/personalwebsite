@@ -40,7 +40,7 @@ export const Hero = () => {
     }, [])
 
     return (
-        <div ref={myRef} className="bg-base-200 border-2 border-secondary rounded-md p-4 overflow-hidden">
+        <div ref={myRef} className="bg-base-200 border-2 border-secondary business:border-[#2f6fe0] rounded-md p-4 overflow-hidden">
             <div className="flex flex-col items-center gap-4 md:gap-8 sm:py-4 md:py-8 lg:py-16">
                 {/* Top row: Component + Picture side-by-side */}
                 <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:space-x-6 lg:space-x-12">
@@ -49,7 +49,7 @@ export const Hero = () => {
                         <img
                             src={avatar}
                             alt="Gordon Zhong"
-                            className="max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl ring-4 ring-primary"
+                            className="max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl ring-4 ring-primary business:ring-[#2f6fe0]"
                         />
                         <NowPlaying />
                     </div>
@@ -59,13 +59,13 @@ export const Hero = () => {
                             <TypingGreeting />
                         </div>
                         <div className="">
-                            <div className="p-4 mx-auto border border-secondary border-4">
+                            <div className="p-4 mx-auto border border-secondary border-4 business:border-[#2f6fe0]">
                                 <div className="flex flex-wrap gap-2 justify-center mx-auto self-center">
-                                    <div className="badge badge-secondary">BSCS</div>
-                                    <div className="badge badge-secondary">MBA</div>
-                                    <div className="badge badge-secondary">MSF</div>
-                                    <div className="badge badge-secondary">ESTJ-A</div>
-                                    <div className="badge badge-secondary">Foodie</div>
+                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">BSCS</div>
+                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">MBA</div>
+                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">MSF</div>
+                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">ESTJ-A</div>
+                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">Foodie</div>
                                 </div>
 
                                 <div className="flex flex-col lg:flex-row gap-2 pt-4 justify-center place-self-center">
