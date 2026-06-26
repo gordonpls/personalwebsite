@@ -74,9 +74,14 @@ jobs:
       # Frontend: mirror dist/ into the web root (the built .htaccess ships with it).
       # Exclude api/ so --delete never removes the cPanel Node-app Passenger mount
       # (cPanel creates ~/gordonzhong.com/api/.htaccess to route /api to Express).
+      # Protect assets/ from --delete: hashed chunks are immutable, so KEEPING old
+      # ones means a tab loaded before this deploy can still lazy-load its chunks
+      # instead of 404'ing into index.html (the "Failed to load module script /
+      # MIME text/html" error). New build's index.html points at the new hashes;
+      # stale assets just linger harmlessly until a periodic cleanup.
       - name: Deploy frontend
         run: |
-          rsync -az --delete --exclude 'api' \
+          rsync -az --delete --exclude 'api' --filter='protect assets/**' \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             dist/ "$SSH_USER@$SSH_HOST:$WEB_ROOT"
 
