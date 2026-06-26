@@ -8,7 +8,7 @@ import { ThemeChanger } from "./ThemeChanger";
 const PROJECT_LINKS = [
   { label: "Allocation", href: "/allocation" },
   { label: "Portfolio", href: "/portfolio" },
-  { label: "Stablecoin Dashboard", href: "/stablecoin" },
+  { label: "Stablecoin Dashboard", href: "/stablecoin", newTab: true },
   { label: "Daily Fortune Cookie", href: "/fortune" },
 ];
 
@@ -67,7 +67,7 @@ export const Navbar = () => {
                 <ul className="p-2">
                   <li><a className="link link-hover link-info" href="/#projects">All projects</a></li>
                   {PROJECT_LINKS.map((proj) => (
-                    <li key={proj.href}><a className="link link-hover link-info" href={proj.href}>{proj.label}</a></li>
+                    <li key={proj.href}><a className="link link-hover link-info" href={proj.href} {...(proj.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{proj.label}</a></li>
                   ))}
                 </ul>
               </details>
@@ -108,7 +108,7 @@ export const Navbar = () => {
             {projectsOpen && (
               <ul className="menu menu-sm absolute top-full left-0 m-0 z-50 w-56 p-2 bg-base-100 rounded-box shadow border border-base-300 before:hidden">
                 {PROJECT_LINKS.map((proj) => (
-                  <li key={proj.href}><a className="link link-hover link-info" href={proj.href}>{proj.label}</a></li>
+                  <li key={proj.href}><a className="link link-hover link-info" href={proj.href} {...(proj.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{proj.label}</a></li>
                 ))}
               </ul>
             )}
