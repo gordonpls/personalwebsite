@@ -9,7 +9,7 @@ const PROJECT_LINKS = [
   { label: "Allocation", href: "/allocation" },
   { label: "Portfolio", href: "/portfolio" },
   { label: "Stablecoin Dashboard", href: "/stablecoin" },
-  { label: "Daily Fortune", href: "/fortune" },
+  { label: "Daily Fortune Cookie", href: "/fortune" },
 ];
 
 export const Navbar = () => {

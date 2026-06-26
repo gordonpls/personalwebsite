@@ -50,7 +50,7 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
         type: "role",
         title: "Associate II Software Engineer",
         org: "S&P Global",
-        period: "Mar 2022 – Jan 2023 · 11 mos",
+        period: "Mar 2022 – Dec 2022 · 10 mos",
         location: "Englewood, CO",
         bullets: [
             "Developed and optimized a full-stack analytics web application integrating geospatial data with real-time visualizations across large energy datasets.",

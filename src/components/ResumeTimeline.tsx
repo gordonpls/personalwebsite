@@ -207,7 +207,7 @@ export function ResumeTimeline() {
                         className="btn btn-primary btn-sm gap-2"
                     >
                         <DownloadIcon />
-                        Download Resume
+                        Download Full Resume
                     </a>
                 </div>
             </div>

@@ -171,7 +171,7 @@ const PROJECTS: Project[] = [
         preview: <PegPreview />,
     },
     {
-        title: "Daily Fortune",
+        title: "Daily Fortune Cookie",
         href: "/fortune",
         tag: "Generative",
         accent: "text-error",
