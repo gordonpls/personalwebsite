@@ -24,13 +24,26 @@ export const NowPlaying = () => {
 
     useEffect(() => {
         let cancelled = false;
-        const load = () => fetch("/api/now-playing")
-            .then((r) => r.ok ? r.json() : Promise.reject())
-            .then((d) => { if (!cancelled) setTrack(d); })
-            .catch(() => { /* stay hidden */ });
+        // Poll the backend sparingly: every 60s, and only while the tab is
+        // visible (a backgrounded tab keeps the bar as-is). This keeps the
+        // most-frequently-hit endpoint from steadily burning the host's I/O
+        // budget across every open tab. Refresh immediately on re-focus.
+        const load = () => {
+            if (cancelled || document.hidden) return;
+            fetch("/api/now-playing")
+                .then((r) => (r.ok ? r.json() : Promise.reject()))
+                .then((d) => { if (!cancelled) setTrack(d); })
+                .catch(() => { /* keep last state */ });
+        };
         load();
-        const id = setInterval(load, 20_000);
-        return () => { cancelled = true; clearInterval(id); };
+        const id = setInterval(load, 60_000);
+        const onVisible = () => { if (!document.hidden) load(); };
+        document.addEventListener("visibilitychange", onVisible);
+        return () => {
+            cancelled = true;
+            clearInterval(id);
+            document.removeEventListener("visibilitychange", onVisible);
+        };
     }, []);
 
     if (!track || track.configured === false || !track.title) return null;

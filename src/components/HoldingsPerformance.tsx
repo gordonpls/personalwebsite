@@ -1,3 +1,4 @@
+import { cachedJson } from "../services/apiCache";
 import { useEffect, useMemo, useState } from "react";
 import {
     LineChart,
@@ -248,8 +249,7 @@ export const HoldingsPerformance = ({
 
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/holdings")
-            .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        cachedJson("/api/holdings")
             .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
             .catch(() => { if (!cancelled) setError(true); });
 

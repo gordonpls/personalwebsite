@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo } from "./HoldingLogo";
+import { cachedJson } from "../services/apiCache";
 
 interface Holding {
     portfolio: string;
@@ -103,8 +104,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
             .then((r) => r.ok ? r.json() : Promise.reject())
             .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
             .catch(() => { /* sparkline just hides */ });
-        fetch("/api/quotes")
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        cachedJson("/api/quotes")
             .then((d) => { if (!cancelled) setQuotes(d.quotes ?? {}); })
             .catch(() => { /* today's change just hides */ });
         return () => { cancelled = true; };

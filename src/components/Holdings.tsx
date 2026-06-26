@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
+import { cachedJson } from "../services/apiCache";
 
 export interface Holding {
     portfolio: string;
@@ -52,11 +53,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
 
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/holdings")
-            .then((r) => {
-                if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                return r.json();
-            })
+        cachedJson("/api/holdings")
             .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
             .catch(() => { if (!cancelled) setError(true); });
 

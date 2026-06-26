@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { PortfolioScopePill } from "./PortfolioScopePill";
+import { cachedJson } from "../services/apiCache";
 
 interface Holding {
     portfolio: string;
@@ -130,8 +131,7 @@ export const PortfolioAnalytics = ({
 
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/holdings")
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        cachedJson("/api/holdings")
             .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
             .catch(() => { if (!cancelled) setError(true); });
         fetch("/holdingsMeta.json", { cache: "no-cache" })

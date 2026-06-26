@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
 import { PortfolioScopePill } from "./PortfolioScopePill";
+import { cachedJson } from "../services/apiCache";
 
 interface Holding {
     portfolio: string;
@@ -108,13 +109,11 @@ export const HoldingsHeatmap = ({
 
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/holdings")
-            .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        cachedJson("/api/holdings")
             .then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); })
             .catch(() => { if (!cancelled) setError(true); });
 
-        fetch("/api/quotes")
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        cachedJson("/api/quotes")
             .then((d) => { if (!cancelled) { setQuotes(d.quotes ?? {}); setQuotesAsOf(d.asOf ?? null); } })
             .catch(() => { if (!cancelled) setQuotesOk(false); });
 
