@@ -8,6 +8,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch: {}   # lets you trigger a deploy manually from the Actions tab
+  schedule:
+    # Weekly (Sun 08:00 UTC): redeploy + prune. Normal pushes keep old hashed
+    # assets (so tabs open across a deploy still load their chunks); this run
+    # rebuilds current main and rsyncs WITHOUT the protect filter, so stale
+    # assets accumulated since the last prune are deleted. Any tab open during
+    # this window self-recovers via the vite:preloadError reload handler.
+    - cron: "0 8 * * 0"
 
 concurrency:
   group: deploy
@@ -81,7 +88,14 @@ jobs:
       # stale assets just linger harmlessly until a periodic cleanup.
       - name: Deploy frontend
         run: |
-          rsync -az --delete --exclude 'api' --filter='protect assets/**' \
+          # Scheduled runs prune stale assets (full --delete); push/manual runs
+          # protect assets/ so old hashed chunks survive for tabs mid-deploy.
+          PROTECT=(--filter='protect assets/**')
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            PROTECT=()
+            echo "Scheduled run → pruning stale assets (no protect filter)"
+          fi
+          rsync -az --delete --exclude 'api' "${PROTECT[@]}" \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             dist/ "$SSH_USER@$SSH_HOST:$WEB_ROOT"
 

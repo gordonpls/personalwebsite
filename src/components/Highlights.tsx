@@ -244,6 +244,7 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
                             muted
                             loop
                             playsInline
+                            preload="metadata"
                             tabIndex={-1}
                             className="absolute inset-0 h-full w-full object-cover"
                         />
