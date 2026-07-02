@@ -15,6 +15,11 @@ RewriteRule ^projects/?$ /#projects [R=302,L]
 RewriteRule ^highlights/?$ /#highlights [R=302,L]
 RewriteRule ^gallery/?$  /#gallery  [R=302,L]
 
+# Permanent rename: /portfolio → /investments (SPA route). The client-side
+# <Navigate> still covers local dev + in-app links; this 301 handles direct
+# hits/bookmarks and transfers SEO to the new URL.
+RewriteRule ^portfolio/?$ /investments [R=301,L]
+
 # /stablecoin → the live dashboard (kept reachable via gordonzhong.com/stablecoin)
 RewriteRule ^stablecoin/?$ https://stablecoin-dashboard-gz.streamlit.app/ [R=302,L]
 

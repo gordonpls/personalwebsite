@@ -138,7 +138,7 @@ const PegPreview = () => (
 
 const PROJECTS: Project[] = [
     {
-        title: "Allocation",
+        title: "Allocation Quiz",
         href: "/allocation",
         tag: "Interactive",
         accent: "text-warning",
@@ -149,8 +149,8 @@ const PROJECTS: Project[] = [
         preview: <DonutPreview />,
     },
     {
-        title: "Portfolio",
-        href: "/portfolio",
+        title: "Investing Dashboard",
+        href: "/investments",
         tag: "Live",
         accent: "text-success",
         glow: "from-success/15 via-success/0 to-primary/10",
@@ -235,8 +235,8 @@ const ProjectCard = ({ p }: { p: Project }) => (
 // Featured hero: the live Portfolio app gets a wide card at the top of the
 // section (line chart on one side, copy + CTA on the other); the remaining
 // projects sit in a carousel below.
-const portfolio = PROJECTS.find((p) => p.title === "Portfolio") as Project;
-const otherProjects = PROJECTS.filter((p) => p.title !== "Portfolio");
+const portfolio = PROJECTS.find((p) => p.title === "Investing Dashboard") as Project;
+const otherProjects = PROJECTS.filter((p) => p.title !== "Investing Dashboard");
 
 const FeaturedHero = () => (
     <a

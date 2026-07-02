@@ -14,7 +14,7 @@ export default function NotFound() {
                     </p>
                     <div className="flex flex-wrap justify-center gap-2 mt-3">
                         <a href="/" className="btn btn-primary btn-sm">← Back home</a>
-                        <a href="/portfolio" className="btn btn-ghost btn-sm">Portfolio</a>
+                        <a href="/investments" className="btn btn-ghost btn-sm">Investing Dashboard</a>
                         <a href="/stablecoin" className="btn btn-ghost btn-sm">Stablecoin</a>
                     </div>
                 </div>

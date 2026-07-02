@@ -6,8 +6,8 @@ import { ThemeChanger } from "./ThemeChanger";
 // Individual projects surfaced as a submenu under the "Projects" nav link.
 // Keep in sync with the cards in Projects.tsx.
 const PROJECT_LINKS = [
-  { label: "Allocation", href: "/allocation" },
-  { label: "Portfolio", href: "/portfolio" },
+  { label: "Allocation Quiz", href: "/allocation" },
+  { label: "Investing Dashboard", href: "/investments" },
   { label: "Stablecoin Dashboard", href: "/stablecoin", newTab: true },
   { label: "Daily Fortune Cookie", href: "/fortune" },
 ];

@@ -33,7 +33,9 @@ function App() {
                 <Route path="/projects" element={<Navigate to="/#projects" replace />} />
                 <Route path="/highlights" element={<Navigate to="/#highlights" replace />} />
                 <Route path="/gallery" element={<Navigate to="/#gallery" replace />} />
-                <Route path="/portfolio" element={<Portfolio />} />
+                <Route path="/investments" element={<Portfolio />} />
+                {/* Backward-compat: old /portfolio links redirect to /investments. */}
+                <Route path="/portfolio" element={<Navigate to="/investments" replace />} />
                 <Route path="/allocation" element={<AllocationPage />} />
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="/fortune" element={<Fortune />} />
