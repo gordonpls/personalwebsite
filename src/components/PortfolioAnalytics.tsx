@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { PortfolioScopePill } from "./PortfolioScopePill";
 import { cachedJson } from "../services/apiCache";
+import { formatWeightPct } from "../utils/format";
 
 interface Holding {
     portfolio: string;
@@ -95,7 +96,7 @@ const DonutTip = ({ active, payload }: { active?: boolean; payload?: Array<{ pay
     return (
         <div className="bg-base-200 border border-base-300 rounded-lg px-3 py-1.5 text-xs shadow-lg">
             <span className="font-medium text-base-content">{s.name}</span>
-            <span className="text-base-content/60"> · {s.value.toFixed(1)}%</span>
+            <span className="text-base-content/60"> · {formatWeightPct(s.value)}</span>
         </div>
     );
 };
@@ -258,7 +259,7 @@ export const PortfolioAnalytics = ({
                             native title= so the full name + share appears on hover. */}
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs shrink-0">
                             {slices.map((s, i) => (
-                                <div key={s.name} className="flex items-center gap-1.5 min-w-0" title={`${s.name} · ${s.value.toFixed(1)}%`}>
+                                <div key={s.name} className="flex items-center gap-1.5 min-w-0" title={`${s.name} · ${formatWeightPct(s.value)}`}>
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
                                     <span className="truncate text-base-content/70">{s.name}</span>
                                     <span className="ml-auto tabular-nums text-base-content/50 shrink-0">{s.value.toFixed(0)}%</span>

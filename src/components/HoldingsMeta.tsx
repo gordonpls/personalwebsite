@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo } from "./HoldingLogo";
 import { cachedJson } from "../services/apiCache";
+import { formatWeightPct } from "../utils/format";
 
 interface Holding {
     portfolio: string;
@@ -137,7 +138,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
     if (st.return26w != null) facts.push({ label: "6M return", value: pct(st.return26w), cls: st.return26w >= 0 ? "text-success" : "text-error" });
     if (st.volatility != null) facts.push({ label: "Volatility (3M)", value: `${st.volatility.toFixed(1)}%` });
     if (meta.ipo) facts.push({ label: "IPO", value: meta.ipo });
-    facts.push({ label: "Portfolio weight", value: `${(holding?.weightPct ?? 0).toFixed(1)}%` });
+    facts.push({ label: "Portfolio weight", value: formatWeightPct(holding?.weightPct ?? 0) });
     if (holding?.returnPct != null) facts.push({ label: "Total return", value: pct(holding.returnPct), cls: holding.returnPct >= 0 ? "text-success" : "text-error" });
 
     return (

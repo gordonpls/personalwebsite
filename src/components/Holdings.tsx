@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
 import { cachedJson } from "../services/apiCache";
+import { formatWeightPct } from "../utils/format";
 
 export interface Holding {
     portfolio: string;
@@ -139,7 +140,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                                         <div className="text-[10.5px] uppercase font-semibold opacity-60 truncate leading-tight" title={h.name}>{displayName}</div>
                                     </div>
                                     <div className="text-right tabular-nums font-medium text-base-content shrink-0 text-sm">
-                                        {h.weightPct.toFixed(1)}%
+                                        {formatWeightPct(h.weightPct)}
                                     </div>
                                     <div className="text-right shrink-0 text-sm">
                                         {h.returnPct == null ? (

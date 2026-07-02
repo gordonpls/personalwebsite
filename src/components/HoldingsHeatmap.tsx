@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
 import { PortfolioScopePill } from "./PortfolioScopePill";
 import { cachedJson } from "../services/apiCache";
+import { formatWeightPct } from "../utils/format";
 
 interface Holding {
     portfolio: string;
@@ -81,7 +82,7 @@ const HeatTooltip = (props: any) => {
             <div className="font-semibold text-base-content">{d.name}</div>
             {d.fullName && <div className="text-base-content/50 max-w-[14rem] truncate">{d.fullName}</div>}
             <div className="mt-1 text-base-content/70">
-                Weight {d.size.toFixed(1)}%{d.changePct != null ? ` · Today ${d.changePct > 0 ? "+" : ""}${d.changePct.toFixed(2)}%` : ""}
+                Weight {formatWeightPct(d.size)}{d.changePct != null ? ` · Today ${d.changePct > 0 ? "+" : ""}${d.changePct.toFixed(2)}%` : ""}
             </div>
         </div>
     );
