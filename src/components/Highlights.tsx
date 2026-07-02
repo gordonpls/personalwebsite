@@ -248,7 +248,6 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
                             tabIndex={-1}
                             className="absolute inset-0 h-full w-full object-cover"
                         />
-                        <ExpandHint />
                     </button>
                 </div>
 
