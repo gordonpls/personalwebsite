@@ -177,7 +177,7 @@ const PROJECTS: Project[] = [
         accent: "text-error",
         glow: "from-error/20 via-error/0 to-primary/10",
         description:
-            "A daily fortune cookie with a crack animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. A mulberry32 PRNG seeded by (date, IP-hash) locks each visitor's payload for the calendar day.",
+            "A daily fortune cookie with a cracking animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. A mulberry32 PRNG seeded by (date, IP-hash) locks each visitor's payload for the calendar day.",
         tags: ["Framer Motion", "Canvas", "Web Speech"],
         preview: <CookiePreview />,
     },
