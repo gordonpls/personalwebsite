@@ -12,7 +12,6 @@ const AllocationPage = lazy(() => import("./components/AllocationPage"));
 const Stablecoin = lazy(() => import("./components/Stablecoin"));
 const Fortune = lazy(() => import("./components/Fortune"));
 const ButtonAnimDemo = lazy(() => import("./components/ButtonAnimDemo"));
-const InvestmentsLab = lazy(() => import("./components/InvestmentsLab"));
 const NotFound = lazy(() => import("./components/NotFound"));
 
 const RouteFallback = () => (
@@ -41,8 +40,6 @@ function App() {
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="/fortune" element={<Fortune />} />
                 <Route path="/button-demo" element={<ButtonAnimDemo />} />
-                {/* Preview-only sandbox for mobile investing-dashboard layouts. */}
-                <Route path="/investments-lab" element={<InvestmentsLab />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>

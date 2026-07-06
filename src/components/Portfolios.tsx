@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Holdings, type Holding } from "./Holdings";
 import { HoldingsHeatmap } from "./HoldingsHeatmap";
 import { HoldingsPerformance } from "./HoldingsPerformance";
@@ -17,6 +17,16 @@ const TABS: { id: string; desc: string }[] = [
 ];
 const SCOPE_OPTIONS = TABS.map((t) => t.id);
 
+// Quick-nav pills that jump to each section of the dashboard.
+const SECTIONS = [
+    { id: "sec-holdings", label: "Holdings" },
+    { id: "sec-allocation", label: "Allocation" },
+    { id: "sec-heatmap", label: "Heatmap" },
+    { id: "sec-performance", label: "Performance" },
+];
+const scrollToSection = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+
 export const Portfolios = () => {
     const [active, setActive] = useState<string>(ALL);
     const [selected, setSelected] = useState<Holding | null>(null);
@@ -28,6 +38,26 @@ export const Portfolios = () => {
     // The "All" sentinel = no filter. Convert to undefined for the child components
     // (Holdings/Heatmap/Analytics) that expect undefined for "every holding."
     const portfolioFilter = active === ALL ? undefined : active;
+
+    // Scroll-spy: highlight whichever section is currently near the middle of the
+    // viewport, so the floating section nav always reflects where you are.
+    const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+    useEffect(() => {
+        const io = new IntersectionObserver(
+            (entries) => {
+                const top = entries
+                    .filter((e) => e.isIntersecting)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+                if (top) setActiveSection(top.target.id);
+            },
+            { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.5, 1] },
+        );
+        SECTIONS.forEach((s) => {
+            const el = document.getElementById(s.id);
+            if (el) io.observe(el);
+        });
+        return () => io.disconnect();
+    }, []);
 
     return (
         <div className="space-y-5">
@@ -65,22 +95,31 @@ export const Portfolios = () => {
 
             <p className="text-sm text-base-content/60">{tab.desc}</p>
 
-            {/* Holdings (left) + selected holding detail (right) */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:h-[34rem]">
-                <div className="w-full lg:w-96 lg:shrink-0 lg:h-full">
+            {/* Holdings (compact list) + selected holding detail. On mobile the
+                list is deliberately short so the detail card peeks into view right
+                below it — a fade + cue signal there's more. Full two-pane on lg. */}
+            <section id="sec-holdings" className="scroll-mt-28 flex flex-col gap-3 lg:flex-row lg:gap-4 lg:h-[34rem]">
+                <div className="relative w-full h-[16rem] lg:w-96 lg:h-full lg:shrink-0">
                     <Holdings portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
+                    <div aria-hidden="true" className="lg:hidden pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-base-100 to-transparent" />
+                </div>
+                <div className="lg:hidden flex flex-col items-center gap-0.5 text-xs font-medium text-primary">
+                    <span>Details for the selected holding</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-4 w-4 animate-bounce" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                 </div>
                 <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
                     <HoldingsMeta holding={selected} />
                 </div>
-            </div>
+            </section>
 
             {/* Allocation donut + risk stats (left) beside the heatmap (right) —
                 all three tab-scoped, with inline scope pickers so you don't have to
                 scroll back up to the global tabs to see or change the scope. The
                 row is sized so the donut + Risk cards split evenly. */}
             <div className="flex flex-col lg:flex-row gap-4 lg:h-[36rem]">
-                <div className="w-full lg:w-96 lg:shrink-0 flex flex-col gap-4 lg:h-full">
+                <div id="sec-allocation" className="scroll-mt-28 w-full lg:w-96 lg:shrink-0 flex flex-col gap-4 lg:h-full">
                     <PortfolioAnalytics
                         portfolio={portfolioFilter}
                         scopeLabel={active}
@@ -88,7 +127,7 @@ export const Portfolios = () => {
                         scopeOptions={SCOPE_OPTIONS}
                     />
                 </div>
-                <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
+                <div id="sec-heatmap" className="scroll-mt-28 w-full lg:flex-1 lg:min-w-0 lg:h-full">
                     <HoldingsHeatmap
                         portfolio={portfolioFilter}
                         title="Heatmap"
@@ -101,13 +140,37 @@ export const Portfolios = () => {
 
             {/* Overall performance: now also tab-scoped, with its own pill in the
                 header. Pinned at the bottom as the page's "summary" view. */}
-            <HoldingsPerformance
-                title="Performance"
-                portfolio={portfolioFilter}
-                scopeLabel={active}
-                onScopeChange={changeTab}
-                scopeOptions={SCOPE_OPTIONS}
-            />
+            <section id="sec-performance" className="scroll-mt-28">
+                <HoldingsPerformance
+                    title="Performance"
+                    portfolio={portfolioFilter}
+                    scopeLabel={active}
+                    onScopeChange={changeTab}
+                    scopeOptions={SCOPE_OPTIONS}
+                />
+            </section>
+
+            {/* Floating section nav — fixed to the viewport so it's reachable at
+                every scroll position. Highlights the section you're currently in. */}
+            <nav
+                aria-label="Dashboard sections"
+                className="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full border border-base-300 bg-base-100/90 p-1.5 shadow-lg backdrop-blur"
+            >
+                {SECTIONS.map((s) => {
+                    const on = activeSection === s.id;
+                    return (
+                        <button
+                            key={s.id}
+                            type="button"
+                            aria-current={on ? "true" : undefined}
+                            onClick={() => scrollToSection(s.id)}
+                            className={`btn btn-xs sm:btn-sm rounded-full border-none whitespace-nowrap shrink-0 ${on ? "btn-primary" : "btn-ghost text-base-content/70"}`}
+                        >
+                            {s.label}
+                        </button>
+                    );
+                })}
+            </nav>
         </div>
     );
 };
