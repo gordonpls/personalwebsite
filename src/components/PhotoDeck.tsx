@@ -119,6 +119,14 @@ export function PhotoDeck() {
         trackMouse: false,
     });
 
+    // react-swipeable v7 includes its own `ref` in the handlers for attaching
+    // touch listeners. Merging here ensures both the swipeable ref and our own
+    // IntersectionObserver ref point to the same element.
+    const setRef = (el: HTMLDivElement | null) => {
+        swipe.ref(el);
+        ref.current = el;
+    };
+
     if (count === 0) return null;
 
     const back1 = PHOTOS[(index + 1) % count];
@@ -152,7 +160,7 @@ export function PhotoDeck() {
                 <div className="relative mx-auto w-44">
                     <div
                         {...swipe}
-                        ref={ref}
+                        ref={setRef}
                         role="group"
                         aria-roledescription="carousel"
                         aria-label="Travel photos"

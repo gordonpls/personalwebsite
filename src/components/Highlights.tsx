@@ -202,6 +202,11 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
         trackMouse: false,
     });
 
+    const setRef = (el: HTMLDivElement | null) => {
+        swipe.ref(el);
+        ref.current = el;
+    };
+
     const back1 = CLIPS[(index + 1) % n];
     const back2 = CLIPS[(index + 2) % n];
 
@@ -210,7 +215,7 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
             <div className="relative mx-auto w-56">
                 <div
                     {...swipe}
-                    ref={ref}
+                    ref={setRef}
                     className="relative aspect-[3/4] w-full touch-pan-y select-none"
                 >
                     {hasStack && (
