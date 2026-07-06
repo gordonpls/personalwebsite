@@ -28,7 +28,7 @@ export const ArchitectureDrawer = ({ content }: { content: ArchitectureContent }
             <button
                 onClick={() => setOpen(true)}
                 aria-label={`Open: ${content.title}`}
-                className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-primary text-primary-content py-4 px-2 rounded-l-xl shadow-lg text-sm font-semibold tracking-wide [writing-mode:vertical-rl] rotate-180 transition-all hover:px-2.5 ${open ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+                className={`fixed right-0 top-16 z-40 bg-primary text-primary-content py-2 px-1.5 rounded-l-lg shadow-lg text-xs font-semibold tracking-wide [writing-mode:vertical-rl] rotate-180 transition-all hover:px-2 ${open ? "opacity-0 pointer-events-none" : "opacity-100"}`}
             >
                 Under the hood
             </button>
