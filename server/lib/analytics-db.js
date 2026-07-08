@@ -1,5 +1,6 @@
-const Database = require("better-sqlite3");
+const { Database } = require("node-sqlite3-wasm");
 const path = require("path");
+const fs = require("fs");
 
 const DB_PATH =
   process.env.ANALYTICS_DB_PATH ||
@@ -9,11 +10,14 @@ let _db = null;
 
 function getDb() {
   if (_db) return _db;
+  // Ensure the data directory exists (first boot on a fresh server)
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   _db = new Database(DB_PATH);
-  // WAL mode: multiple Passenger workers can read/write safely without
-  // locking each other out. NORMAL sync gives good durability with lower I/O.
-  _db.pragma("journal_mode = WAL");
-  _db.pragma("synchronous = NORMAL");
+  try {
+    // WAL mode: multiple Passenger workers can read/write without blocking each other.
+    _db.exec("PRAGMA journal_mode = WAL");
+    _db.exec("PRAGMA synchronous = NORMAL");
+  } catch (e) { void e; /* WASM build may not support all pragmas — non-fatal */ }
   initSchema(_db);
   return _db;
 }
@@ -48,15 +52,24 @@ function initSchema(db) {
 // ── Write ──────────────────────────────────────────────────────────────────
 
 function insertEvent(db, event) {
-  const stmt = db.prepare(`
+  db.prepare(`
     INSERT INTO analytics_events
       (day, event_type, visitor_hash, path, project_slug, referrer_host,
        device_type, browser, os, country, region)
-    VALUES
-      (@day, @event_type, @visitor_hash, @path, @project_slug, @referrer_host,
-       @device_type, @browser, @os, @country, @region)
-  `);
-  return stmt.run(event);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run([
+    event.day,
+    event.event_type,
+    event.visitor_hash ?? null,
+    event.path ?? null,
+    event.project_slug ?? null,
+    event.referrer_host ?? null,
+    event.device_type ?? null,
+    event.browser ?? null,
+    event.os ?? null,
+    event.country ?? null,
+    event.region ?? null,
+  ]);
 }
 
 // ── Read ───────────────────────────────────────────────────────────────────
@@ -67,22 +80,22 @@ function getOverview(db, startDay) {
       `SELECT COUNT(*) AS total FROM analytics_events
        WHERE event_type = 'page_view' AND day >= ?`
     )
-    .get(startDay).total;
+    .get([startDay]).total;
 
   const unique = db
     .prepare(
       `SELECT COUNT(DISTINCT visitor_hash) AS total FROM analytics_events
        WHERE event_type = 'page_view' AND day >= ? AND visitor_hash IS NOT NULL`
     )
-    .get(startDay).total;
+    .get([startDay]).total;
 
   const projectClicks = db
     .prepare(
       `SELECT COUNT(*) AS total FROM analytics_events
-       WHERE event_type LIKE '%_click%' OR event_type LIKE '%_clicked%'
+       WHERE (event_type LIKE '%_click%' OR event_type LIKE '%_clicked%')
        AND day >= ?`
     )
-    .get(startDay).total;
+    .get([startDay]).total;
 
   const conversionClicks = db
     .prepare(
@@ -90,7 +103,7 @@ function getOverview(db, startDay) {
        WHERE event_type IN ('resume_downloaded','email_clicked','linkedin_clicked','github_clicked')
        AND day >= ?`
     )
-    .get(startDay).total;
+    .get([startDay]).total;
 
   return { totalPageViews: views, uniqueVisitors: unique, projectClicks, conversionClicks };
 }
@@ -106,7 +119,7 @@ function getTopPages(db, startDay, limit = 10) {
        ORDER BY views DESC
        LIMIT ?`
     )
-    .all(startDay, limit);
+    .all([startDay, limit]);
 }
 
 function getTopProjects(db, startDay) {
@@ -118,7 +131,7 @@ function getTopProjects(db, startDay) {
        GROUP BY project_slug, event_type
        ORDER BY count DESC`
     )
-    .all(startDay);
+    .all([startDay]);
 }
 
 function getDeviceBreakdown(db, startDay) {
@@ -130,7 +143,7 @@ function getDeviceBreakdown(db, startDay) {
        GROUP BY COALESCE(device_type, 'desktop')
        ORDER BY count DESC`
     )
-    .all(startDay);
+    .all([startDay]);
 }
 
 function getBrowserBreakdown(db, startDay, limit = 8) {
@@ -143,7 +156,7 @@ function getBrowserBreakdown(db, startDay, limit = 8) {
        ORDER BY count DESC
        LIMIT ?`
     )
-    .all(startDay, limit);
+    .all([startDay, limit]);
 }
 
 function getOsBreakdown(db, startDay, limit = 8) {
@@ -156,7 +169,7 @@ function getOsBreakdown(db, startDay, limit = 8) {
        ORDER BY count DESC
        LIMIT ?`
     )
-    .all(startDay, limit);
+    .all([startDay, limit]);
 }
 
 function getLocationBreakdown(db, startDay, limit = 20) {
@@ -169,7 +182,7 @@ function getLocationBreakdown(db, startDay, limit = 20) {
        ORDER BY count DESC
        LIMIT ?`
     )
-    .all(startDay, limit);
+    .all([startDay, limit]);
 }
 
 function getReferrerBreakdown(db, startDay, limit = 10) {
@@ -182,7 +195,7 @@ function getReferrerBreakdown(db, startDay, limit = 10) {
        ORDER BY count DESC
        LIMIT ?`
     )
-    .all(startDay, limit);
+    .all([startDay, limit]);
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────
