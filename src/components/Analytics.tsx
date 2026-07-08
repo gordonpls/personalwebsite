@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
+import { SectionHeading } from "./SectionHeading";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -296,41 +297,27 @@ export function AnalyticsPage() {
   const isEmpty = !loading && !error && data && data.totalPageViews === 0;
 
   return (
-    <>
+    <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-4 py-12 space-y-12">
+      <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
+        <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md space-y-6">
+
         {/* Page header */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-3"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">
-                Portfolio Analytics
-              </p>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-base-content">
-                How people find this site
-              </h1>
-              <p className="text-base-content/50 text-sm mt-2 max-w-lg">
-                Aggregate traffic metrics — no cookies, no personal data, just counts.
-              </p>
-            </div>
-            {/* Range selector */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {(["7d", "30d", "all"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRange(r)}
-                  className={`btn btn-sm rounded-full px-4 ${range === r ? "btn-primary" : "btn-ghost text-base-content/50"}`}
-                >
-                  {r === "7d" ? "7d" : r === "30d" ? "30d" : "All"}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <SectionHeading eyebrow="Analytics" title="Website Analytics" />
+          {/* Range selector */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(["7d", "30d", "all"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`btn btn-sm ${range === r ? "btn-primary" : "btn-ghost text-base-content/50"}`}
+              >
+                {r === "7d" ? "7d" : r === "30d" ? "30d" : "All"}
+              </button>
+            ))}
           </div>
-        </motion.div>
+        </div>
 
         {loading && (
           <div className="flex justify-center py-20">
@@ -493,8 +480,10 @@ export function AnalyticsPage() {
             )}
           </>
         )}
-      </main>
+
+        </div>
+      </div>
       <Footer />
-    </>
+    </div>
   );
 }
