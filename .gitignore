@@ -10,6 +10,10 @@ server/data/spotify-last.json
 server/data/spotify-tokens.json
 server/data/spotify-needs-reauth.flag
 server/data/spotify-reauth-state.json
+# Analytics SQLite database — runtime data, never commit.
+server/data/analytics.db
+server/data/analytics.db-shm
+server/data/analytics.db-wal
 dist
 .DS_Store
 node_modules

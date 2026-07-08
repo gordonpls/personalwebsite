@@ -4,6 +4,8 @@ const cors = require("cors");
 const plaidRoutes = require("./routes/plaid");
 const spotifyRoutes = require("./routes/spotify");
 const fortuneRoutes = require("./routes/fortune");
+const adminRoutes = require("./routes/admin");
+const analyticsRoutes = require("./routes/analytics");
 
 const app = express();
 
@@ -25,7 +27,7 @@ app.use(cors({
         }
     },
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 app.use(express.json());
@@ -39,6 +41,8 @@ if (process.env.PLAID_SETUP_ENABLED === "true") {
 app.use("/api", plaidRoutes);
 app.use("/api", spotifyRoutes);
 app.use("/api", fortuneRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 

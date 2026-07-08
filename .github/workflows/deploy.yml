@@ -111,6 +111,7 @@ jobs:
             --exclude .plaid-items.json \
             --exclude spotify-last.json --exclude spotify-tokens.json \
             --exclude spotify-needs-reauth.flag \
+            --exclude analytics.db --exclude 'analytics.db-shm' --exclude 'analytics.db-wal' \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             server/ "$SSH_USER@$SSH_HOST:$SERVER_ROOT"
 
