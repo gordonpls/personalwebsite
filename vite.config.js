@@ -18,6 +18,12 @@ export default defineConfig({
     // (5173) and 404. changeOrigin avoids Host-header/CORS issues. Use 127.0.0.1
     // (not "localhost") so the proxy doesn't hit the same IPv6/IPv4 race.
     proxy: {
+      // Blog always talks to the production server so localhost and prod share one DB.
+      "/api/blog": {
+        target: "https://gordonzhong.com",
+        changeOrigin: true,
+        secure: true,
+      },
       "/api": {
         target: "http://127.0.0.1:3000",
         changeOrigin: true,
