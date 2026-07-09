@@ -5,6 +5,8 @@ const ANALYTICS_ENABLED =
   import.meta.env.PROD || import.meta.env.VITE_ANALYTICS_ENABLED === "true";
 
 const IGNORE_KEY = "analytics_ignore";
+const SESSION_KEY = "analytics_seen";
+const SESSION_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
 const CONTROL_ROUTES = new Set([
   "/ignore",
@@ -33,6 +35,30 @@ export function enableAnalyticsIgnore(): void {
 export function disableAnalyticsIgnore(): void {
   try {
     localStorage.removeItem(IGNORE_KEY);
+  } catch {}
+}
+
+// ── Session deduplication (30-min cooldown per path) ──────────────────────
+// sessionStorage persists across refreshes but clears on tab close.
+
+function wasRecentlySeen(path: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const seen: Record<string, number> = JSON.parse(raw);
+    const last = seen[path];
+    return !!last && Date.now() - last < SESSION_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markAsSeen(path: string): void {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    const seen: Record<string, number> = raw ? JSON.parse(raw) : {};
+    seen[path] = Date.now();
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(seen));
   } catch {}
 }
 
@@ -90,6 +116,8 @@ export function trackPageView(
   options?: { referrer?: string; projectSlug?: string }
 ): void {
   if (!shouldTrack(path)) return;
+  if (wasRecentlySeen(path)) return;
+  markAsSeen(path);
   let referrerHost: string | undefined;
   try {
     if (options?.referrer || document.referrer) {
