@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently -k -n web,api -c blue,magenta \"npm run dev\" \"cd server && npm run dev\"",
+    "dev:all": "concurrently -k -n web,api -c blue,magenta \"vite\" \"cd server && node --watch app.js\"",
+    "dev:kill": "lsof -ti tcp:5173 -i tcp:3000 | xargs kill 2>/dev/null || true",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
