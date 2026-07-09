@@ -17,6 +17,7 @@ const NotFound = lazy(() => import("./components/NotFound"));
 const Admin = lazy(() => import("./components/Admin").then((m) => ({ default: m.Admin })));
 const AnalyticsPage = lazy(() => import("./components/Analytics").then((m) => ({ default: m.AnalyticsPage })));
 const AnalyticsControl = lazy(() => import("./components/AnalyticsControl").then((m) => ({ default: m.AnalyticsControl })));
+const Blog = lazy(() => import("./components/Blog"));
 
 const RouteFallback = () => (
     <div className="flex min-h-screen items-center justify-center bg-base-100">
@@ -49,6 +50,7 @@ function App() {
                 {/* Analytics */}
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/blog" element={<Blog />} />
                 <Route path="/ignore" element={<AnalyticsControl />} />
                 <Route path="/track" element={<AnalyticsControl />} />
                 <Route path="/analytics-ignore" element={<AnalyticsControl />} />

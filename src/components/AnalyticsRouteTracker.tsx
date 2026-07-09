@@ -31,6 +31,7 @@ export function AnalyticsRouteTracker() {
     prevPathRef.current = path;
 
     if (path.startsWith("/admin")) return;
+    if (path.startsWith("/blog")) return;
     if (isAnalyticsControlRoute(path)) return;
 
     trackPageView(path, {

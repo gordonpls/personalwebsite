@@ -85,6 +85,22 @@
     scroll-behavior: smooth;
   }
 
+  /* Blog note card colors — warm paper in light, muted slate in dark */
+  :root, [data-theme="corporate"] {
+    --blog-note-bg: oklch(99% 0.018 85);
+    --blog-note-border: oklch(88% 0.035 85);
+    --blog-note-shadow: 2px 4px 14px oklch(72% 0.03 85 / 0.35);
+    --blog-tape-bg: oklch(94% 0.025 85);
+    --blog-header-bg: oklch(96% 0.025 85);
+  }
+  [data-theme="business"] {
+    --blog-note-bg: oklch(28% 0.014 256);
+    --blog-note-border: oklch(36% 0.018 256);
+    --blog-note-shadow: 2px 4px 14px oklch(8% 0 0 / 0.5);
+    --blog-tape-bg: oklch(33% 0.018 256);
+    --blog-header-bg: oklch(31% 0.016 256);
+  }
+
   @media (max-width: 640px) {
     .typing-greeting {
       min-width: auto !important;

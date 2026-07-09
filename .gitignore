@@ -14,6 +14,10 @@ server/data/spotify-reauth-state.json
 server/data/analytics.db
 server/data/analytics.db-shm
 server/data/analytics.db-wal
+# Blog SQLite database — runtime data, never commit.
+server/data/blog.db
+server/data/blog.db-shm
+server/data/blog.db-wal
 dist
 .DS_Store
 node_modules

@@ -6,6 +6,7 @@ const spotifyRoutes = require("./routes/spotify");
 const fortuneRoutes = require("./routes/fortune");
 const adminRoutes = require("./routes/admin");
 const analyticsRoutes = require("./routes/analytics");
+const blogRoutes = require("./routes/blog");
 
 const app = express();
 
@@ -26,7 +27,7 @@ app.use(cors({
             callback(new Error(`CORS: origin ${origin} not allowed`));
         }
     },
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
@@ -43,6 +44,7 @@ app.use("/api", spotifyRoutes);
 app.use("/api", fortuneRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/blog", blogRoutes);
 
 app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 
