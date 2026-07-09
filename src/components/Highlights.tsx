@@ -322,7 +322,7 @@ export const Highlights = () => {
         <section className="p-6 md:p-10 bg-base-200 border-2 border-secondary rounded-md">
             <SectionHeading
                 eyebrow="Highlights"
-                description="some of my short adventures caught on camera"
+                description="some short clips of my adventures"
                 className="mb-6 md:mb-8"
             />
 
