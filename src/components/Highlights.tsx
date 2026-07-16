@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
 import { SectionHeading } from "./SectionHeading";
 
@@ -32,6 +33,14 @@ const CLIPS: Clip[] = Object.keys(vidGlob)
         poster: posterByBase.get(baseName(path)),
         alt: baseName(path).replace(/[-_]/g, " "),
     }));
+
+// Directional slide for the mobile deck's front clip — mirrors the About Me
+// PhotoDeck so each swipe visibly moves exactly one step (no "skip" flash).
+const slide = {
+    enter: (dir: number) => ({ x: dir > 0 ? 120 : -120, opacity: 0, scale: 0.96 }),
+    center: { x: 0, opacity: 1, scale: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -120 : 120, opacity: 0, scale: 0.96 }),
+};
 
 function DoubleCaret({ direction }: { direction: "left" | "right" }) {
     return (
@@ -151,13 +160,27 @@ function RowTile({
 // behind for the deck look. Swipe / carets / arrow keys navigate.
 function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
     const [index, setIndex] = useState(0);
+    const [dir, setDir] = useState(0);
     const ref = useRef<HTMLDivElement>(null);
     const n = CLIPS.length;
     const hasStack = n > 1;
 
-    const go = (d: number) => setIndex((i) => (i + d + n) % n);
+    const go = (d: number) => {
+        setDir(d);
+        setIndex((i) => (i + d + n) % n);
+    };
+    const jumpTo = (i: number) => {
+        setDir(i > index ? 1 : -1);
+        setIndex(i);
+    };
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    // AnimatePresence keeps the exiting <video> mounted briefly alongside the
+    // incoming one; both share this ref. Ignore the exiting element's null so
+    // videoRef always points at the current front clip for the autoplay effect.
+    const setVideoEl = (el: HTMLVideoElement | null) => {
+        if (el) videoRef.current = el;
+    };
     const [inView, setInView] = useState(false);
 
     // Track whether the deck is on screen.
@@ -241,18 +264,26 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
                         aria-label={`Expand video: ${CLIPS[index].alt}`}
                         className="group absolute inset-0 overflow-hidden rounded-2xl shadow-xl ring-1 ring-base-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                        <video
-                            key={index}
-                            ref={videoRef}
-                            src={CLIPS[index].src}
-                            poster={CLIPS[index].poster}
-                            muted
-                            loop
-                            playsInline
-                            preload="metadata"
-                            tabIndex={-1}
-                            className="absolute inset-0 h-full w-full object-cover"
-                        />
+                        <AnimatePresence custom={dir} initial={false} mode="popLayout">
+                            <motion.video
+                                key={index}
+                                ref={setVideoEl}
+                                src={CLIPS[index].src}
+                                poster={CLIPS[index].poster}
+                                muted
+                                loop
+                                playsInline
+                                preload="metadata"
+                                tabIndex={-1}
+                                custom={dir}
+                                variants={slide}
+                                initial="enter"
+                                animate="center"
+                                exit="exit"
+                                transition={{ duration: 0.32, ease: "easeOut" }}
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                        </AnimatePresence>
                     </button>
                 </div>
 
@@ -284,7 +315,7 @@ function MobileDeck({ onOpen }: { onOpen: (i: number) => void }) {
                         <button
                             key={i}
                             type="button"
-                            onClick={() => setIndex(i)}
+                            onClick={() => jumpTo(i)}
                             aria-label={`Go to video ${i + 1}`}
                             aria-current={i === index ? "true" : undefined}
                             className={`h-1.5 rounded-full transition-all ${
