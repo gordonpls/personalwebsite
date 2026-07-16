@@ -44,19 +44,19 @@ export const Home = () => {
                         <Hero />
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="about" className="scroll-mt-24">
+                    <section id="about" className="scroll-mt-20">
                         <Reveal><AboutMe /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="resume" className="scroll-mt-24">
+                    <section id="resume" className="scroll-mt-20">
                         <Reveal><ResumeTimeline /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="projects" className="scroll-mt-24">
+                    <section id="projects" className="scroll-mt-20">
                         <Reveal><Projects /></Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="highlights" className="scroll-mt-24">
+                    <section id="highlights" className="scroll-mt-20">
                         <Reveal>
                             <Suspense fallback={<SectionLoading />}>
                                 <Highlights />
@@ -64,7 +64,7 @@ export const Home = () => {
                         </Reveal>
                     </section>
                     <div className="divider divider-primary" />
-                    <section id="gallery" className="scroll-mt-24">
+                    <section id="gallery" className="scroll-mt-20">
                         <Reveal>
                             <Suspense fallback={<SectionLoading />}>
                                 <Gallery />
