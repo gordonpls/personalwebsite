@@ -215,11 +215,13 @@ function PostModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    // Backdrop deliberately does NOT close on click — a stray click outside must
+    // never discard an in-progress entry. Close only via Cancel or a successful
+    // save.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div
         className="w-full max-w-lg rounded-sm shadow-xl flex flex-col"
         style={{ background: "var(--blog-note-bg)", border: "1px solid var(--blog-note-border)" }}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--blog-note-border)", background: "var(--blog-header-bg)" }}>
           <h3 className="font-semibold text-base-content">
