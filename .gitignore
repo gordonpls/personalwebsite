@@ -18,6 +18,11 @@ server/data/analytics.db-wal
 server/data/blog.db
 server/data/blog.db-shm
 server/data/blog.db-wal
+# Blog backups + export — PRIVATE journal content, never commit.
+server/data/blog-export.json
+server/data/blog-backups/
+# SQLite stale-lock directories (node-sqlite3-wasm mkdir mutex).
+server/data/*.db.lock/
 dist
 .DS_Store
 node_modules

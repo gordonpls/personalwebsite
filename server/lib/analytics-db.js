@@ -1,6 +1,5 @@
-const { Database } = require("node-sqlite3-wasm");
 const path = require("path");
-const fs = require("fs");
+const { openDatabase } = require("./sqlite");
 
 const DB_PATH =
   process.env.ANALYTICS_DB_PATH ||
@@ -10,14 +9,10 @@ let _db = null;
 
 function getDb() {
   if (_db) return _db;
-  // Ensure the data directory exists (first boot on a fresh server)
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  _db = new Database(DB_PATH);
-  try {
-    // WAL mode: multiple Passenger workers can read/write without blocking each other.
-    _db.exec("PRAGMA journal_mode = WAL");
-    _db.exec("PRAGMA synchronous = NORMAL");
-  } catch (e) { void e; /* WASM build may not support all pragmas — non-fatal */ }
+  // WAL mode: higher write throughput for frequent event inserts. Opened via the
+  // shared helper, which ensures the data dir, clears any stale lock left by an
+  // ungraceful restart, and registers a graceful close.
+  _db = openDatabase(DB_PATH, { journalMode: "WAL", synchronous: "NORMAL" });
   initSchema(_db);
   return _db;
 }

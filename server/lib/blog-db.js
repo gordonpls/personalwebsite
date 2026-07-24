@@ -1,14 +1,16 @@
 const path = require("path");
-const { Database } = require("node-sqlite3-wasm");
+const { openDatabase } = require("./sqlite");
 
 const DB_PATH = path.join(__dirname, "../data/blog.db");
 let _db = null;
 
 function getDb() {
   if (_db) return _db;
-  _db = new Database(DB_PATH);
-  _db.exec("PRAGMA journal_mode = WAL");
-  _db.exec("PRAGMA synchronous = NORMAL");
+  // Rollback (DELETE) journal + FULL sync: writes are rare, so durability beats
+  // throughput, and a single authoritative blog.db (no -wal holding uncommitted
+  // data) keeps the on-disk file trivially safe to copy for backups. Opened via
+  // the shared helper for stale-lock recovery + graceful close.
+  _db = openDatabase(DB_PATH, { journalMode: "DELETE", synchronous: "FULL" });
   initSchema(_db);
   return _db;
 }
