@@ -38,16 +38,20 @@ function formatDateTime(iso: string): string {
   return `${formatDate(iso)} · ${formatTime(iso)}`;
 }
 
+// localStorage (not sessionStorage) so a single login persists across tab and
+// browser restarts. The server token carries its own 90-day expiry; a stale one
+// simply 401s and drops back to the login screen.
 function getToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 function saveToken(t: string) {
-  sessionStorage.setItem(TOKEN_KEY, t);
+  localStorage.setItem(TOKEN_KEY, t);
 }
 
 function clearToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY); // clear any token from the old scheme
 }
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
@@ -470,6 +474,25 @@ export default function Blog() {
     setPosts([]);
   }
 
+  async function handleExport() {
+    try {
+      const res = await apiFetch("/export");
+      if (res.status === 401) { clearToken(); setAuthed(false); return; }
+      if (!res.ok) throw new Error("export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `journal-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setFetchError("couldn't download backup — try again");
+    }
+  }
+
   function handleSaved(saved: BlogPost) {
     setPosts((prev) => {
       const idx = prev.findIndex((p) => p.id === saved.id);
@@ -513,6 +536,17 @@ export default function Blog() {
                       <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                     </svg>
                     new entry
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-xs text-base-content/30 hover:text-base-content/60"
+                    onClick={handleExport}
+                    title="Download backup"
+                    aria-label="Download all entries as a backup file"
+                    disabled={posts.length === 0}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
                   </button>
                   <button
                     className="btn btn-ghost btn-xs text-base-content/30 hover:text-base-content/60"
