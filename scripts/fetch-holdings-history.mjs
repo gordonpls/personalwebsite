@@ -52,13 +52,50 @@ function thin(series) {
     return out;
 }
 
+// Statuses worth retrying: transient server/proxy hiccups plus the WAF codes
+// the prod host intermittently returns to CI's datacenter IPs.
+const TRANSIENT_STATUS = new Set([403, 408, 415, 425, 429, 500, 502, 503, 504]);
+
 async function getTickers() {
-    const res = await fetch(HOLDINGS_URL);
-    if (!res.ok) throw new Error(`holdings ${res.status} — is the backend running? (npm run dev:all)`);
-    const d = await res.json();
-    // SPY is always included as the S&P 500 benchmark for the performance chart,
-    // even though it isn't a holding.
-    return [...new Set([...(d.holdings || []).map((h) => h.ticker).filter(Boolean), "SPY"])];
+    // The live host sits behind a LiteSpeed/WAF layer that intermittently rejects
+    // requests from CI's datacenter IPs — notably with a 415 when no User-Agent
+    // is sent (Node's fetch sends none by default). Send browser-like headers and
+    // retry with backoff + a timeout so one transient blip doesn't fail the run.
+    const headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; holdings-refresh/1.0; +https://gordonzhong.com)",
+        Accept: "application/json",
+    };
+    let lastErr;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+            const ac = new AbortController();
+            const timer = setTimeout(() => ac.abort(), 20000);
+            let res;
+            try {
+                res = await fetch(HOLDINGS_URL, { headers, signal: ac.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+            if (res.ok) {
+                const d = await res.json();
+                // SPY is always included as the S&P 500 benchmark for the
+                // performance chart, even though it isn't a holding.
+                return [...new Set([...(d.holdings || []).map((h) => h.ticker).filter(Boolean), "SPY"])];
+            }
+            lastErr = new Error(`holdings HTTP ${res.status}`);
+            if (!TRANSIENT_STATUS.has(res.status)) break; // hard 4xx won't recover
+        } catch (e) {
+            lastErr = e; // network error / timeout — retry
+        }
+        if (attempt < 5) {
+            const backoff = Math.min(2000 * attempt, 10000);
+            console.warn(`getTickers attempt ${attempt} failed (${lastErr?.message}); retrying in ${backoff}ms`);
+            await sleep(backoff);
+        }
+    }
+    throw new Error(
+        `holdings fetch failed after retries: ${lastErr?.message}. URL=${HOLDINGS_URL} — is the backend reachable? (local: npm run dev:all)`,
+    );
 }
 
 // One Yahoo chart call yields both the price series AND the metadata block.
