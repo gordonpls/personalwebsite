@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const { UAParser } = require("ua-parser-js");
 const { requireAdmin } = require("../lib/admin-auth");
+const { resolveGeo } = require("../lib/geoip");
 const {
   getDb,
   insertEvent,
@@ -166,13 +167,12 @@ router.post("/event", (req, res) => {
     }
 
     const { deviceType, browser, os } = parseUserAgent(ua);
-    const { country, region } = getGeoFromHeaders(req);
+    const headerGeo = getGeoFromHeaders(req);
     const visitorHash = getVisitorHash(ip, ua);
     const referrerHost = sanitizeReferrerHost(referrer);
     const day = todayStr();
 
-    const db = getDb();
-    insertEvent(db, {
+    const baseEvent = {
       day,
       event_type: eventType,
       visitor_hash: visitorHash,
@@ -182,15 +182,35 @@ router.post("/event", (req, res) => {
       device_type: deviceType,
       browser,
       os,
-      country,
-      region,
-    });
+    };
+
+    // Respond immediately; persistence (incl. any IP geo lookup) happens after,
+    // so the client is never blocked and geo can never break the response.
+    res.status(204).end();
+
+    const persist = (geo) => {
+      try {
+        insertEvent(getDb(), { ...baseEvent, country: geo.country ?? null, region: geo.region ?? null });
+      } catch (err) {
+        console.error("[analytics] event insert failed:", err.message);
+      }
+    };
+
+    if (headerGeo.country) {
+      // Host provided geo headers (e.g. Cloudflare CF-IPCountry) — use them.
+      persist(headerGeo);
+    } else {
+      // No geo headers (shared cPanel) — fall back to a cached IP lookup.
+      resolveGeo(ip)
+        .then((geo) => persist(geo.country ? geo : headerGeo))
+        .catch(() => persist(headerGeo));
+    }
+    return;
   } catch (err) {
     // Log but never propagate — the frontend must not be affected
-    console.error("[analytics] event insert failed:", err.message);
+    console.error("[analytics] event handler failed:", err.message);
+    if (!res.headersSent) res.status(204).end();
   }
-
-  return res.status(204).end();
 });
 
 // ── GET /api/analytics/private-summary (admin only) ───────────────────────
