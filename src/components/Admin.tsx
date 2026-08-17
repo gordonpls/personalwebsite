@@ -393,6 +393,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <tr className="text-base-content/50 text-xs">
                         <th>Country</th>
                         <th>Region</th>
+                        <th className="text-right">Visitors</th>
                         <th className="text-right">Views</th>
                       </tr>
                     </thead>
@@ -401,7 +402,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                         <tr key={i} className="hover:bg-base-300/40">
                           <td className="text-xs">{String(r.country || "Unknown")}</td>
                           <td className="text-xs text-base-content/50">{String(r.region || "—")}</td>
-                          <td className="text-right text-sm">{r.count as number}</td>
+                          <td className="text-right text-sm font-medium">{(r.unique_visitors ?? 0) as number}</td>
+                          <td className="text-right text-sm text-base-content/50">{r.count as number}</td>
                         </tr>
                       ))}
                     </tbody>

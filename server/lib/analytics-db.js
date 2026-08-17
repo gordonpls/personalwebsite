@@ -170,11 +170,13 @@ function getOsBreakdown(db, startDay, limit = 8) {
 function getLocationBreakdown(db, startDay, limit = 20) {
   return db
     .prepare(
-      `SELECT country, region, COUNT(*) AS count
+      `SELECT country, region,
+              COUNT(DISTINCT visitor_hash) AS unique_visitors,
+              COUNT(*) AS count
        FROM analytics_events
        WHERE event_type = 'page_view' AND day >= ? AND country IS NOT NULL
        GROUP BY country, region
-       ORDER BY count DESC
+       ORDER BY unique_visitors DESC, count DESC
        LIMIT ?`
     )
     .all([startDay, limit]);
