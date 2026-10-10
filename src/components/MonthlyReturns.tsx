@@ -3,11 +3,8 @@
 // Performance chart's method, so the current year's total equals the chart's
 // YTD figure, and each row's months compound exactly to its total.
 
-import { useEffect, useMemo, useState } from "react";
-import { cachedJson } from "../services/apiCache";
-import { calendarYears, type PriceMap, type YearReturns } from "../utils/portfolioMath";
+import { useCalendarYears } from "../hooks/useCalendarYears";
 import { PortfolioScopePill } from "./PortfolioScopePill";
-import type { Holding } from "./Holdings";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const FULL_AT = 8; // a ±8% month gets the strongest shade
@@ -20,25 +17,6 @@ function cellStyle(v: number | null, fullAt = FULL_AT): React.CSSProperties | un
     const strength = Math.min(1, Math.abs(v) / fullAt);
     const color = v >= 0 ? "var(--color-success)" : "var(--color-error)";
     return { background: `color-mix(in oklch, ${color} ${Math.round(12 + strength * 58)}%, transparent)` };
-}
-
-// Shared data hook, also used by the drawdown chart.
-export function useCalendarYears(portfolio?: string) {
-    const [holdings, setHoldings] = useState<Holding[] | null>(null);
-    const [prices, setPrices] = useState<PriceMap | null>(null);
-    const [error, setError] = useState(false);
-    useEffect(() => {
-        let cancelled = false;
-        cachedJson<{ holdings: Holding[] }>("/api/holdings").then((d) => { if (!cancelled) setHoldings(d.holdings ?? []); }).catch(() => { if (!cancelled) setError(true); });
-        cachedJson<{ prices: PriceMap }>("/api/finance/history").then((d) => { if (!cancelled) setPrices(d.prices ?? {}); }).catch(() => { if (!cancelled) setError(true); });
-        return () => { cancelled = true; };
-    }, []);
-    const years = useMemo<YearReturns[] | null>(() => {
-        if (!holdings || !prices) return null;
-        const scoped = portfolio ? holdings.filter((h) => h.portfolio === portfolio) : holdings;
-        return calendarYears(scoped, prices);
-    }, [holdings, prices, portfolio]);
-    return { years, prices, error };
 }
 
 export const MonthlyReturns = ({ portfolio, scopeLabel, onScopeChange, scopeOptions }: {

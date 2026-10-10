@@ -5,7 +5,7 @@
 
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useCalendarYears } from "./MonthlyReturns";
+import { useCalendarYears } from "../hooks/useCalendarYears";
 import { PortfolioScopePill } from "./PortfolioScopePill";
 import { calendarYears, drawdownFromYears, parseLocalDate, type DrawdownPoint } from "../utils/portfolioMath";
 
