@@ -131,14 +131,22 @@ export const FinanceGate = ({ children }: { children: ReactNode }) => {
     return (
         <div className="relative">
             <TickerTape items={TEASER_TAPE} label="Markets" redacted className="-mx-4 -mt-4 mb-6" />
-            <h2 className="mb-4 text-2xl font-bold tracking-tight text-base-content">Personal Portfolio</h2>
+            <h2 className="mb-4 text-center text-2xl font-bold tracking-tight text-base-content">Personal Portfolio</h2>
             <div aria-hidden="true" inert className="pointer-events-none select-none">
                 <DashboardTeaser />
             </div>
-            {/* Soft spotlight behind the card so it reads clearly over the teaser. */}
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_35%,var(--color-base-300)_0%,transparent_60%)] opacity-80" />
-            <div className="absolute inset-0 flex items-start justify-center px-2 pt-40 sm:pt-48">
-                <UnlockCard />
+            {/* Fade the preview out at the very bottom so it doesn't stop abruptly. */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-base-300 to-transparent" />
+            {/* The card rides along (sticky) while visitors scroll the whole preview. */}
+            <div className="absolute inset-0 px-2">
+                <div className="sticky top-24 flex flex-col items-center pt-24 sm:top-28 sm:pt-32">
+                    {/* Soft spotlight behind the card so it reads clearly over the teaser. */}
+                    <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[34rem] w-[48rem] max-w-[100vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,var(--color-base-300)_0%,transparent_65%)]" />
+                    <UnlockCard />
+                    <p className="mt-3 rounded-full bg-base-100/80 px-3 py-1 text-xs text-base-content/70 shadow-sm backdrop-blur">
+                        Scroll to preview what&apos;s inside ↓
+                    </p>
+                </div>
             </div>
         </div>
     );

@@ -12,15 +12,23 @@ import type { Holding } from "./Holdings";
 // for phones, where the name sits beside the icon.
 export interface PortfolioOption { id: string; short: string; tiny?: string }
 
-const icon = (id: string) => {
-    const common = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true }; // size comes from the badge (smaller on phones)
+// Portfolio icons, shared with the locked teaser. (A component, so this file
+// still exports only components and keeps Fast Refresh working.)
+export const PortfolioIcon = ({ id }: { id: string }) => {
+    const common = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true }; // size comes from the badge
     switch (id) {
         case "Core": // shield: the steady foundation
             return <svg {...common}><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" /></svg>;
         case "Tech & Speculation": // bolt: concentrated bets
             return <svg {...common}><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>;
-        case "Retirement": // hourglass: long horizon
-            return <svg {...common}><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9" /></svg>;
+        case "Retirement": // safe: money set aside and kept secure
+            return (
+                <svg {...common}>
+                    <rect x="3" y="4" width="18" height="15" rx="2" />
+                    <circle cx="11" cy="11.5" r="3.5" />
+                    <path d="M11 8v1.2M11 13.8V15M7.5 11.5h1.2M13.3 11.5h1.2M18 9.5v4M6 19v1.5M16 19v1.5" />
+                </svg>
+            );
         default: // stacked layers: everything together
             return <svg {...common}><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></svg>;
     }
@@ -92,7 +100,7 @@ export const PortfolioSwitcher = ({ options, active, onChange, allId }: {
                             <div className="flex items-center justify-between gap-1.5">
                                 <span className="flex min-w-0 items-center gap-2 sm:block">
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md sm:h-8 sm:w-8 sm:rounded-lg [&>svg]:h-3.5 [&>svg]:w-3.5 sm:[&>svg]:h-5 sm:[&>svg]:w-5 ${on ? "bg-primary text-primary-content" : "bg-base-200 text-base-content/70 group-hover:text-base-content"}`}>
-                                        {icon(o.id)}
+                                        <PortfolioIcon id={o.id} />
                                     </span>
                                     <span className="min-w-0 truncate text-[13px] font-bold leading-tight text-base-content sm:hidden" title={o.id}>{o.tiny ?? o.id}</span>
                                 </span>
@@ -109,7 +117,7 @@ export const PortfolioSwitcher = ({ options, active, onChange, allId }: {
                                     {st ? `${st.share.toFixed(0)}%` : "—"}
                                     <span className="hidden font-normal text-base-content/60 sm:inline"> of total</span>
                                 </span>
-                                {st && <span className="whitespace-nowrap text-base-content/60">{st.count} <span className="hidden sm:inline">{st.count === 1 ? "position" : "positions"}</span><span className="sm:hidden">pos.</span></span>}
+                                {st && <span className="whitespace-nowrap text-base-content/60">{st.count} {st.count === 1 ? "position" : "positions"}</span>}
                             </span>
                             <span className="mt-1 h-1 overflow-hidden rounded-full bg-base-300 sm:mt-1.5" aria-hidden="true">
                                 <span className={`block h-full rounded-full transition-all duration-500 ${on ? "bg-primary" : "bg-base-content/30"}`} style={{ width: `${st?.share ?? 0}%` }} />
