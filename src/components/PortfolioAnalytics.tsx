@@ -149,7 +149,9 @@ export const PortfolioAnalytics = ({
             {/* Risk & income */}
             {show !== "allocation" && (show === "risk" ? (
                 <div className="bg-base-100 border border-base-300 rounded-2xl px-5 py-4">
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                    {/* Title and numbers share a row only from lg up; narrower, the
+                        numbers get the full width beneath (2×2, then 4 across). */}
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-semibold text-base-content">Risk, return &amp; income</h3>
                             {scopeLabel && onScopeChange && scopeOptions && (
@@ -159,9 +161,9 @@ export const PortfolioAnalytics = ({
                         {error ? (
                             <p className="text-xs text-base-content/50">Unavailable.</p>
                         ) : loading ? (
-                            <div className="h-12 flex-1 rounded bg-base-200 animate-pulse" />
+                            <div className="h-12 w-full flex-1 rounded bg-base-200 animate-pulse" />
                         ) : (
-                            <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 sm:divide-x sm:divide-base-300 [&>*]:sm:pl-6 [&>*:first-child]:sm:pl-0">
+                            <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4 md:divide-x md:divide-base-300 [&>*]:md:pl-6 [&>*:first-child]:md:pl-0">
                                 <Stat label="Beta" value={beta != null ? beta.toFixed(2) : "—"} />
                                 <Stat label="Avg volatility" value={vol != null ? `${vol.toFixed(1)}%` : "—"} />
                                 <Stat label="1Y return" value={ret1y != null ? `${ret1y > 0 ? "+" : ""}${ret1y.toFixed(1)}%` : "—"} valueClass={ret1y != null ? (ret1y >= 0 ? "text-success" : "text-error") : undefined} />
