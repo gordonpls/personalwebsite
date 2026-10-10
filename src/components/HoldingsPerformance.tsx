@@ -37,6 +37,12 @@ function parseLocalDate(s: string): Date {
     return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
+// Local-date → "YYYY-MM-DD". (toISOString would shift a local midnight to the
+// previous UTC day for visitors east of UTC, moving every range cutoff a day early.)
+function toLocalDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // Anchor the cutoff to the most recent data point we have (not "today"), so a
 // stale bake on a weekend doesn't leave shorter ranges with an empty window.
 function cutoffFor(range: Range, latest: Date): string {
@@ -46,7 +52,7 @@ function cutoffFor(range: Range, latest: Date): string {
     else if (range === "3M") d.setMonth(d.getMonth() - 3);
     else if (range === "1M") d.setMonth(d.getMonth() - 1);
     else if (range === "1W") d.setDate(d.getDate() - 7);
-    return d.toISOString().slice(0, 10);
+    return toLocalDateStr(d);
 }
 
 interface ChartPoint { date: string; value: number; benchmark?: number; }
@@ -278,15 +284,18 @@ export const HoldingsPerformance = ({
     // "All" range header: at full scope use the backend's reported global
     // totalReturnPct (cost-basis HPR). When scoped to a single portfolio the
     // backend doesn't carry a per-portfolio aggregate, so compute it here as
-    // the weight-renormalized average of each holding's returnPct.
+    // the COST-weighted average of each holding's returnPct (cost ∝ weight ÷
+    // (1 + return)) — i.e. Σgain / Σcost, matching the "All" chart's endpoint.
+    // Weighting by current value instead would double-count winners.
     const scopedTotalReturnPct = useMemo<number | null>(() => {
         if (!filteredHoldings) return null;
         if (!portfolio) return totalReturnPct;
         let s = 0, w = 0;
         for (const h of filteredHoldings) {
-            if (h.returnPct == null) continue;
-            s += h.weightPct * h.returnPct;
-            w += h.weightPct;
+            if (h.returnPct == null || 1 + h.returnPct / 100 <= 0) continue;
+            const cost = h.weightPct / (1 + h.returnPct / 100);
+            s += cost * h.returnPct;
+            w += cost;
         }
         return w > 0 ? Math.round((s / w) * 100) / 100 : null;
     }, [filteredHoldings, portfolio, totalReturnPct]);

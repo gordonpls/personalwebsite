@@ -157,9 +157,12 @@ export const PortfolioAnalytics = ({
         // to the latest data point we have (not "today") to survive weekend lag.
         let latestStr = "";
         for (const t in prices) for (const d in prices[t]) if (d > latestStr) latestStr = d;
-        const cutoff1y = latestStr
-            ? new Date(parseLocalDate(latestStr).getTime() - 365 * 86400000).toISOString().slice(0, 10)
-            : "";
+        let cutoff1y = "";
+        if (latestStr) {
+            const c = parseLocalDate(latestStr);
+            c.setFullYear(c.getFullYear() - 1); // same cutoff as the chart's 1Y range
+            cutoff1y = `${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, "0")}-${String(c.getDate()).padStart(2, "0")}`;
+        }
 
         for (const h of hs) {
             if (!h.ticker || h.weightPct <= 0) continue;
@@ -179,7 +182,11 @@ export const PortfolioAnalytics = ({
                 const dates = Object.keys(s).sort();
                 const last = s[dates[dates.length - 1]];
                 const baseIdx = dates.findIndex((d) => d >= cutoff1y);
-                if (baseIdx >= 0 && baseIdx < dates.length - 1) {
+                // Require history reaching back to the cutoff — a ticker that listed
+                // mid-year would otherwise report its since-IPO return as "1Y"
+                // (the chart excludes these too). Allow a few days for a weekend/holiday.
+                const coversYear = Date.parse(dates[0]) - Date.parse(cutoff1y) <= 4 * 86400000;
+                if (coversYear && baseIdx >= 0 && baseIdx < dates.length - 1) {
                     const base = s[dates[baseIdx]];
                     if (base > 0 && last > 0) {
                         rSum += h.weightPct * ((last / base - 1) * 100);

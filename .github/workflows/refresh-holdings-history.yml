@@ -40,6 +40,7 @@ jobs:
         env:
           HOLDINGS_URL: https://gordonzhong.com/api/holdings
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FINANCE_PASSWORD: ${{ secrets.FINANCE_PASSWORD }}   # /api/holdings is password-gated
 
       - name: Detect change
         id: diff

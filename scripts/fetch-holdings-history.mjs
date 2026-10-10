@@ -56,15 +56,41 @@ function thin(series) {
 // the prod host intermittently returns to CI's datacenter IPs.
 const TRANSIENT_STATUS = new Set([403, 408, 415, 425, 429, 500, 502, 503, 504]);
 
+const UA = "Mozilla/5.0 (compatible; holdings-refresh/1.0; +https://gordonzhong.com)";
+
+// /api/holdings is password-gated (requireFinance). Exchange FINANCE_PASSWORD
+// (CI secret / server/.env) for a session token via /api/finance/login.
+async function financeToken() {
+    let pw = process.env.FINANCE_PASSWORD || "";
+    if (!pw) {
+        try {
+            const m = readFileSync(resolve(__dirname, "../server/.env"), "utf-8").match(/FINANCE_PASSWORD=(.+)/);
+            if (m) pw = m[1].trim();
+        } catch { /* none */ }
+    }
+    if (!pw) return null;
+    try {
+        const r = await fetch(new URL("/api/finance/login", HOLDINGS_URL), {
+            method: "POST",
+            headers: { "User-Agent": UA, "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ password: pw }),
+        });
+        if (!r.ok) { console.warn(`finance login failed: HTTP ${r.status}`); return null; }
+        return (await r.json()).token || null;
+    } catch (e) {
+        console.warn(`finance login failed: ${e.message}`);
+        return null;
+    }
+}
+
 async function getTickers() {
     // The live host sits behind a LiteSpeed/WAF layer that intermittently rejects
     // requests from CI's datacenter IPs — notably with a 415 when no User-Agent
     // is sent (Node's fetch sends none by default). Send browser-like headers and
     // retry with backoff + a timeout so one transient blip doesn't fail the run.
-    const headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; holdings-refresh/1.0; +https://gordonzhong.com)",
-        Accept: "application/json",
-    };
+    const headers = { "User-Agent": UA, Accept: "application/json" };
+    const token = await financeToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
     let lastErr;
     for (let attempt = 1; attempt <= 5; attempt++) {
         try {
@@ -83,6 +109,16 @@ async function getTickers() {
                 return [...new Set([...(d.holdings || []).map((h) => h.ticker).filter(Boolean), "SPY"])];
             }
             lastErr = new Error(`holdings HTTP ${res.status}`);
+            if (res.status === 401) {
+                // Auth missing/wrong: keep refreshing the tickers we already track
+                // rather than letting the whole bake go stale. New buys won't be
+                // picked up until FINANCE_PASSWORD is fixed — hence the loud warning.
+                const known = Object.keys(readJson(HISTORY_PATH, "prices"));
+                if (known.length) {
+                    console.warn(`::warning::/api/holdings returned 401 (set the FINANCE_PASSWORD secret). Refreshing ${known.length} previously-baked tickers; newly bought tickers will be missed.`);
+                    return [...new Set([...known, "SPY"])];
+                }
+            }
             if (!TRANSIENT_STATUS.has(res.status)) break; // hard 4xx won't recover
         } catch (e) {
             lastErr = e; // network error / timeout — retry
