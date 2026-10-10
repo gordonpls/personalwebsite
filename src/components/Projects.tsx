@@ -257,8 +257,8 @@ const PadlockIcon = ({ className = "w-3.5 h-3.5" }: { className?: string }) => (
 );
 
 // The dashboard is password-gated; until this browser has unlocked it, the hero
-// stays low-key about it: a softly blurred chart that sharpens on hover and a
-// quiet "Private" tag in place of the live pulse. The dashboard page itself
+// stays low-key about it: a softly blurred chart that sharpens on hover, with
+// a quiet "Private" tag over it in place of the live pulse. The dashboard page itself
 // asks for the password.
 const FeaturedHero = () => {
     const unlocked = useFinanceUnlocked();
@@ -279,6 +279,16 @@ const FeaturedHero = () => {
                     <div className={`absolute inset-0 p-6 transition-[filter] duration-500 ${unlocked ? "" : "blur-[3px] group-hover:blur-[1px]"}`}>
                         <LinePreview />
                     </div>
+                    {!unlocked && (
+                        // Sits over the blurred chart so the lock reads as "this
+                        // graphic is private", not as a status on the copy.
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="flex items-center gap-1.5 rounded-full border border-base-300 bg-base-100/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/70 shadow-sm backdrop-blur-sm">
+                                <PadlockIcon className="w-3 h-3" />
+                                Private
+                            </span>
+                        </div>
+                    )}
                     <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                         <div className="project-shimmer absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-base-content/5 to-transparent" />
                     </div>
@@ -287,7 +297,7 @@ const FeaturedHero = () => {
                 <div className="p-6 md:p-8 relative flex flex-col justify-center">
                     <div className="flex items-center justify-between gap-3 mb-3">
                         <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
-                        {unlocked ? (
+                        {unlocked && (
                             <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>
                                 {/* Green pulsing dot: outer ping ring + solid inner pip */}
                                 <span className="relative flex h-2 w-2" aria-hidden="true">
@@ -295,11 +305,6 @@ const FeaturedHero = () => {
                                     <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                                 </span>
                                 {portfolio.tag}
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-base-content/60">
-                                <PadlockIcon className="w-3 h-3" />
-                                Private
                             </span>
                         )}
                     </div>
