@@ -10,16 +10,19 @@ import { ReturnDrivers } from "./ReturnDrivers";
 import { MonthlyReturns } from "./MonthlyReturns";
 import { DrawdownChart } from "./DrawdownChart";
 import { RiskReturnMap } from "./RiskReturnMap";
+import { PortfolioSwitcher } from "./PortfolioSwitcher";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 // "All" is special: it means no portfolio filter — the heatmap, allocation,
 // and stats render the union of every portfolio.
 const ALL = "All";
-const TABS: { id: string; desc: string }[] = [
-    { id: ALL, desc: "Every position across Core, Tech & Speculation, and Retirement." },
-    { id: "Core", desc: "Diversified foundation built on broad index funds. The majority of the portfolio." },
-    { id: "Tech & Speculation", desc: "Concentrated tech and speculative positions." },
-    { id: "Retirement", desc: "Traditional & Roth IRA." },
+// `short` is the one-liner on the switcher card, `tiny` its name on phones;
+// `desc` sits under the switcher.
+const TABS: { id: string; short: string; tiny?: string; desc: string }[] = [
+    { id: ALL, short: "Everything, combined", tiny: "All", desc: "Every position across Core, Tech & Speculation, and Retirement." },
+    { id: "Core", short: "Broad index funds", desc: "Diversified foundation built on broad index funds. The majority of the portfolio." },
+    { id: "Tech & Speculation", short: "Concentrated bets", tiny: "Tech & Spec.", desc: "Concentrated tech and speculative positions." },
+    { id: "Retirement", short: "Traditional & Roth IRA", desc: "Traditional & Roth IRA." },
 ];
 const SCOPE_OPTIONS = TABS.map((t) => t.id);
 
@@ -89,30 +92,15 @@ export const Portfolios = () => {
             {/* Flush with the window chrome: cancels the page's px-4 / pt-4. */}
             <LiveTickerTape className="-mx-4 -mt-4" />
 
-            <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                <div className="min-w-0">
-                    <h2 className="text-2xl font-bold tracking-tight text-base-content">Personal Portfolio</h2>
-                    <p className="mt-0.5 text-sm text-base-content/70">{tab.desc}</p>
-                </div>
-                <div className="flex w-full min-w-0 sm:w-auto">
-                    {/* One line at every width: scrolls sideways on phones instead of wrapping. */}
-                    <div role="tablist" aria-label="Portfolios" className="inline-flex min-w-0 gap-1 overflow-x-auto rounded-xl bg-base-200 p-1">
-                        {TABS.map((t) => (
-                            <button
-                                key={t.id}
-                                role="tab"
-                                aria-selected={active === t.id}
-                                onClick={() => changeTab(t.id)}
-                                className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${active === t.id
-                                    ? "bg-primary text-primary-content shadow-sm"
-                                    : "text-base-content/70 hover:text-base-content"
-                                    }`}
-                            >
-                                {t.id}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            {/* Title, then the portfolio switcher: centered, because picking a
+                portfolio is the main choice on this page and drives every
+                section below. The line under it explains the current pick. */}
+            <header className="space-y-4 text-center">
+                <h2 className="text-2xl font-bold tracking-tight text-base-content">Personal Portfolio</h2>
+                <PortfolioSwitcher options={TABS} active={active} onChange={changeTab} allId={ALL} />
+                <p className="text-sm text-base-content/70" aria-live="polite">
+                    <span className="font-semibold text-base-content">{active === ALL ? "All portfolios" : active}:</span> {tab.desc}
+                </p>
             </header>
 
             {/* Headline numbers for the selected scope. */}
