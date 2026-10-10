@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SectionHeading } from "./SectionHeading";
+import { useFinanceUnlocked } from "../services/financeAuth";
 
 interface Project {
     title: string;
@@ -248,52 +249,78 @@ const ProjectCard = ({ p }: { p: Project }) => (
 const portfolio = PROJECTS.find((p) => p.title === "Investing Dashboard") as Project;
 const otherProjects = PROJECTS.filter((p) => p.title !== "Investing Dashboard");
 
-const FeaturedHero = () => (
-    <a
-        href={portfolio.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-track="project_card_clicked"
-        data-project={PROJECT_SLUGS[portfolio.href] ?? "investing-dashboard"}
-        className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    >
-        <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${portfolio.glow}`} />
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
-            {/* Preview band */}
-            <div className="relative h-56 lg:h-auto bg-gradient-to-br from-base-200 to-base-300 overflow-hidden border-b lg:border-b-0 lg:border-r border-base-300">
-                <div className="absolute inset-0 p-6"><LinePreview /></div>
-                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="project-shimmer absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-base-content/5 to-transparent" />
+const PadlockIcon = ({ className = "w-3.5 h-3.5" }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className={className} aria-hidden="true">
+        <rect x="4" y="11" width="16" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" strokeLinecap="round" />
+    </svg>
+);
+
+// The dashboard is password-gated; until this browser has unlocked it, the hero
+// stays low-key about it: a softly blurred chart that sharpens on hover and a
+// quiet "Private" tag in place of the live pulse. The dashboard page itself
+// asks for the password.
+const FeaturedHero = () => {
+    const unlocked = useFinanceUnlocked();
+    return (
+        <a
+            href={portfolio.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-track="project_card_clicked"
+            data-project={PROJECT_SLUGS[portfolio.href] ?? "investing-dashboard"}
+            data-locked={unlocked ? undefined : "true"}
+            className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+            <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${portfolio.glow}`} />
+            <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+                {/* Preview band */}
+                <div className="relative h-56 lg:h-auto bg-gradient-to-br from-base-200 to-base-300 overflow-hidden border-b lg:border-b-0 lg:border-r border-base-300">
+                    <div className={`absolute inset-0 p-6 transition-[filter] duration-500 ${unlocked ? "" : "blur-[3px] group-hover:blur-[1px]"}`}>
+                        <LinePreview />
+                    </div>
+                    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        <div className="project-shimmer absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-base-content/5 to-transparent" />
+                    </div>
                 </div>
-            </div>
-            {/* Body */}
-            <div className="p-6 md:p-8 relative flex flex-col justify-center">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                    <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
-                    <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>
-                        {/* Green pulsing dot: outer ping ring + solid inner pip */}
-                        <span className="relative flex h-2 w-2" aria-hidden="true">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-                        </span>
-                        {portfolio.tag}
+                {/* Body */}
+                <div className="p-6 md:p-8 relative flex flex-col justify-center">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <span className="badge badge-sm badge-primary text-[10px] uppercase tracking-widest font-semibold">★ Featured</span>
+                        {unlocked ? (
+                            <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold ${portfolio.accent}`}>
+                                {/* Green pulsing dot: outer ping ring + solid inner pip */}
+                                <span className="relative flex h-2 w-2" aria-hidden="true">
+                                    <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                                </span>
+                                {portfolio.tag}
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-base-content/60">
+                                <PadlockIcon className="w-3 h-3" />
+                                Private
+                            </span>
+                        )}
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-bold text-base-content group-hover:text-primary transition-colors">
+                        {unlocked ? "Every stock I hold, out in the open" : "Every stock I hold, and how it's doing"}
+                    </h3>
+                    <p className="text-sm md:text-base text-base-content/70 leading-relaxed mt-2">{portfolio.description}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-4">
+                        {portfolio.tags.map((t) => (
+                            <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
+                        ))}
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold text-primary">
+                        {unlocked ? "Open the live dashboard" : "View the dashboard"}
+                        <span className="transition-transform group-hover:translate-x-1">↗</span>
                     </span>
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-base-content group-hover:text-primary transition-colors">Every stock I hold, out in the open</h3>
-                <p className="text-sm md:text-base text-base-content/70 leading-relaxed mt-2">{portfolio.description}</p>
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                    {portfolio.tags.map((t) => (
-                        <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
-                    ))}
-                </div>
-                <span className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold text-primary">
-                    Open the live dashboard
-                    <span className="transition-transform group-hover:translate-x-1">↗</span>
-                </span>
             </div>
-        </div>
-    </a>
-);
+        </a>
+    );
+};
 
 const ChevronIcon = ({ dir }: { dir: "left" | "right" }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5" aria-hidden="true">

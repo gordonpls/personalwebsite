@@ -3,6 +3,7 @@ import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
 import { cachedJson } from "../services/apiCache";
 import { formatWeightPct } from "../utils/format";
+import { categoryOf } from "../utils/holdingCategory";
 
 export interface Holding {
     portfolio: string;
@@ -13,7 +14,7 @@ export interface Holding {
     returnPct: number | null;  // total return since purchase (cost basis); null if unavailable
 }
 
-interface Meta extends LogoMeta { type?: string }
+interface Meta extends LogoMeta { type?: string; industry?: string }
 type MetaMap = Record<string, Meta>;
 
 interface HoldingsProps {
@@ -21,7 +22,25 @@ interface HoldingsProps {
     title?: string;
     selectedTicker?: string | null;     // highlighted row
     onSelect?: (h: Holding) => void;    // row click; also auto-selects the first row
+    bare?: boolean;                     // no card chrome: for use inside a shared container
 }
+
+type SortKey = "weight" | "return" | "az";
+const SORTS: { key: SortKey; label: string }[] = [
+    { key: "weight", label: "Weight" }, { key: "return", label: "Return" }, { key: "az", label: "A–Z" },
+];
+const ALL = "All";
+
+const Chip = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={on}
+        className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${on ? "border-primary bg-primary text-primary-content" : "border-base-300 text-base-content/70 hover:border-base-content/30 hover:text-base-content"}`}
+    >
+        {children}
+    </button>
+);
 
 // Strip the boilerplate issuer/family wrapper from fund names so the list-row
 // secondary line shows the actual fund identifier (e.g. "Total Stock Market"
@@ -47,10 +66,15 @@ function cleanFundName(raw: string | null | undefined): string {
     return s.trim() || raw;
 }
 
-export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: HoldingsProps = {}) => {
+export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = false }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [meta, setMeta] = useState<MetaMap>({});
     const [error, setError] = useState(false);
+    const [sort, setSort] = useState<SortKey>("weight");
+    const [cat, setCat] = useState<string>(ALL);
+
+    // A category from one portfolio may not exist in the next.
+    useEffect(() => { setCat(ALL); }, [portfolio]);
 
     useEffect(() => {
         let cancelled = false;
@@ -59,8 +83,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             .catch(() => { if (!cancelled) setError(true); });
 
         // Logos + names live here. Failing this fetch just means letter chips.
-        fetch("/holdingsMeta.json", { cache: "no-cache" })
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        cachedJson("/api/finance/meta")
             .then((d) => { if (!cancelled) setMeta(d.meta ?? {}); })
             .catch(() => { /* letter chips fallback */ });
 
@@ -77,25 +100,78 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
             .sort((a, b) => b.weightPct - a.weightPct);
     }, [holdings, portfolio]);
 
-    // Default to (and keep a valid) selection — the first row of the active portfolio.
+    const withCat = useMemo(
+        () => rows.map((h) => ({ ...h, category: categoryOf(h, meta[h.ticker ?? ""]) })),
+        [rows, meta],
+    );
+    // Every category in scope, largest share first, for the dropdown.
+    const cats = useMemo(() => {
+        const w = new Map<string, { weight: number; count: number }>();
+        for (const h of withCat) {
+            const c = w.get(h.category) ?? { weight: 0, count: 0 };
+            c.weight += h.weightPct; c.count += 1;
+            w.set(h.category, c);
+        }
+        return [...w.entries()].sort((a, b) => b[1].weight - a[1].weight);
+    }, [withCat]);
+
+    const shown = useMemo(() => {
+        const list = withCat.filter((h) => cat === ALL || h.category === cat);
+        const by: Record<SortKey, (a: Holding, b: Holding) => number> = {
+            weight: (a, b) => b.weightPct - a.weightPct,
+            return: (a, b) => (b.returnPct ?? -Infinity) - (a.returnPct ?? -Infinity),
+            az: (a, b) => (a.ticker ?? a.name).localeCompare(b.ticker ?? b.name),
+        };
+        return [...list].sort(by[sort]);
+    }, [withCat, cat, sort]);
+
+    // Default to (and keep a valid) selection: the first visible row, so the
+    // detail always matches something in the filtered list.
     useEffect(() => {
-        if (!onSelect || rows.length === 0) return;
-        if (!selectedTicker || !rows.some((r) => r.ticker === selectedTicker)) onSelect(rows[0]);
-    }, [rows, selectedTicker, onSelect]);
+        if (!onSelect || shown.length === 0) return;
+        if (!selectedTicker || !shown.some((r) => r.ticker === selectedTicker)) onSelect(shown[0]);
+    }, [shown, selectedTicker, onSelect]);
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl flex flex-col h-full overflow-hidden">
-            {/* Header */}
-            <div className="shrink-0 p-5 pb-3">
+        <div className={`flex flex-col h-full overflow-hidden ${bare ? "" : "bg-base-100 border border-base-300 rounded-2xl"}`}>
+            {/* Header: what this is (+ count), how it's ordered, what it's filtered
+                to, then the hint, which sits right above the rows it refers to. */}
+            <div className="shrink-0 space-y-2.5 p-5 pb-2">
                 {title !== "" && <h2 className="text-lg font-semibold text-base-content">{title ?? "My Portfolio Holdings"}</h2>}
-                <p className="text-sm text-base-content/60 mt-0.5 flex items-center gap-2">
-                    <span className="relative flex h-2 w-2" aria-hidden="true">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-                    </span>
-                    Live Positions
-                </p>
-                {onSelect && <p className="text-xs text-base-content/70 mt-1.5">👇 Click any holding to view its details</p>}
+                <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm font-medium text-base-content/80">
+                        <span className="relative flex h-2 w-2" aria-hidden="true">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                        </span>
+                        Live positions
+                    </p>
+                    {rows.length > 0 && (
+                        <span className="text-xs tabular-nums text-base-content/60">
+                            {cat === ALL ? `${rows.length} holdings` : `${shown.length} of ${rows.length}`}
+                        </span>
+                    )}
+                </div>
+                {rows.length > 0 && (
+                    <>
+                        <div className="flex items-center gap-1">
+                            <span className="w-14 shrink-0 text-xs text-base-content/60">Sort</span>
+                            {SORTS.map((s) => <Chip key={s.key} on={sort === s.key} onClick={() => setSort(s.key)}>{s.label}</Chip>)}
+                        </div>
+                        <label className="flex items-center gap-1">
+                            <span className="w-14 shrink-0 text-xs text-base-content/60">Category</span>
+                            <select
+                                value={cat}
+                                onChange={(e) => setCat(e.target.value)}
+                                className="select select-xs min-w-0 flex-1 rounded-full border-base-300 bg-base-100 text-xs"
+                            >
+                                <option value={ALL}>All categories ({rows.length})</option>
+                                {cats.map(([name, c]) => <option key={name} value={name}>{name} ({c.count})</option>)}
+                            </select>
+                        </label>
+                    </>
+                )}
+                {onSelect && <p className="pt-0.5 text-[11px] text-base-content/60">Click any holding to view its details</p>}
             </div>
 
             {error ? (
@@ -123,7 +199,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect }: Holding
                             <div className="text-right">Weight</div>
                             <div className="text-right whitespace-nowrap">Total Return</div>
                         </li>
-                        {rows.map((h, i) => {
+                        {shown.map((h, i) => {
                             const isSelected = selectedTicker === h.ticker;
                             const displayName = cleanFundName(h.name);
                             return (

@@ -88,7 +88,8 @@ function SentimentBar({ a }: { a: Analysts }) {
     );
 }
 
-export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
+// `bare` drops the card chrome for use inside a shared container.
+export const HoldingsMeta = ({ holding, bare = false }: { holding: Holding | null; bare?: boolean }) => {
     const [metaMap, setMetaMap] = useState<MetaMap | null>(null);
     const [prices, setPrices] = useState<PriceMap>({});
     const [quotes, setQuotes] = useState<QuoteMap>({});
@@ -96,13 +97,11 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
 
     useEffect(() => {
         let cancelled = false;
-        // Static, cache-revalidated files — no per-visit API calls.
-        fetch("/holdingsMeta.json", { cache: "no-cache" })
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        // Weekly-baked files (password-gated) — no per-visit third-party API calls.
+        cachedJson("/api/finance/meta")
             .then((d) => { if (!cancelled) setMetaMap(d.meta ?? {}); })
             .catch(() => { if (!cancelled) { setMetaMap({}); setError(true); } });
-        fetch("/holdingsHistory.json", { cache: "no-cache" })
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        cachedJson("/api/finance/history")
             .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
             .catch(() => { /* sparkline just hides */ });
         cachedJson("/api/quotes")
@@ -142,7 +141,7 @@ export const HoldingsMeta = ({ holding }: { holding: Holding | null }) => {
     if (holding?.returnPct != null) facts.push({ label: "Total return", value: pct(holding.returnPct), cls: holding.returnPct >= 0 ? "text-success" : "text-error" });
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col h-full min-h-[18rem]">
+        <div className={`p-6 flex flex-col h-full min-h-[18rem] ${bare ? "" : "bg-base-100 border border-base-300 rounded-2xl"}`}>
             {!holding ? (
                 <div className="flex-1 flex items-center justify-center text-sm text-base-content/40 text-center">
                     {metaMap ? "Click any holding to view its details." : "Loading…"}

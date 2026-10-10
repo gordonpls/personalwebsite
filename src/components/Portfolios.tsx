@@ -4,6 +4,12 @@ import { HoldingsHeatmap } from "./HoldingsHeatmap";
 import { HoldingsPerformance } from "./HoldingsPerformance";
 import { HoldingsMeta } from "./HoldingsMeta";
 import { PortfolioAnalytics } from "./PortfolioAnalytics";
+import { HoldingSpotlight } from "./HoldingSpotlight";
+import { LiveTickerTape } from "./TickerTape";
+import { ReturnDrivers } from "./ReturnDrivers";
+import { MonthlyReturns } from "./MonthlyReturns";
+import { DrawdownChart } from "./DrawdownChart";
+import { RiskReturnMap } from "./RiskReturnMap";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 // "All" is special: it means no portfolio filter — the heatmap, allocation,
@@ -19,10 +25,14 @@ const SCOPE_OPTIONS = TABS.map((t) => t.id);
 
 // Quick-nav pills that jump to each section of the dashboard.
 const SECTIONS = [
+    { id: "sec-performance", label: "Performance" },
     { id: "sec-holdings", label: "Holdings" },
     { id: "sec-allocation", label: "Allocation" },
     { id: "sec-heatmap", label: "Heatmap" },
-    { id: "sec-performance", label: "Performance" },
+    { id: "sec-drivers", label: "Drivers" },
+    { id: "sec-calendar", label: "Monthly" },
+    { id: "sec-drawdown", label: "Drawdown" },
+    { id: "sec-risk", label: "Risk" },
 ];
 const scrollToSection = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -38,6 +48,15 @@ export const Portfolios = () => {
     // The "All" sentinel = no filter. Convert to undefined for the child components
     // (Holdings/Heatmap/Analytics) that expect undefined for "every holding."
     const portfolioFilter = active === ALL ? undefined : active;
+
+    // Spotlight → open that holding in the detail card. Switch to "All" so the
+    // holding is guaranteed to be in the list (Holdings would otherwise reset
+    // the selection to the first row).
+    const viewHolding = (h: Holding) => {
+        setActive(ALL);
+        setSelected(h);
+        scrollToSection("sec-holdings");
+    };
 
     // Scroll-spy: highlight whichever section is currently near the middle of the
     // viewport, so the floating section nav always reflects where you are.
@@ -59,75 +78,96 @@ export const Portfolios = () => {
         return () => io.disconnect();
     }, []);
 
+    // Layout, top to bottom: live tape → title + scope tabs → headline stats →
+    // performance with the spotlight beside it → holdings / detail / allocation
+    // in one row → heatmap beside return drivers → monthly calendar → drawdown
+    // beside risk vs return →
+    // fine print. Rows share one gap and fixed
+    // heights on desktop so cards line up instead of leaving ragged gaps.
     return (
-        <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-base-content">Personal Portfolio</h2>
+        <div className="space-y-6">
+            {/* Flush with the window chrome: cancels the page's px-4 / pt-4. */}
+            <LiveTickerTape className="-mx-4 -mt-4" />
 
-            {/* Disclaimer */}
-            <div>
-                <p className="text-xs text-base-content/50 leading-relaxed">
-                    <span className="font-semibold text-base-content/70">Not financial advice.</span>{" "}
-                    The holdings, weights, and performance shown here are my own and are provided for
-                    informational and illustrative purposes only. Nothing on this page is investment advice
-                    or a recommendation to buy or sell any security. Past performance does not guarantee
-                    future results. Do your own research and consult a licensed financial professional
-                    before making investment decisions.
-                </p>
+            <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                <div className="min-w-0">
+                    <h2 className="text-2xl font-bold tracking-tight text-base-content">Personal Portfolio</h2>
+                    <p className="mt-0.5 text-sm text-base-content/70">{tab.desc}</p>
+                </div>
+                <div className="flex w-full min-w-0 sm:w-auto">
+                    {/* One line at every width: scrolls sideways on phones instead of wrapping. */}
+                    <div role="tablist" aria-label="Portfolios" className="inline-flex min-w-0 gap-1 overflow-x-auto rounded-xl bg-base-200 p-1">
+                        {TABS.map((t) => (
+                            <button
+                                key={t.id}
+                                role="tab"
+                                aria-selected={active === t.id}
+                                onClick={() => changeTab(t.id)}
+                                className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${active === t.id
+                                    ? "bg-primary text-primary-content shadow-sm"
+                                    : "text-base-content/70 hover:text-base-content"
+                                    }`}
+                            >
+                                {t.id}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </header>
+
+            {/* Headline numbers for the selected scope. */}
+            <PortfolioAnalytics
+                show="risk"
+                portfolio={portfolioFilter}
+                scopeLabel={active}
+                onScopeChange={changeTab}
+                scopeOptions={SCOPE_OPTIONS}
+            />
+
+            {/* Headline row: performance (wide) + holding of the day. */}
+            <div className="grid gap-4 lg:grid-cols-12">
+                <section id="sec-performance" className="scroll-mt-28 min-w-0 lg:col-span-8">
+                    <HoldingsPerformance
+                        title="Performance"
+                        portfolio={portfolioFilter}
+                        scopeLabel={active}
+                        onScopeChange={changeTab}
+                        scopeOptions={SCOPE_OPTIONS}
+                    />
+                </section>
+                <aside className="min-w-0 lg:col-span-4">
+                    <HoldingSpotlight onView={viewHolding} />
+                </aside>
             </div>
 
-            {/* Portfolio selector (drives every tab-scoped component below) */}
-            <div role="tablist" aria-label="Portfolios" className="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-base-200">
-                {TABS.map((t) => (
-                    <button
-                        key={t.id}
-                        role="tab"
-                        aria-selected={active === t.id}
-                        onClick={() => changeTab(t.id)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${active === t.id
-                            ? "bg-primary text-primary-content shadow-sm"
-                            : "text-base-content/50 hover:text-base-content/80"
-                            }`}
-                    >
-                        {t.id}
-                    </button>
-                ))}
-            </div>
-
-            <p className="text-sm text-base-content/60">{tab.desc}</p>
-
-            {/* Holdings (compact list) + selected holding detail. On mobile the
-                list is deliberately short so the detail card peeks into view right
-                below it — a fade + cue signal there's more. Full two-pane on lg. */}
-            <section id="sec-holdings" className="scroll-mt-28 flex flex-col gap-3 lg:flex-row lg:gap-4 lg:h-[34rem]">
-                <div className="relative w-full h-[16rem] lg:w-96 lg:h-full lg:shrink-0">
-                    <Holdings portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
-                    <div aria-hidden="true" className="lg:hidden pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-base-100 to-transparent" />
+            {/* Holdings: the list (with category + sort) and the selected
+                holding's detail share one card, beside allocation. On mobile the
+                detail stacks under the list inside the same card. */}
+            <section id="sec-holdings" className="scroll-mt-28 grid gap-4 lg:grid-cols-12">
+                <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 lg:col-span-12 lg:h-[34rem] lg:flex-row xl:col-span-9">
+                    <div className="relative h-[24rem] shrink-0 lg:h-full lg:w-96 lg:border-r lg:border-base-300">
+                        <Holdings bare portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
+                        <div aria-hidden="true" className="lg:hidden pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent" />
+                    </div>
+                    <div className="min-w-0 flex-1 border-t border-base-300 lg:h-full lg:border-t-0">
+                        <HoldingsMeta bare holding={selected} />
+                    </div>
                 </div>
-                <div className="lg:hidden flex flex-col items-center gap-0.5 text-xs font-medium text-primary">
-                    <span>Details for the selected holding</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-4 w-4 animate-bounce" aria-hidden="true">
-                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </div>
-                <div className="w-full lg:flex-1 lg:min-w-0 lg:h-full">
-                    <HoldingsMeta holding={selected} />
-                </div>
-            </section>
-
-            {/* Allocation donut + risk stats (left) beside the heatmap (right) —
-                all three tab-scoped, with inline scope pickers so you don't have to
-                scroll back up to the global tabs to see or change the scope. The
-                row is sized so the donut + Risk cards split evenly. */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:h-[36rem]">
-                <div id="sec-allocation" className="scroll-mt-28 w-full lg:w-96 lg:shrink-0 flex flex-col gap-4 lg:h-full">
+                <div id="sec-allocation" className="scroll-mt-28 flex min-w-0 flex-col lg:col-span-12 lg:h-[22rem] xl:col-span-3 xl:h-[34rem]">
                     <PortfolioAnalytics
+                        show="allocation"
                         portfolio={portfolioFilter}
                         scopeLabel={active}
                         onScopeChange={changeTab}
                         scopeOptions={SCOPE_OPTIONS}
                     />
                 </div>
-                <div id="sec-heatmap" className="scroll-mt-28 w-full lg:flex-1 lg:min-w-0 lg:h-full">
+            </section>
+
+            {/* Today's map beside what drove the period's return. */}
+            <div className="grid gap-4 lg:grid-cols-12">
+                {/* Row height follows the drivers card; the heatmap stretches to match. */}
+                <section id="sec-heatmap" className="scroll-mt-28 min-w-0 lg:col-span-7 lg:min-h-[34rem] xl:col-span-8">
                     <HoldingsHeatmap
                         portfolio={portfolioFilter}
                         title="Heatmap"
@@ -135,20 +175,54 @@ export const Portfolios = () => {
                         onScopeChange={changeTab}
                         scopeOptions={SCOPE_OPTIONS}
                     />
-                </div>
+                </section>
+                <section id="sec-drivers" className="scroll-mt-28 min-w-0 lg:col-span-5 xl:col-span-4">
+                    <ReturnDrivers
+                        portfolio={portfolioFilter}
+                        scopeLabel={active}
+                        onScopeChange={changeTab}
+                        scopeOptions={SCOPE_OPTIONS}
+                    />
+                </section>
             </div>
 
-            {/* Overall performance: now also tab-scoped, with its own pill in the
-                header. Pinned at the bottom as the page's "summary" view. */}
-            <section id="sec-performance" className="scroll-mt-28">
-                <HoldingsPerformance
-                    title="Performance"
+            <section id="sec-calendar" className="scroll-mt-28">
+                <MonthlyReturns
                     portfolio={portfolioFilter}
                     scopeLabel={active}
                     onScopeChange={changeTab}
                     scopeOptions={SCOPE_OPTIONS}
                 />
             </section>
+
+            {/* How deep it fell beside how bumpy each position was for its return. */}
+            <div className="grid gap-4 xl:grid-cols-2">
+                <section id="sec-drawdown" className="scroll-mt-28 min-w-0">
+                    <DrawdownChart
+                        portfolio={portfolioFilter}
+                        scopeLabel={active}
+                        onScopeChange={changeTab}
+                        scopeOptions={SCOPE_OPTIONS}
+                    />
+                </section>
+                <section id="sec-risk" className="scroll-mt-28 min-w-0">
+                    <RiskReturnMap
+                        portfolio={portfolioFilter}
+                        scopeLabel={active}
+                        onScopeChange={changeTab}
+                        scopeOptions={SCOPE_OPTIONS}
+                    />
+                </section>
+            </div>
+
+            <p className="border-t border-base-300 pt-4 text-xs leading-relaxed text-base-content/60">
+                <span className="font-semibold text-base-content/70">Not financial advice.</span>{" "}
+                The holdings, weights, and performance shown here are my own and are provided for
+                informational and illustrative purposes only. Nothing on this page is investment advice
+                or a recommendation to buy or sell any security. Past performance does not guarantee
+                future results. Do your own research and consult a licensed financial professional
+                before making investment decisions.
+            </p>
 
             {/* Floating section nav — fixed to the viewport so it's reachable at
                 every scroll position. Highlights the section you're currently in. */}

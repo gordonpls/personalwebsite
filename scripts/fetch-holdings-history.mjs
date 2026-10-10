@@ -4,16 +4,16 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Build-time only. Bakes two static files the finance UI reads at runtime (so
-// there are zero per-visit API calls):
-//   • public/holdingsHistory.json — dividend/split-adjusted daily closes
+// Build-time only. Bakes two data files the finance API serves (password-gated,
+// via /api/finance/history + /meta) so there are zero per-visit API calls:
+//   • server/data/holdingsHistory.json — dividend/split-adjusted daily closes
 //     (total-return basis) from Yahoo Finance; powers the performance chart.
-//   • public/holdingsMeta.json — per-holding metadata: name/type/exchange/52wk
+//   • server/data/holdingsMeta.json — per-holding metadata: name/type/exchange/52wk
 //     from the same Yahoo response (free), plus logo/industry/market-cap/site
 //     from Finnhub for stocks. Powers the holding detail panel.
 const HOLDINGS_URL = process.env.HOLDINGS_URL || "http://localhost:3000/api/holdings";
-const HISTORY_PATH = resolve(__dirname, "../public/holdingsHistory.json");
-const META_PATH = resolve(__dirname, "../public/holdingsMeta.json");
+const HISTORY_PATH = resolve(__dirname, "../server/data/holdingsHistory.json");
+const META_PATH = resolve(__dirname, "../server/data/holdingsMeta.json");
 const HISTORY_DAYS = 365 * 6 + 14;   // ~6 years — covers the "All" (since-inception) view
 const RECENT_DAILY_DAYS = 400;       // keep daily granularity within ~13 months; thin older to weekly
 const DELAY_MS = 250;                // light pacing for Yahoo (Finnhub is throttled separately)

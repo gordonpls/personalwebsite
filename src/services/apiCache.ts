@@ -7,6 +7,13 @@
 // repeated calls into a single in-flight request, caches the result briefly so
 // re-mounts/SPA navigations don't refetch, and times out so a stalled backend
 // fails fast (component shows its error state) instead of spinning forever.
+//
+// The investments endpoints are password-gated, so requests carry the finance
+// token (see financeAuth.ts).
+
+import { FINANCE_AUTH_EVENT, financeAuthHeaders, clearFinanceToken } from "./financeAuth";
+
+const GATED = ["/api/holdings", "/api/quotes", "/api/finance/history", "/api/finance/meta"];
 
 type Entry = { at: number; promise: Promise<unknown> };
 
@@ -17,8 +24,10 @@ const TIMEOUT_MS = 12_000;
 function fetchJson(url: string): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    return fetch(url, { signal: controller.signal })
+    return fetch(url, { signal: controller.signal, headers: financeAuthHeaders() })
         .then((r) => {
+            // Token expired / password rotated → back to the teaser.
+            if (r.status === 401 && GATED.includes(url)) clearFinanceToken();
             if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
             return r.json();
         })
@@ -39,3 +48,6 @@ export function cachedJson<T = any>(url: string, ttlMs = DEFAULT_TTL): Promise<T
     cache.set(url, { at: Date.now(), promise });
     return promise as Promise<T>;
 }
+
+// Locking or unlocking changes what the gated URLs should return.
+if (typeof window !== "undefined") window.addEventListener(FINANCE_AUTH_EVENT, () => cache.clear());

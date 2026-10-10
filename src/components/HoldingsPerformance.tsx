@@ -10,6 +10,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { PortfolioScopePill } from "./PortfolioScopePill";
+import { cutoffFor, parseLocalDate, type Range } from "../utils/portfolioMath";
 
 interface Holding {
     portfolio: string;
@@ -21,7 +22,6 @@ interface Holding {
 }
 type PriceMap = Record<string, Record<string, number>>; // ticker -> { "YYYY-MM-DD": close }
 
-type Range = "1W" | "1M" | "3M" | "YTD" | "1Y" | "All";
 const RANGES: Range[] = ["1W", "1M", "3M", "YTD", "1Y", "All"];
 const RANGE_LABEL: Record<Range, string> = {
     "1W": "past week",
@@ -31,29 +31,6 @@ const RANGE_LABEL: Record<Range, string> = {
     "1Y": "past year",
     All: "all time",
 };
-
-function parseLocalDate(s: string): Date {
-    const [y, m, d] = s.split("-").map(Number);
-    return new Date(y, (m ?? 1) - 1, d ?? 1);
-}
-
-// Local-date → "YYYY-MM-DD". (toISOString would shift a local midnight to the
-// previous UTC day for visitors east of UTC, moving every range cutoff a day early.)
-function toLocalDateStr(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Anchor the cutoff to the most recent data point we have (not "today"), so a
-// stale bake on a weekend doesn't leave shorter ranges with an empty window.
-function cutoffFor(range: Range, latest: Date): string {
-    const d = new Date(latest);
-    if (range === "YTD") return `${d.getFullYear()}-01-01`;
-    if (range === "1Y") d.setFullYear(d.getFullYear() - 1);
-    else if (range === "3M") d.setMonth(d.getMonth() - 3);
-    else if (range === "1M") d.setMonth(d.getMonth() - 1);
-    else if (range === "1W") d.setDate(d.getDate() - 7);
-    return toLocalDateStr(d);
-}
 
 interface ChartPoint { date: string; value: number; benchmark?: number; }
 const BENCHMARK_TICKER = "SPY"; // S&P 500 proxy, baked even though it isn't a holding
@@ -259,10 +236,9 @@ export const HoldingsPerformance = ({
             .then((d) => { if (!cancelled) { setHoldings(d.holdings ?? []); setTotalReturnPct(d.totalReturnPct ?? null); } })
             .catch(() => { if (!cancelled) setError(true); });
 
-        // no-cache: always revalidate so a redeploy/weekly refresh of this static
-        // file is picked up instead of serving a stale (shorter) cached copy.
-        fetch("/holdingsHistory.json", { cache: "no-cache" })
-            .then((r) => r.ok ? r.json() : Promise.reject())
+        // Weekly-baked prices, password-gated; the server sends ETags so a refresh
+        // is picked up while unchanged data revalidates as a cheap 304.
+        cachedJson("/api/finance/history")
             .then((d) => { if (!cancelled) setPrices(d.prices ?? {}); })
             .catch(() => { if (!cancelled) setPrices({}); });
 

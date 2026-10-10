@@ -313,6 +313,19 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Ticker tape: shifts by exactly one measured copy of the list (set inline by
+   TickerTape), so the wrap lands on an identical frame. */
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(var(--ticker-shift, -50%)); }
+}
+.ticker-track { animation: ticker-scroll var(--ticker-duration, 60s) linear infinite; }
+.ticker-tape:hover .ticker-track { animation-play-state: paused; }
+.ticker-viewport {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 3%, black 95%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, black 3%, black 95%, transparent 100%);
+}
+
 /* Respect prefers-reduced-motion: kill the decorative animations so the page
    still feels alive (transitions) without anything looping in the background. */
 @media (prefers-reduced-motion: reduce) {
@@ -321,6 +334,7 @@
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
     }
+    .ticker-track,
     .group:hover .project-shimmer,
     .group:hover .project-line,
     .project-peg-pulse,
@@ -330,4 +344,5 @@
     .typing-greeting-refined .caret.idle {
         animation: none !important;
     }
+    .ticker-viewport { overflow-x: auto; }
 }

@@ -2,6 +2,7 @@ import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { Portfolios } from "./Portfolios";
 import { PortfolioArchitecture } from "./PortfolioArchitecture";
+import { FinanceGate } from "./FinanceGate";
 
 export default function Portfolio() {
     return (
@@ -10,7 +11,9 @@ export default function Portfolio() {
             <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
                 <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md space-y-6">
                     <section>
-                        <Portfolios />
+                        <FinanceGate>
+                            <Portfolios />
+                        </FinanceGate>
                     </section>
                 </div>
             </div>

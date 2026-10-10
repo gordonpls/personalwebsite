@@ -5,6 +5,7 @@ const plaidRoutes = require("./routes/plaid");
 const spotifyRoutes = require("./routes/spotify");
 const fortuneRoutes = require("./routes/fortune");
 const adminRoutes = require("./routes/admin");
+const financeRoutes = require("./routes/finance");
 const analyticsRoutes = require("./routes/analytics");
 const blogRoutes = require("./routes/blog");
 
@@ -43,6 +44,7 @@ app.use("/api", plaidRoutes);
 app.use("/api", spotifyRoutes);
 app.use("/api", fortuneRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/finance", financeRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/blog", blogRoutes);
 

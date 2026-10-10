@@ -12,7 +12,7 @@ const CONTENT: ArchitectureContent = {
         { label: "Quality", items: ["ESLint", "husky + lint-staged", "gitleaks secret scan"] },
     ],
     dataFlow:
-        "Plaid is the only runtime source. The Express /api/holdings route reshapes raw Plaid holdings into privacy-safe rows (ticker, relative weight, and cost-basis return, never dollar amounts), cached server-side for 6 hours with in-flight dedup and serve-stale-on-error. Live daily quotes come from Finnhub via /api/quotes with a 2-minute cache. Everything heavy is baked at schedule time: a weekly GitHub Actions job pulls ~6 years of dividend-adjusted prices and dividend events from Yahoo (plus SPY as the S&P 500 benchmark), and per-holding metrics, profiles, and analyst data from Finnhub (throttled to ≤1 req/s). It commits the JSON and rsyncs it live. The React app reads those static files (cache-revalidated) and computes every return on the page (chart, risk-card 1Y, sparkline, per-position total return) from the same baked adjusted closes, so widgets never disagree. Per-visit third-party API cost is ≈ zero.",
+        "Plaid is the only runtime source. The Express /api/holdings route reshapes raw Plaid holdings into privacy-safe rows (ticker, relative weight, and cost-basis return, never dollar amounts), cached server-side for 6 hours with in-flight dedup and serve-stale-on-error. Live daily quotes come from Finnhub via /api/quotes with a 2-minute cache. Everything heavy is baked at schedule time: a weekly GitHub Actions job pulls ~6 years of dividend-adjusted prices and dividend events from Yahoo (plus SPY as the S&P 500 benchmark), and per-holding metrics, profiles, and analyst data from Finnhub (throttled to ≤1 req/s). It commits the JSON and rsyncs it to the server, which serves it behind the same password gate (/api/finance/history and /meta, ETag-revalidated). The React app computes every return on the page (chart, risk-card 1Y, sparkline, per-position total return) from the same baked adjusted closes, so widgets never disagree. Per-visit third-party API cost is ≈ zero.",
     diagram: ` Plaid (brokerage)
    │ runtime
    ▼
@@ -21,7 +21,7 @@ const CONTENT: ArchitectureContent = {
    │ /holdings (6h) · /quotes (2-min)
    ▼
  React + Vite (Recharts, framer-motion)
-   ▲ reads static JSON (revalidated)
+   ▲ gated /api/finance/history + /meta
    │
  GitHub Actions, weekly bake
    Yahoo:   6y adj. closes + dividends

@@ -4,6 +4,7 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const items = require("../lib/plaid-items");
 const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
 const { sendPlaidRelinkEmail } = require("../lib/notify");
+const { requireFinance } = require("../lib/admin-auth");
 
 const router = express.Router();
 
@@ -391,19 +392,23 @@ async function fetchHoldingsPayload() {
 async function fetchQuotesPayload(tickers) {
     const key = process.env.FINNHUB_API_KEY;
     const quotes = {};
+    const prices = {}; // public market price per share (for the ticker tape), not a position value
     await Promise.all(tickers.map(async (t) => {
         try {
             const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(t)}&token=${key}`);
             const q = await r.json();
             // dp = daily percent change; c = current price (0 for symbols Finnhub can't quote)
-            if (q && typeof q.dp === "number" && q.c) quotes[t] = Math.round(q.dp * 100) / 100;
+            if (q && typeof q.dp === "number" && q.c) {
+                quotes[t] = Math.round(q.dp * 100) / 100;
+                prices[t] = Math.round(q.c * 100) / 100;
+            }
         } catch { /* skip unquotable ticker */ }
     }));
-    return { asOf: new Date().toISOString(), quotes };
+    return { asOf: new Date().toISOString(), quotes, prices };
 }
 
-// ── Public, privacy-safe holdings: portfolio + ticker + relative weight only ──
-router.get("/holdings", async (_req, res) => {
+// ── Password-gated (FINANCE_PASSWORD), privacy-safe holdings: portfolio + ticker + relative weight only ──
+router.get("/holdings", requireFinance, async (_req, res) => {
     if (!getTokens().length) return res.status(503).json({ error: "No access tokens configured" });
     try {
         res.json(await getHoldings(fetchHoldingsPayload));
@@ -413,8 +418,8 @@ router.get("/holdings", async (_req, res) => {
     }
 });
 
-// ── Public: live daily % change per holding ticker (Finnhub), for the heatmap ──
-router.get("/quotes", async (_req, res) => {
+// ── Password-gated: live daily % change per holding ticker (Finnhub), for the heatmap ──
+router.get("/quotes", requireFinance, async (_req, res) => {
     if (!process.env.FINNHUB_API_KEY) return res.status(503).json({ error: "No quote provider configured" });
     try {
         const h = await getHoldings(fetchHoldingsPayload); // reuse cached holdings for the ticker list
