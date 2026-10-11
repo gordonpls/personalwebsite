@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "./ScrollArea";
 import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
 import { cachedJson } from "../services/apiCache";
@@ -23,6 +23,9 @@ interface HoldingsProps {
     selectedTicker?: string | null;     // highlighted row
     onSelect?: (h: Holding) => void;    // row click; also auto-selects the first row
     bare?: boolean;                     // no card chrome: for use inside a shared container
+    // Bring a holding into view: scroll the list to its row and flash it. A new
+    // `nonce` replays it (e.g. clicking "View details" twice on the same pick).
+    reveal?: { ticker: string; nonce: number } | null;
 }
 
 type SortKey = "weight" | "return" | "az";
@@ -66,12 +69,41 @@ function cleanFundName(raw: string | null | undefined): string {
     return s.trim() || raw;
 }
 
-export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = false }: HoldingsProps = {}) => {
+// Resolves once the window has stopped scrolling (smooth scrolls take longer
+// the further they travel), or after `maxMs` regardless.
+function waitForPageScroll(maxMs = 1500): Promise<void> {
+    return new Promise((resolve) => {
+        let last = window.scrollY, still = 0;
+        const start = performance.now();
+        const tick = () => {
+            const y = window.scrollY;
+            still = y === last ? still + 1 : 0;
+            last = y;
+            // ~6 unchanged frames ≈ 100ms of stillness.
+            if (still >= 6 || performance.now() - start > maxMs) resolve();
+            else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    });
+}
+
+// Nearest ancestor that scrolls vertically (the list's scroll viewport).
+function scrollParent(el: HTMLElement): HTMLElement | null {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+        const oy = getComputedStyle(p).overflowY;
+        if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight) return p;
+    }
+    return null;
+}
+
+export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = false, reveal = null }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [meta, setMeta] = useState<MetaMap>({});
     const [error, setError] = useState(false);
     const [sort, setSort] = useState<SortKey>("weight");
     const [cat, setCat] = useState<string>(ALL);
+    const [flash, setFlash] = useState<string | null>(null);
+    const listRef = useRef<HTMLUListElement>(null);
 
     // A category from one portfolio may not exist in the next.
     useEffect(() => { setCat(ALL); }, [portfolio]);
@@ -125,12 +157,49 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = fa
         return [...list].sort(by[sort]);
     }, [withCat, cat, sort]);
 
+    // A reveal in progress owns the selection until it has cleared the filter.
+    const pendingReveal = useRef<string | null>(null);
+
+    // Reveal: if the category filter hides the holding, clear it; then wait for
+    // the page's own smooth scroll to settle, glide the list so the row sits in
+    // the middle, and flash it once it arrives.
+    const revealNonce = reveal?.nonce;
+    useEffect(() => {
+        if (!reveal) return;
+        pendingReveal.current = reveal.ticker;
+        if (cat !== ALL && !shown.some((h) => h.ticker === reveal.ticker)) setCat(ALL);
+        let cancelled = false;
+        const timers: ReturnType<typeof setTimeout>[] = [];
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        waitForPageScroll().then(() => {
+            pendingReveal.current = null;
+            if (cancelled) return;
+            const row = listRef.current?.querySelector<HTMLElement>(`[data-ticker="${CSS.escape(reveal.ticker)}"]`);
+            if (!row) return;
+            const box = scrollParent(row);
+            if (box) {
+                const r = row.getBoundingClientRect(), b = box.getBoundingClientRect();
+                box.scrollBy({ top: r.top - b.top - (b.height - r.height) / 2, behavior: reduce ? "auto" : "smooth" });
+            }
+            // Flash after the list has (roughly) finished gliding.
+            timers.push(setTimeout(() => { if (!cancelled) setFlash(reveal.ticker); }, reduce ? 0 : 450));
+            timers.push(setTimeout(() => { if (!cancelled) setFlash(null); }, reduce ? 1600 : 2050));
+        });
+        return () => { cancelled = true; timers.forEach(clearTimeout); };
+        // Re-run only for a new reveal request, not on every filter/sort change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [revealNonce]);
+
     // Default to (and keep a valid) selection: the first visible row, so the
-    // detail always matches something in the filtered list.
+    // detail always matches something in the filtered list. Declared after the
+    // reveal effect on purpose: effects run in order, so a new reveal has marked
+    // its holding as pending before this runs and would otherwise replace it.
     useEffect(() => {
         if (!onSelect || shown.length === 0) return;
+        if (pendingReveal.current && pendingReveal.current === selectedTicker) return;
         if (!selectedTicker || !shown.some((r) => r.ticker === selectedTicker)) onSelect(shown[0]);
     }, [shown, selectedTicker, onSelect]);
+
 
     return (
         <div className={`flex flex-col h-full overflow-hidden ${bare ? "" : "bg-base-100 border border-base-300 rounded-2xl"}`}>
@@ -186,7 +255,7 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = fa
                 <p className="text-sm text-base-content/50 py-8 text-center px-5">No holdings to display.</p>
             ) : (
                 <ScrollArea className="flex-1 min-h-0" viewportClassName="max-h-[26rem] lg:max-h-none" contentClassName="px-2 pb-2">
-                    <ul className="list">
+                    <ul ref={listRef} className="list">
                         {/* Column-header row using the same grid template as list-row.
                             "Holding" spans the logo + name columns so it sits flush
                             left with the row content below. The fixed-width Weight
@@ -205,9 +274,10 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = fa
                             return (
                                 <li
                                     key={`${h.ticker ?? h.name}-${i}`}
+                                    data-ticker={h.ticker ?? undefined}
                                     onClick={() => onSelect?.(h)}
                                     aria-selected={isSelected}
-                                    className={`list-row !py-1.5 !px-3 cursor-pointer transition-colors items-center ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"}`}
+                                    className={`list-row !py-1.5 !px-3 cursor-pointer transition-colors items-center ${isSelected ? "bg-primary/10" : "hover:bg-base-200/60"} ${flash && flash === h.ticker ? "holding-flash" : ""}`}
                                     style={{ gridTemplateColumns: "auto minmax(0, 1fr) 3.5rem 5.5rem" }}
                                 >
                                     <HoldingLogo ticker={h.ticker} meta={meta[h.ticker ?? ""]} />

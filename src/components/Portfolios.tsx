@@ -55,10 +55,12 @@ export const Portfolios = () => {
     // Spotlight → open that holding in the detail card. Switch to "All" so the
     // holding is guaranteed to be in the list (Holdings would otherwise reset
     // the selection to the first row).
+    const [reveal, setReveal] = useState<{ ticker: string; nonce: number } | null>(null);
     const viewHolding = (h: Holding) => {
         setActive(ALL);
         setSelected(h);
         scrollToSection("sec-holdings");
+        if (h.ticker) setReveal({ ticker: h.ticker, nonce: Date.now() });
     };
 
     // Scroll-spy: highlight whichever section is currently near the middle of the
@@ -134,7 +136,7 @@ export const Portfolios = () => {
             <section id="sec-holdings" className="scroll-mt-28 grid gap-4 lg:grid-cols-12">
                 <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 lg:col-span-12 lg:h-[34rem] lg:flex-row xl:col-span-9">
                     <div className="relative h-[24rem] shrink-0 lg:h-full lg:w-96 lg:border-r lg:border-base-300">
-                        <Holdings bare portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} />
+                        <Holdings bare portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} reveal={reveal} />
                         <div aria-hidden="true" className="lg:hidden pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent" />
                     </div>
                     <div className="min-w-0 flex-1 border-t border-base-300 lg:h-full lg:border-t-0">
