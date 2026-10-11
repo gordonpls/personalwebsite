@@ -318,6 +318,167 @@ function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => v
   );
 }
 
+// ── Visitors ─────────────────────────────────────────────────────────────
+
+interface JourneyEvent { at: string; type: string; path: string | null; project: string | null }
+interface VisitorRow {
+  visitor_hash: string; first_at: string; last_at: string;
+  views: number; pages: number; clicks: number;
+  country: string | null; region: string | null;
+  device_type: string | null; browser: string | null; os: string | null;
+  referrer_host: string | null; journey: JourneyEvent[];
+}
+
+const PAGE_SIZE = 50;
+const regionNames = (() => { try { return new Intl.DisplayNames(["en"], { type: "region" }); } catch { return null; } })();
+const countryName = (c: string | null) => {
+  if (!c) return null;
+  if (/^[A-Z]{2}$/.test(c)) { try { return regionNames?.of(c) ?? c; } catch { return c; } }
+  return c;
+};
+const placeOf = (v: VisitorRow) => [v.region, countryName(v.country)].filter(Boolean).join(", ") || "Unknown location";
+const ago = (iso: string) => {
+  const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  if (m < 60 * 24) return `${Math.round(m / 60)}h ago`;
+  return when(iso);
+};
+const timeOnly = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const span = (a: string, b: string) => {
+  const m = Math.round((Date.parse(b) - Date.parse(a)) / 60000);
+  return m < 1 ? "under a minute" : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
+};
+const EVENT_LABELS: Record<string, string> = {
+  page_view: "Viewed",
+  project_card_clicked: "Opened card",
+  project_demo_clicked: "Clicked demo",
+};
+const eventLabel = (t: string) => EVENT_LABELS[t] ?? t.replace(/_/g, " ");
+
+// One row per visitor, newest activity first; a row expands into the pages and
+// clicks in order. Visitor IDs rotate with the hash salt (daily by default), so
+// the same person on two days shows up as two rows.
+function Visitors({ range, onLogout }: { range: string; onLogout: () => void }) {
+  const [rows, setRows] = useState<VisitorRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+
+  const fetchPage = useCallback(async (offset: number) => {
+    const r = await fetch(`/api/analytics/visitors?range=${range}&limit=${PAGE_SIZE}&offset=${offset}`, { headers: authHeaders() });
+    if (r.status === 401) { onLogout(); return null; }
+    if (!r.ok) throw new Error();
+    return r.json() as Promise<{ total: number; visitors: VisitorRow[] }>;
+  }, [range, onLogout]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRows(null); setError(false); setOpen(null);
+    fetchPage(0)
+      .then((d) => { if (!cancelled && d) { setRows(d.visitors); setTotal(d.total); } })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [fetchPage]);
+
+  const loadMore = async () => {
+    if (!rows) return;
+    setLoadingMore(true);
+    try {
+      const d = await fetchPage(rows.length);
+      if (d) setRows([...rows, ...d.visitors]);
+    } catch { setError(true); }
+    setLoadingMore(false);
+  };
+
+  return (
+    <section>
+      <SectionTitle>Visitors</SectionTitle>
+      {error ? (
+        <p className="text-sm text-error">Failed to load visitors.</p>
+      ) : !rows ? (
+        <div className="h-40 rounded-xl bg-base-200 animate-pulse" />
+      ) : rows.length === 0 ? (
+        <p className="text-xs text-base-content/60">No visitors in this period.</p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-base-300 bg-base-200">
+          <ul className="divide-y divide-base-300">
+            {rows.map((v) => {
+              const expanded = open === v.visitor_hash;
+              return (
+                <li key={v.visitor_hash}>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(expanded ? null : v.visitor_hash)}
+                    aria-expanded={expanded}
+                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition hover:bg-base-300/40 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_1rem] ${expanded ? "bg-base-300/40" : ""}`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-base-content">{placeOf(v)}</span>
+                      <span className="block truncate text-xs text-base-content/60">{device(v)}</span>
+                    </span>
+                    <span className="hidden min-w-0 truncate text-sm text-base-content/70 md:block">
+                      {v.referrer_host ?? <span className="text-base-content/60">Direct</span>}
+                    </span>
+                    <span className="hidden text-right text-sm tabular-nums text-base-content/80 md:block">
+                      {v.pages} {v.pages === 1 ? "page" : "pages"}
+                      {v.clicks > 0 && <span className="block text-xs text-base-content/60">{v.clicks} {v.clicks === 1 ? "click" : "clicks"}</span>}
+                    </span>
+                    <span className="text-right text-xs text-base-content/60 whitespace-nowrap">
+                      {ago(v.last_at)}
+                      {/* On phones the source and activity fold under the time. */}
+                      <span className="block md:hidden">{v.pages} {v.pages === 1 ? "page" : "pages"}</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+                      className={`hidden h-4 w-4 text-base-content/60 transition-transform md:block ${expanded ? "rotate-180" : ""}`}>
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {expanded && (
+                    <div className="border-t border-base-300 bg-base-100/50 px-4 py-4">
+                      <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+                        <div><dt className="text-base-content/60">Source</dt><dd className="text-base-content">{v.referrer_host ?? "Direct"}</dd></div>
+                        <div><dt className="text-base-content/60">Visit</dt><dd className="text-base-content">{when(v.first_at)} · {span(v.first_at, v.last_at)}</dd></div>
+                        <div><dt className="text-base-content/60">Page views</dt><dd className="text-base-content tabular-nums">{v.views}</dd></div>
+                        <div><dt className="text-base-content/60">Visitor ID</dt><dd className="font-mono text-base-content/70">{v.visitor_hash.slice(0, 8)}</dd></div>
+                      </dl>
+                      <ol className="space-y-1.5 border-l border-base-300 pl-4">
+                        {v.journey.map((e, i) => (
+                          <li key={i} className="relative flex items-baseline gap-3 text-xs">
+                            <span className={`absolute -left-[1.29rem] top-1 h-2 w-2 rounded-full ${e.type === "page_view" ? "bg-base-content/40" : "bg-primary"}`} />
+                            <span className="w-16 shrink-0 tabular-nums text-base-content/60">{timeOnly(e.at)}</span>
+                            <span className={e.type === "page_view" ? "text-base-content/70" : "font-medium text-primary"}>{eventLabel(e.type)}</span>
+                            <span className="min-w-0 truncate font-mono text-base-content/80">
+                              {e.project ? (PROJECT_NAMES[e.project] ?? e.project) : (e.path || "/")}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                      {v.journey.length < v.views + v.clicks && (
+                        <p className="mt-2 text-xs text-base-content/60">First {v.journey.length} of {v.views + v.clicks} events.</p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex items-center justify-between gap-3 border-t border-base-300 px-4 py-2.5 text-xs text-base-content/60">
+            <span>Showing {rows.length} of {total} · visitor IDs reset each day (or month), so a return visit is a new row</span>
+            {rows.length < total && (
+              <button type="button" className="btn btn-xs btn-ghost" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [range, setRange] = useState<typeof RANGES[number]>("30d");
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -385,7 +546,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-10">
         {/* Range filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {RANGES.map((r) => (
             <button
               key={r}
@@ -501,34 +662,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </section>
 
-            {/* Location */}
-            {summary.locationBreakdown.length > 0 && (
-              <section>
-                <SectionTitle>Locations</SectionTitle>
-                <div className="bg-base-200 rounded-xl border border-base-300 overflow-hidden">
-                  <table className="table table-sm w-full">
-                    <thead>
-                      <tr className="text-base-content/50 text-xs">
-                        <th>Country</th>
-                        <th>Region</th>
-                        <th className="text-right">Visitors</th>
-                        <th className="text-right">Views</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary.locationBreakdown.map((r, i) => (
-                        <tr key={i} className="hover:bg-base-300/40">
-                          <td className="text-xs">{String(r.country || "Unknown")}</td>
-                          <td className="text-xs text-base-content/50">{String(r.region || "—")}</td>
-                          <td className="text-right text-sm font-medium">{(r.unique_visitors ?? 0) as number}</td>
-                          <td className="text-right text-sm text-base-content/50">{r.count as number}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
+            {/* Visitors, one row each (replaces the country/region breakdown) */}
+            <Visitors range={range} onLogout={onLogout} />
 
             {/* Referrers */}
             {summary.referrerBreakdown.length > 0 && (

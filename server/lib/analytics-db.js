@@ -241,6 +241,51 @@ function getReferrerBreakdown(db, startDay, limit = 10) {
     .all([startDay, limit]);
 }
 
+// One row per visitor since `startDay`, most recently active first, each with
+// its trail of events. A visitor is a visitor_hash, which rotates with the
+// salt period (daily by default), so one person on two days is two rows.
+const JOURNEY_MAX = 40;
+function getVisitors(db, startDay, limit = 50, offset = 0) {
+  const total = db.prepare(`
+    SELECT COUNT(DISTINCT visitor_hash) AS n
+    FROM analytics_events WHERE day >= ? AND visitor_hash IS NOT NULL
+  `).get([startDay])?.n ?? 0;
+
+  const rows = db.prepare(`
+    SELECT visitor_hash,
+           MIN(created_at) AS first_at, MAX(created_at) AS last_at,
+           SUM(event_type = 'page_view') AS views,
+           COUNT(DISTINCT CASE WHEN event_type = 'page_view' THEN path END) AS pages,
+           SUM(event_type <> 'page_view') AS clicks,
+           MAX(country) AS country, MAX(region) AS region,
+           MAX(device_type) AS device_type, MAX(browser) AS browser, MAX(os) AS os,
+           (SELECT e2.referrer_host FROM analytics_events e2
+             WHERE e2.visitor_hash = e.visitor_hash AND e2.day >= ? AND e2.referrer_host IS NOT NULL
+             ORDER BY e2.created_at LIMIT 1) AS referrer_host
+    FROM analytics_events e
+    WHERE day >= ? AND visitor_hash IS NOT NULL
+    GROUP BY visitor_hash
+    ORDER BY last_at DESC
+    LIMIT ? OFFSET ?
+  `).all([startDay, startDay, limit, offset]);
+
+  if (rows.length) {
+    const hashes = rows.map((r) => r.visitor_hash);
+    const events = db.prepare(`
+      SELECT visitor_hash, created_at, event_type, path, project_slug
+      FROM analytics_events
+      WHERE day >= ? AND visitor_hash IN (${hashes.map(() => "?").join(",")})
+      ORDER BY created_at, id
+    `).all([startDay, ...hashes]);
+    const byHash = new Map(rows.map((r) => [r.visitor_hash, (r.journey = [])]));
+    for (const ev of events) {
+      const j = byHash.get(ev.visitor_hash);
+      if (j.length < JOURNEY_MAX) j.push({ at: ev.created_at, type: ev.event_type, path: ev.path, project: ev.project_slug });
+    }
+  }
+  return { total, visitors: rows };
+}
+
 // ── Date helpers ───────────────────────────────────────────────────────────
 
 // Failed /investments password attempts since `startDay`, for /admin.
@@ -320,4 +365,5 @@ module.exports = {
   insertLoginFailure,
   countLoginFailuresToday,
   getLoginFailures,
+  getVisitors,
 };

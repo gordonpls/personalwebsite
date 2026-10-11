@@ -13,6 +13,7 @@ const {
   getOsBreakdown,
   getLocationBreakdown,
   getReferrerBreakdown,
+  getVisitors,
   getStartDay,
   todayStr,
 } = require("../lib/analytics-db");
@@ -173,6 +174,22 @@ router.get("/private-summary", requireAdmin, (req, res) => {
   } catch (err) {
     console.error("[analytics] private-summary error:", err.message);
     res.status(500).json({ error: "Failed to load analytics" });
+  }
+});
+
+// ── GET /api/analytics/visitors (admin only) ──────────────────────────────
+
+router.get("/visitors", requireAdmin, (req, res) => {
+  try {
+    const range = ["7d", "30d", "month", "all"].includes(req.query.range)
+      ? req.query.range
+      : "30d";
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    res.json(getVisitors(getDb(), getStartDay(range), limit, offset));
+  } catch (err) {
+    console.error("[analytics] visitors error:", err.message);
+    res.status(500).json({ error: "Failed to load visitors" });
   }
 });
 
