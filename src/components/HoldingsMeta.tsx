@@ -37,8 +37,8 @@ function fmtCap(m?: number): string | null {
 
 const Fact = ({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) => (
     <div className="min-w-0">
-        <p className="text-xs text-base-content/40">{label}</p>
-        <p className={`font-medium truncate ${valueClass ?? "text-base-content"}`}>{value}</p>
+        <p className="text-[11px] leading-tight text-base-content/60 truncate">{label}</p>
+        <p className={`font-medium leading-snug tabular-nums truncate ${valueClass ?? "text-base-content"}`}>{value}</p>
     </div>
 );
 
@@ -121,24 +121,39 @@ export const HoldingsMeta = ({ holding, bare = false }: { holding: Holding | nul
         ? Math.max(0, Math.min(100, ((meta.price - meta.week52Low!) / (meta.week52High! - meta.week52Low!)) * 100))
         : null;
 
-    // Ordered facts; only those present render. Returns are sign-colored.
+    // Facts in fixed groups so every holding puts the same stat in the same
+    // spot: a missing value shows "—" rather than shifting the rest up, and a
+    // group is hidden only when all of it is missing (e.g. Fundamentals for ETFs).
+    type FactValue = { value: string; cls?: string };
     const pct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`;
-    const facts: { label: string; value: string; cls?: string }[] = [];
-    if (meta.exchange) facts.push({ label: "Exchange", value: meta.exchange });
-    if (meta.industry) facts.push({ label: "Industry", value: meta.industry });
-    if (fmtCap(meta.marketCap)) facts.push({ label: "Market cap", value: fmtCap(meta.marketCap)! });
-    if (st.pe != null) facts.push({ label: "P/E", value: st.pe.toFixed(1) });
-    if (st.divYield != null) facts.push({ label: "Dividend yield", value: `${st.divYield.toFixed(2)}%` });
-    if (st.beta != null) facts.push({ label: "Beta", value: st.beta.toFixed(2) });
-    if (st.roe != null) facts.push({ label: "ROE", value: `${st.roe.toFixed(1)}%` });
-    if (st.profitMargin != null) facts.push({ label: "Profit margin", value: `${st.profitMargin.toFixed(1)}%` });
-    if (st.revGrowth != null) facts.push({ label: "Revenue growth", value: pct(st.revGrowth), cls: st.revGrowth >= 0 ? "text-success" : "text-error" });
-    if (st.return52w != null) facts.push({ label: "1Y return", value: pct(st.return52w), cls: st.return52w >= 0 ? "text-success" : "text-error" });
-    if (st.return26w != null) facts.push({ label: "6M return", value: pct(st.return26w), cls: st.return26w >= 0 ? "text-success" : "text-error" });
-    if (st.volatility != null) facts.push({ label: "Volatility (3M)", value: `${st.volatility.toFixed(1)}%` });
-    if (meta.ipo) facts.push({ label: "IPO", value: meta.ipo });
-    facts.push({ label: "Portfolio weight", value: formatWeightPct(holding?.weightPct ?? 0) });
-    if (holding?.returnPct != null) facts.push({ label: "Total return", value: pct(holding.returnPct), cls: holding.returnPct >= 0 ? "text-success" : "text-error" });
+    const signed = (v?: number | null): FactValue | null =>
+        v != null ? { value: pct(v), cls: v >= 0 ? "text-success" : "text-error" } : null;
+    const plain = (v: string | null | undefined): FactValue | null => (v ? { value: v } : null);
+    const groups: { title: string; facts: { label: string; fact: FactValue | null }[] }[] = [
+        { title: "Your position", facts: [
+            { label: "Portfolio weight", fact: plain(formatWeightPct(holding?.weightPct ?? 0)) },
+            { label: "Total return", fact: signed(holding?.returnPct) },
+        ] },
+        { title: "Performance", facts: [
+            { label: "6M return", fact: signed(st.return26w) },
+            { label: "1Y return", fact: signed(st.return52w) },
+            { label: "Volatility (3M)", fact: plain(st.volatility != null ? `${st.volatility.toFixed(1)}%` : null) },
+            { label: "Beta", fact: plain(st.beta?.toFixed(2)) },
+        ] },
+        { title: "Fundamentals", facts: [
+            { label: "P/E", fact: plain(st.pe?.toFixed(1)) },
+            { label: "Revenue growth", fact: signed(st.revGrowth) },
+            { label: "Profit margin", fact: plain(st.profitMargin != null ? `${st.profitMargin.toFixed(1)}%` : null) },
+            { label: "ROE", fact: plain(st.roe != null ? `${st.roe.toFixed(1)}%` : null) },
+            { label: "Dividend yield", fact: plain(st.divYield != null ? `${st.divYield.toFixed(2)}%` : null) },
+        ] },
+        { title: "Company", facts: [
+            { label: "Market cap", fact: plain(fmtCap(meta.marketCap)) },
+            { label: "Industry", fact: plain(meta.industry) },
+            { label: "Exchange", fact: plain(meta.exchange) },
+            { label: "IPO", fact: plain(meta.ipo) },
+        ] },
+    ].filter((g) => g.facts.some((f) => f.fact));
 
     return (
         <div className={`p-6 flex flex-col h-full min-h-[18rem] ${bare ? "" : "bg-base-100 border border-base-300 rounded-2xl"}`}>
@@ -229,9 +244,20 @@ export const HoldingsMeta = ({ holding, bare = false }: { holding: Holding | nul
                         {/* Analyst sentiment — paired with the price visuals above */}
                         {meta.analysts && <SentimentBar a={meta.analysts} />}
 
-                        {/* Facts (fundamentals + portfolio context) */}
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                            {facts.map((f) => <Fact key={f.label} label={f.label} value={f.value} valueClass={f.cls} />)}
+                        {/* Facts, grouped. Every group uses the same ~7rem
+                            auto-fill columns (more on wider panes), so columns
+                            line up from one group to the next. */}
+                        <div className="flex flex-col gap-4">
+                            {groups.map((g) => (
+                                <section key={g.title}>
+                                    <h4 className="mb-1.5 border-b border-base-300 pb-1 text-[11px] font-semibold uppercase tracking-wide text-base-content/60">{g.title}</h4>
+                                    <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-x-4 gap-y-2 text-sm">
+                                        {g.facts.map(({ label, fact }) => (
+                                            <Fact key={label} label={label} value={fact?.value ?? "—"} valueClass={fact ? fact.cls : "text-base-content/60"} />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
                         </div>
                     </ScrollArea>
 
