@@ -314,12 +314,17 @@ function flagItemAndAlert(itemId, code, institution) {
     }
 }
 
+// Which display portfolios each Item feeds, and its newest price date, keyed by
+// access token. Server-only: lets /api/plaid/status report health per portfolio
+// without ever sending institution names to the browser. Kept across fetches so
+// an Item that later errors still maps to the portfolios it last fed.
+const itemCoverage = new Map();
+
 // Build the privacy-safe holdings payload from Plaid (no $ amounts/account names).
 async function fetchHoldingsPayload() {
     const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }
     let total = 0, costSum = 0, costValueSum = 0;
     let firstError = null; // remember a per-item failure to surface only if ALL fail
-    const sources = []; // per-institution freshness: { institution, pricesAsOf }
 
     for (const { institution, token, itemId } of getTokens()) {
         let resp;
@@ -384,7 +389,7 @@ async function fetchHoldingsPayload() {
             const d = h.institution_price_as_of || secMap[h.security_id]?.close_price_as_of;
             if (d && (!pricesAsOf || d > pricesAsOf)) pricesAsOf = d;
         }
-        sources.push({ institution: inst, pricesAsOf });
+        const covered = new Set();
         const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
 
         for (const h of holdings) {
@@ -402,6 +407,7 @@ async function fetchHoldingsPayload() {
             const hasCost = lotCost != null && lotCost > 0;
             if (hasCost) { costSum += lotCost; costValueSum += value; }
             const portfolio = PORTFOLIO_OVERRIDE[tkr] ?? portfolioOf(inst, acctSubtype[h.account_id]);
+            covered.add(portfolio);
             const ticker = sec.ticker_symbol ?? sec.name ?? "Unknown";
             const key = `${portfolio}|${ticker}`;
             const cur = agg.get(key) ?? {
@@ -417,6 +423,7 @@ async function fetchHoldingsPayload() {
             if (hasCost) { cur.cbCost += lotCost; cur.cbValue += value; }
             agg.set(key, cur);
         }
+        itemCoverage.set(token, { portfolios: covered, pricesAsOf });
     }
 
     // Only fail the whole request (→ 500, not cached) if NOTHING resolved. A
@@ -440,7 +447,7 @@ async function fetchHoldingsPayload() {
     // Overall total return vs cost basis (% only — never a dollar amount).
     const totalReturnPct = costSum > 0 ? Math.round(((costValueSum - costSum) / costSum) * 1000) / 10 : null;
 
-    return { asOf: new Date().toISOString(), totalReturnPct, holdings, sources };
+    return { asOf: new Date().toISOString(), totalReturnPct, holdings };
 }
 
 // Live daily % change per ticker from Finnhub (free tier: 60/min).
@@ -806,19 +813,38 @@ async function fetchItemHealth() {
             logPlaidError("item.get", err, { item_id: it.itemId, institution: it.institution });
             errorCode = err.response?.data?.error_code || errorCode;
         }
-        return {
-            institution: it.institution || "Unknown",
-            status: errorCode ? "error" : "healthy",
-            errorCode,
-            lastSyncedAt: it.lastSyncedAt || null,
-            consentExpiresAt,
-        };
+        return { key: it.accessToken, errorCode, lastSyncedAt: it.lastSyncedAt || null, consentExpiresAt };
     }));
+}
+
+// Fold several Items into one status: errored if any is, and the OLDEST sync /
+// price date (a portfolio is only as fresh as its stalest source).
+function rollUp(entries) {
+    const min = (vals) => vals.filter(Boolean).sort()[0] ?? null;
+    return {
+        status: entries.some((e) => e.errorCode) ? "error" : "healthy",
+        lastSyncedAt: min(entries.map((e) => e.lastSyncedAt)),
+        pricesAsOf: min(entries.map((e) => e.pricesAsOf)),
+        consentExpiresAt: min(entries.map((e) => e.consentExpiresAt)),
+    };
 }
 
 router.get("/plaid/status", requireFinance, async (_req, res) => {
     try {
-        res.json({ asOf: new Date().toISOString(), webhooks: webhooksLive(), items: await healthCache(fetchItemHealth) });
+        // Holdings first (usually a cache hit) so itemCoverage is populated.
+        await getHoldings(fetchHoldingsPayload).catch(() => {});
+        const health = (await healthCache(fetchItemHealth)).map((h) => ({ ...h, ...itemCoverage.get(h.key) }));
+        const byPortfolio = new Map();
+        for (const h of health) {
+            for (const p of h.portfolios ?? []) byPortfolio.set(p, [...(byPortfolio.get(p) ?? []), h]);
+        }
+        res.json({
+            asOf: new Date().toISOString(),
+            webhooks: webhooksLive(),
+            // Display portfolios only — no institution names, item ids or error codes.
+            all: rollUp(health),
+            portfolios: Object.fromEntries([...byPortfolio].map(([p, entries]) => [p, rollUp(entries)])),
+        });
     } catch (err) {
         console.error("[plaid/status]", err.message);
         res.status(500).json({ error: "Failed to fetch connection status" });

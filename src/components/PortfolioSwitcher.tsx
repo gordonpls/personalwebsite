@@ -7,6 +7,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cachedJson } from "../services/apiCache";
 import type { Holding } from "./Holdings";
+import { usePortfolioHealth } from "../hooks/usePortfolioHealth";
+import { PortfolioHealthChip } from "./PortfolioHealthChip";
 
 // `short` is the card's one-line description; `tiny` an optional shorter name
 // for phones, where the name sits beside the icon.
@@ -60,6 +62,8 @@ export const PortfolioSwitcher = ({ options, active, onChange, allId }: {
         out.set(allId, { share: 100, count: new Set(holdings.map((h) => h.ticker ?? h.name)).size });
         return out;
     }, [holdings, allId]);
+
+    const health = usePortfolioHealth();
 
     const refs = useRef<(HTMLButtonElement | null)[]>([]);
     const onKey = (e: React.KeyboardEvent, i: number) => {
@@ -122,6 +126,7 @@ export const PortfolioSwitcher = ({ options, active, onChange, allId }: {
                             <span className="mt-1 h-1 overflow-hidden rounded-full bg-base-300 sm:mt-1.5" aria-hidden="true">
                                 <span className={`block h-full rounded-full transition-all duration-500 ${on ? "bg-primary" : "bg-base-content/30"}`} style={{ width: `${st?.share ?? 0}%` }} />
                             </span>
+                            <PortfolioHealthChip health={o.id === allId ? health?.all : health?.portfolios[o.id]} />
                         </button>
                     );
                 })}
