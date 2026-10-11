@@ -205,7 +205,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 // ── Dashboard password attempts ──────────────────────────────────────────
 
 interface AttemptRow {
-  created_at: string; visitor_hash: string | null; guess_length: number | null; is_bot: number;
+  created_at: string; visitor_hash: string | null; guess: string | null; guess_length: number | null; is_bot: number;
   device_type: string | null; browser: string | null; os: string | null; country: string | null; region: string | null;
 }
 interface RepeatRow {
@@ -221,8 +221,10 @@ const where = (r: { country: string | null; region: string | null }) =>
 const device = (r: { device_type: string | null; browser: string | null; os: string | null }) =>
   [r.device_type, r.browser, r.os].filter(Boolean).join(" · ") || "Unknown";
 
-// Wrong passwords at the /investments gate. The guess itself is never stored,
-// only its length. Visitor IDs rotate daily, so "repeat" means within one day.
+// Wrong passwords at the /investments gate, with the guess as typed. Guesses
+// are blanked after 30 days (only the length remains), since people sometimes
+// type passwords they use elsewhere. Visitor IDs rotate daily, so "repeat"
+// means within one day.
 function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => void }) {
   const [data, setData] = useState<Attempts | null>(null);
   const [error, setError] = useState(false);
@@ -268,26 +270,32 @@ function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => v
                 <table className="table table-sm">
                   <thead>
                     <tr className="text-base-content/60">
-                      <th>When</th><th>Where</th><th>Device</th><th className="text-right">Length</th><th>Visitor</th>
+                      <th>When</th><th>Guess</th><th>Where</th><th>Device</th><th>Visitor</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.recent.map((r, i) => (
                       <tr key={i}>
                         <td className="whitespace-nowrap text-sm">{when(r.created_at)}</td>
+                        <td className="max-w-[12rem] truncate font-mono text-sm" title={r.guess ?? undefined}>
+                          {r.guess ?? (
+                            <span className="text-base-content/60" title="Older than 30 days; only the length is kept">
+                              {"•".repeat(Math.min(r.guess_length ?? 0, 12)) || "—"}
+                            </span>
+                          )}
+                        </td>
                         <td className="whitespace-nowrap text-sm">{where(r)}</td>
                         <td className="whitespace-nowrap text-sm text-base-content/70">
                           {device(r)}
                           {r.is_bot ? <span className="badge badge-xs badge-warning ml-1.5">bot</span> : null}
                         </td>
-                        <td className="text-right text-sm tabular-nums">{r.guess_length ?? "—"}</td>
                         <td className="font-mono text-xs text-base-content/60">{r.visitor_hash ? r.visitor_hash.slice(0, 8) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 <p className="px-4 pb-3 pt-1 text-xs text-base-content/60">
-                  Latest {data.recent.length}{data.attempts > data.recent.length ? ` of ${data.attempts}` : ""}. Guesses aren&apos;t stored, only their length.
+                  Latest {data.recent.length}{data.attempts > data.recent.length ? ` of ${data.attempts}` : ""}. Guesses are deleted after 30 days.
                 </p>
               </div>
 

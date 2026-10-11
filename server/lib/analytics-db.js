@@ -42,8 +42,9 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_ae_project_slug ON analytics_events(project_slug);
     CREATE INDEX IF NOT EXISTS idx_ae_visitor_hash ON analytics_events(visitor_hash);
 
-    -- Wrong passwords at the /investments gate. Never the guess itself (people
-    -- type passwords they use elsewhere); only its length.
+    -- Wrong passwords at the /investments gate. The guess is kept as typed for
+    -- GUESS_RETENTION_DAYS, then blanked (people type passwords they use
+    -- elsewhere); its length stays.
     CREATE TABLE IF NOT EXISTS finance_login_failures (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
@@ -61,6 +62,12 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_flf_day     ON finance_login_failures(day);
     CREATE INDEX IF NOT EXISTS idx_flf_visitor ON finance_login_failures(visitor_hash, day);
   `);
+
+  // Added after the table shipped: older databases need the column.
+  const cols = db.prepare(`PRAGMA table_info(finance_login_failures)`).all([]);
+  if (!cols.some((c) => c.name === "guess")) {
+    db.exec(`ALTER TABLE finance_login_failures ADD COLUMN guess TEXT`);
+  }
 }
 
 // ── Write ──────────────────────────────────────────────────────────────────
@@ -89,11 +96,12 @@ function insertEvent(db, event) {
 function insertLoginFailure(db, row) {
   db.prepare(`
     INSERT INTO finance_login_failures
-      (day, visitor_hash, guess_length, is_bot, device_type, browser, os, country, region)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (day, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run([
     row.day,
     row.visitor_hash ?? null,
+    row.guess ?? null,
     row.guess_length ?? null,
     row.is_bot ? 1 : 0,
     row.device_type ?? null,
@@ -288,8 +296,20 @@ function getVisitors(db, startDay, limit = 50, offset = 0) {
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 
+// Stored guesses are blanked after this many days; the attempt row stays.
+const GUESS_RETENTION_DAYS = 30;
+function purgeOldGuesses(db) {
+  db.prepare(`
+    UPDATE finance_login_failures SET guess = NULL
+    WHERE guess IS NOT NULL AND created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
+  `).run([`-${GUESS_RETENTION_DAYS} days`]);
+}
+
 // Failed /investments password attempts since `startDay`, for /admin.
 function getLoginFailures(db, startDay) {
+  // Also runs on every logged attempt; doing it here too means expired guesses
+  // are never shown even if nobody has guessed in a while.
+  purgeOldGuesses(db);
   const totals = db.prepare(`
     SELECT COUNT(*) AS attempts,
            COUNT(DISTINCT visitor_hash) AS visitors,
@@ -299,7 +319,7 @@ function getLoginFailures(db, startDay) {
   `).get([startDay]);
 
   const recent = db.prepare(`
-    SELECT created_at, visitor_hash, guess_length, is_bot, device_type, browser, os, country, region
+    SELECT created_at, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region
     FROM finance_login_failures WHERE day >= ?
     ORDER BY created_at DESC LIMIT 50
   `).all([startDay]);
@@ -366,4 +386,6 @@ module.exports = {
   countLoginFailuresToday,
   getLoginFailures,
   getVisitors,
+  purgeOldGuesses,
+  GUESS_RETENTION_DAYS,
 };
