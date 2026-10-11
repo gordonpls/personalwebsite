@@ -3,8 +3,8 @@
 // gets a hover animation specific to its visualization (donut spins, line
 // re-draws, peg pulses) plus a card-wide lift + "open in new tab" hint.
 
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef, useId } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { SectionHeading } from "./SectionHeading";
 import { useFinanceUnlocked } from "../services/financeAuth";
 
@@ -37,7 +37,7 @@ const DonutPreview = () => {
         return `M ${(r * Math.cos(a0)).toFixed(2)} ${(r * Math.sin(a0)).toFixed(2)} A ${r} ${r} 0 ${large} 1 ${(r * Math.cos(a1)).toFixed(2)} ${(r * Math.sin(a1)).toFixed(2)}`;
     };
     return (
-        <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
+        <svg viewBox="0 0 200 120" className="project-donut w-full h-full" aria-hidden="true">
             <g transform="translate(100 64)" className="origin-center transition-transform duration-[2500ms] ease-out group-hover:rotate-[140deg]">
                 {SEGMENTS.map((s, i) => (
                     <path key={i} d={arc(s.from, s.to)} fill="none" stroke={s.color} strokeWidth={sw} />
@@ -48,10 +48,15 @@ const DonutPreview = () => {
 };
 
 // Inline line chart: trending up, gradient fill below, line redraws on hover.
-const LinePreview = () => (
+// Gradient ids are per instance: the same preview renders in several places
+// (some hidden by breakpoint), and a url(#id) that resolves to a gradient
+// inside a display:none SVG paints nothing.
+const LinePreview = () => {
+    const grad = useId();
+    return (
     <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
         <defs>
-            <linearGradient id="gainGrad" x1="0" x2="0" y1="0" y2="1">
+            <linearGradient id={grad} x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0" stopColor="#1D9E75" stopOpacity="0.45" />
                 <stop offset="1" stopColor="#1D9E75" stopOpacity="0" />
             </linearGradient>
@@ -59,7 +64,7 @@ const LinePreview = () => (
         <line x1="20" y1="40" x2="180" y2="40" stroke="currentColor" strokeOpacity="0.06" />
         <line x1="20" y1="70" x2="180" y2="70" stroke="currentColor" strokeOpacity="0.06" />
         <line x1="20" y1="100" x2="180" y2="100" stroke="currentColor" strokeOpacity="0.06" />
-        <path d="M 20 95 L 45 82 L 70 86 L 95 65 L 120 55 L 150 35 L 180 30 L 180 110 L 20 110 Z" fill="url(#gainGrad)" />
+        <path d="M 20 95 L 45 82 L 70 86 L 95 65 L 120 55 L 150 35 L 180 30 L 180 110 L 20 110 Z" fill={`url(#${grad})`} />
         <path
             d="M 20 95 L 45 82 L 70 86 L 95 65 L 120 55 L 150 35 L 180 30"
             stroke="#1D9E75"
@@ -69,9 +74,10 @@ const LinePreview = () => (
             strokeLinejoin="round"
             className="project-line"
         />
-        <circle cx="180" cy="30" r="3" fill="#1D9E75" className="opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <circle cx="180" cy="30" r="3" fill="#1D9E75" className="opacity-0 group-hover:opacity-100 group-data-[play]:opacity-100 transition-opacity duration-500" />
     </svg>
-);
+    );
+};
 
 // Inline cookie: stylized closed fortune cookie that "shakes" on hover.
 // Different centering approach from previous iterations: the viewBox itself
@@ -81,16 +87,18 @@ const LinePreview = () => (
 // centers a square-ish SVG horizontally in the preview band, sized by CSS.
 // Result: cookie is always centered in its SVG, the SVG is always centered
 // in the preview band, with no transform math to drift out of alignment.
-const CookiePreview = () => (
+const CookiePreview = () => {
+    const grad = useId();
+    return (
     <div className="flex items-center justify-center w-full h-full">
         <svg
             viewBox="-72 -85 140 160"
-            className="h-full w-auto max-h-full"
+            className="project-cookie h-full w-auto max-h-full"
             aria-hidden="true"
             preserveAspectRatio="xMidYMid meet"
         >
             <defs>
-                <linearGradient id="ckPrevBody" x1="0.2" y1="0" x2="0.7" y2="1">
+                <linearGradient id={grad} x1="0.2" y1="0" x2="0.7" y2="1">
                     <stop offset="0" stopColor="#F8CB7C" />
                     <stop offset="0.5" stopColor="#E5A24B" />
                     <stop offset="1" stopColor="#B97623" />
@@ -100,12 +108,12 @@ const CookiePreview = () => (
                 {/* Right lobe (drawn first; left tucks it behind near the V valley) */}
                 <path
                     d="M 16 -50 L 36 -64 L 50 -44 Q 66 -12 56 22 Q 42 52 14 56 Q -2 56 2 44 Q 12 -8 16 -50 Z"
-                    fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+                    fill={`url(#${grad})`} stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
                 />
                 {/* Left lobe — slightly taller, drawn on top */}
                 <path
                     d="M -20 -54 L -42 -68 L -54 -46 Q -68 -12 -58 22 Q -44 52 -14 58 Q 2 56 -2 44 Q -14 -10 -20 -54 Z"
-                    fill="url(#ckPrevBody)" stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
+                    fill={`url(#${grad})`} stroke="#7E4F18" strokeWidth="3" strokeLinejoin="round"
                 />
                 {/* Soft highlights on the bulging outer faces */}
                 <path d="M -22 -40 Q -40 -22 -50 0" stroke="#FFF1C8" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.55" />
@@ -113,7 +121,8 @@ const CookiePreview = () => (
             </g>
         </svg>
     </div>
-);
+    );
+};
 
 // Inline peg: dashed $1 reference + a near-flat peg line that redraws on hover
 // (same treatment as the Portfolio line chart) + a pulsing dot.
@@ -132,8 +141,8 @@ const PegPreview = () => (
             className="project-line"
         />
         {/* Pulsing latest point, revealed on hover like the portfolio dot. */}
-        <circle cx="170" cy="60" r="3" fill="#378ADD" className="opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <circle cx="170" cy="60" r="3" fill="#378ADD" className="project-peg-pulse opacity-0 group-hover:opacity-100" />
+        <circle cx="170" cy="60" r="3" fill="#378ADD" className="opacity-0 group-hover:opacity-100 group-data-[play]:opacity-100 transition-opacity duration-500" />
+        <circle cx="170" cy="60" r="3" fill="#378ADD" className="project-peg-pulse opacity-0 group-hover:opacity-100 group-data-[play]:opacity-100" />
     </svg>
 );
 
@@ -535,16 +544,207 @@ const ProjectsCarousel = ({ projects }: { projects: Project[] }) => {
     );
 };
 
+// ── Mobile: expandable list ──────────────────────────────────────────────────
+// Phones get a numbered list instead of the hero + carousel: every project is
+// visible at once, and tapping a row opens it in place (its body grows, which
+// pushes the rows below down) with the full preview, description and an Open
+// link. One row is open at a time; the featured dashboard starts open.
+const MOBILE_ORDER = [portfolio, ...otherProjects];
+
+// One curve for everything that moves on open/close (an expo-style ease-out:
+// fast start, long soft landing), so the parts read as a single motion.
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const EXPAND_S = 0.55;
+
+// Body content arrives in a short cascade (preview, copy, tags, button), each
+// piece rising out of a slight blur. Leaving is a quick fade so the height
+// collapse isn't fighting content that's still visible.
+const bodyContent = {
+    open: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } },
+    closed: { transition: { staggerChildren: 0.03, staggerDirection: -1 } },
+};
+const bodyItem = {
+    open: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.45, ease: EASE_OUT } },
+    closed: { opacity: 0, y: 10, filter: "blur(6px)", transition: { duration: 0.15 } },
+};
+
+const MobileProjectList = () => {
+    const unlocked = useFinanceUnlocked();
+    const reduce = useReducedMotion();
+    const [open, setOpen] = useState<string | null>(portfolio.title);
+    const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
+    // How many times each row's icon has played. The icon plays once when its
+    // row scrolls into view and again on every tap; bumping the count remounts
+    // the preview, which restarts its keyframe animation.
+    const [plays, setPlays] = useState<Record<string, number>>({});
+    const play = (title: string, onlyFirst = false) =>
+        setPlays((cur) => (onlyFirst && cur[title] ? cur : { ...cur, [title]: (cur[title] ?? 0) + 1 }));
+
+    // Closing a tall row above the one just opened shifts everything up; once
+    // the motion settles, bring the opened row's top back into view if needed.
+    const keepInView = (title: string) => {
+        const el = rowRefs.current[title];
+        if (!el) return;
+        const top = el.getBoundingClientRect().top;
+        const NAV = 88; // fixed navbar + breathing room
+        if (top < NAV) window.scrollBy({ top: top - NAV, behavior: reduce ? "auto" : "smooth" });
+    };
+
+    return (
+        <ul className="space-y-3">
+            {MOBILE_ORDER.map((p, i) => {
+                const isOpen = open === p.title;
+                const locked = p === portfolio && !unlocked;
+                const bodyId = `project-body-${i}`;
+                return (
+                    <motion.li
+                        key={p.title}
+                        ref={(el) => { rowRefs.current[p.title] = el; }}
+                        initial={reduce ? false : { opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-40px" }}
+                        onViewportEnter={() => play(p.title, true)}
+                        transition={{ duration: 0.5, ease: EASE_OUT, delay: i * 0.06 }}
+                        className={`relative overflow-hidden rounded-2xl border bg-base-100 transition-[border-color,box-shadow] duration-500 ${isOpen ? "border-primary/40 shadow-lg" : "border-base-300 shadow-sm"}`}
+                    >
+                        {/* Accent bar draws down the left edge, and a soft glow fades in. */}
+                        <motion.span
+                            aria-hidden="true"
+                            className={`absolute inset-y-0 left-0 w-1 origin-top bg-current ${p.accent}`}
+                            initial={false}
+                            animate={{ scaleY: isOpen ? 1 : 0 }}
+                            transition={{ duration: reduce ? 0 : EXPAND_S, ease: EASE_OUT }}
+                        />
+                        <motion.div
+                            aria-hidden="true"
+                            className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${p.glow}`}
+                            initial={false}
+                            animate={{ opacity: isOpen ? 0.6 : 0 }}
+                            transition={{ duration: reduce ? 0 : EXPAND_S, ease: EASE_OUT }}
+                        />
+
+                        {/* The header never changes size, so nothing in it jumps. */}
+                        <button
+                            type="button"
+                            onClick={() => { setOpen(isOpen ? null : p.title); play(p.title); }}
+                            aria-expanded={isOpen}
+                            aria-controls={bodyId}
+                            className="relative flex w-full items-center gap-3 p-3.5 text-left"
+                        >
+                            <span className={`w-6 shrink-0 font-mono text-sm font-bold tabular-nums transition-colors duration-500 ${isOpen ? p.accent : "text-base-content/60"}`}>
+                                {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <motion.span
+                                initial={false}
+                                animate={{ scale: isOpen ? 0.92 : 1, opacity: isOpen ? 0.55 : 1 }}
+                                transition={{ duration: reduce ? 0 : EXPAND_S, ease: EASE_OUT }}
+                                data-play={plays[p.title] ? "" : undefined}
+                                className="group relative block h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-base-300 bg-gradient-to-br from-base-200 to-base-300"
+                                aria-hidden="true"
+                            >
+                                <span key={plays[p.title] ?? 0} className={`absolute inset-0 block p-1 ${locked ? "blur-[2px]" : ""}`}>{p.preview}</span>
+                            </motion.span>
+                            <span className="min-w-0 flex-1">
+                                <span className="text-base font-bold leading-tight text-base-content line-clamp-2">{p.title}</span>
+                                <span className={`mt-0.5 flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-widest ${p.accent}`}>
+                                    {locked && <PadlockIcon className="h-3 w-3" />}
+                                    {locked ? "Private" : p.tag}
+                                </span>
+                            </span>
+                            <motion.span
+                                initial={false}
+                                animate={{ rotate: isOpen ? 135 : 0 }}
+                                transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 20 }}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-500 ${isOpen ? "border-primary/40 bg-primary/10 text-primary" : "border-base-300 text-base-content/60"}`}
+                                aria-hidden="true"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-4 w-4">
+                                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                                </svg>
+                            </motion.span>
+                        </button>
+
+                        <AnimatePresence initial={false}>
+                            {isOpen && (
+                                <motion.div
+                                    id={bodyId}
+                                    key="body"
+                                    initial={{ height: 0 }}
+                                    animate={{ height: "auto", transition: { duration: reduce ? 0 : EXPAND_S, ease: EASE_OUT } }}
+                                    exit={{ height: 0, transition: { duration: reduce ? 0 : 0.4, ease: EASE_OUT } }}
+                                    onAnimationComplete={(def) => { if (isOpen && def !== "exit") keepInView(p.title); }}
+                                    className="relative overflow-hidden"
+                                >
+                                    <motion.div
+                                        variants={reduce ? undefined : bodyContent}
+                                        initial="closed"
+                                        animate="open"
+                                        exit="closed"
+                                        className="px-3.5 pb-4"
+                                    >
+                                        {/* data-play replays the preview's hover animation, since touch has no hover. */}
+                                        <motion.div
+                                            variants={reduce ? undefined : bodyItem}
+                                            data-play=""
+                                            className="group relative h-40 overflow-hidden rounded-xl border border-base-300 bg-gradient-to-br from-base-200 to-base-300"
+                                        >
+                                            <div className={`absolute inset-0 p-4 ${locked ? "blur-[3px]" : ""}`}>{p.preview}</div>
+                                            {locked && (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="flex items-center gap-1.5 rounded-full border border-base-300 bg-base-100/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/70 shadow-sm backdrop-blur-sm">
+                                                        <PadlockIcon className="h-3 w-3" />
+                                                        Private
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                        <motion.p variants={reduce ? undefined : bodyItem} className="mt-3 text-sm leading-relaxed text-base-content/80">
+                                            {p.description}
+                                        </motion.p>
+                                        <motion.div variants={reduce ? undefined : bodyItem} className="mt-3 flex flex-wrap gap-1.5">
+                                            {p.tags.map((t) => (
+                                                <span key={t} className="badge badge-sm badge-ghost text-[10px]">{t}</span>
+                                            ))}
+                                        </motion.div>
+                                        <motion.a
+                                            variants={reduce ? undefined : bodyItem}
+                                            href={p.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            data-track="project_card_clicked"
+                                            data-project={PROJECT_SLUGS[p.href] ?? p.href.replace("/", "")}
+                                            data-locked={locked ? "true" : undefined}
+                                            className="btn btn-primary btn-sm mt-4 w-full gap-1.5"
+                                        >
+                                            {p === portfolio ? (unlocked ? "Open the live dashboard" : "View the dashboard") : `Open ${p.title}`}
+                                            <span aria-hidden="true">↗</span>
+                                        </motion.a>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.li>
+                );
+            })}
+        </ul>
+    );
+};
+
 export const Projects = () => (
     <section className="bg-base-200 border-2 border-secondary rounded-md p-6 md:p-10 space-y-5">
         <SectionHeading
             eyebrow="Projects"
             title="Things I've been building"
-            description="A few interactive apps; each one opens in a new tab. Hover to pause the carousel, use the arrows, or swipe on mobile."
+            description="A few interactive apps; each one opens in a new tab."
         />
 
-        <FeaturedHero />
+        <div className="md:hidden">
+            <MobileProjectList />
+        </div>
 
-        <ProjectsCarousel projects={otherProjects} />
+        <div className="hidden md:block space-y-5">
+            <FeaturedHero />
+            <ProjectsCarousel projects={otherProjects} />
+        </div>
     </section>
 );

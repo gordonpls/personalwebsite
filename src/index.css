@@ -190,6 +190,27 @@
     stroke-dashoffset: 0;
 }
 .group:hover .project-line { animation: project-line-draw 1.4s ease-out forwards; }
+/* Touch screens have no hover: mobile project previews carry data-play and
+   run these keyframe versions instead. Keyframes (not transitions) because
+   the element is created already in the play state, so a transition would
+   have nothing to animate from. The donut and cookie rotate the whole <svg>
+   box with `transform`, not a group inside it: Safari (so every iPhone
+   browser) won't reliably animate rotation on shapes inside an SVG. */
+.group[data-play] .project-line { animation: project-line-draw 1.4s ease-out forwards; }
+@keyframes project-donut-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(140deg); }
+}
+/* Pivot on the ring's centre: (100, 64) in the 200×120 viewBox. */
+.group[data-play] .project-donut { transform-origin: 50% 53.33%; animation: project-donut-spin 2.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@keyframes project-cookie-wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-9deg); }
+    40% { transform: rotate(7deg); }
+    60% { transform: rotate(-5deg); }
+    80% { transform: rotate(2deg); }
+}
+.group[data-play] .project-cookie { transform-origin: 50% 50%; animation: project-cookie-wiggle 0.9s ease-in-out 0.15s; }
 
 @keyframes project-peg-pulse {
     0%   { transform: scale(1);  opacity: 0.7; }
@@ -403,6 +424,9 @@
     .ticker-track,
     .group:hover .project-shimmer,
     .group:hover .project-line,
+    .group[data-play] .project-line,
+    .group[data-play] .project-donut,
+    .group[data-play] .project-cookie,
     .project-peg-pulse,
     .eq-bar,
     .deck-caret-left,
