@@ -125,13 +125,15 @@ const PROJECT_NAMES: Record<string, string> = {
   "fortune-cookie": "Fortune Cookie",
 };
 
-function groupProjects(rows: ProjectRow[]) {
+// One row per project, with its per-event counts kept in `counts` (spreading
+// them into the row loses their type).
+function groupProjects(rows: ProjectRow[]): { slug: string; counts: Record<string, number> }[] {
   const map: Record<string, Record<string, number>> = {};
   for (const r of rows) {
     if (!map[r.project_slug]) map[r.project_slug] = {};
     map[r.project_slug][r.event_type] = r.count;
   }
-  return Object.entries(map).map(([slug, events]) => ({ slug, ...events }));
+  return Object.entries(map).map(([slug, counts]) => ({ slug, counts }));
 }
 
 // ── Login form ─────────────────────────────────────────────────────────────
@@ -199,6 +201,122 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
+
+// ── Dashboard password attempts ──────────────────────────────────────────
+
+interface AttemptRow {
+  created_at: string; visitor_hash: string | null; guess_length: number | null; is_bot: number;
+  device_type: string | null; browser: string | null; os: string | null; country: string | null; region: string | null;
+}
+interface RepeatRow {
+  visitor_hash: string; day: string; attempts: number; first_at: string; last_at: string;
+  country: string | null; region: string | null; device_type: string | null; browser: string | null; os: string | null;
+}
+interface Attempts { attempts: number; visitors: number; bots: number; lastAt: string | null; recent: AttemptRow[]; repeat: RepeatRow[] }
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const where = (r: { country: string | null; region: string | null }) =>
+  r.country ? [r.region, r.country].filter(Boolean).join(", ") : "Unknown";
+const device = (r: { device_type: string | null; browser: string | null; os: string | null }) =>
+  [r.device_type, r.browser, r.os].filter(Boolean).join(" · ") || "Unknown";
+
+// Wrong passwords at the /investments gate. The guess itself is never stored,
+// only its length. Visitor IDs rotate daily, so "repeat" means within one day.
+function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => void }) {
+  const [data, setData] = useState<Attempts | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setError(false);
+    fetch(`/api/admin/finance-attempts?range=${range}`, { headers: authHeaders() })
+      .then((r) => {
+        if (r.status === 401) { onLogout(); return null; }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((d) => { if (!cancelled && d) setData(d); })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [range, onLogout]);
+
+  return (
+    <section>
+      <SectionTitle>Investments password attempts</SectionTitle>
+      {error ? (
+        <p className="text-sm text-error">Failed to load attempts.</p>
+      ) : !data ? (
+        <div className="h-24 rounded-xl bg-base-200 animate-pulse" />
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard label="Failed attempts" value={data.attempts} />
+            <StatCard label="~Unique visitors" value={data.visitors} sub="Approximate (daily hash)" />
+            <StatCard label="From bots" value={data.bots} sub="Scripts and crawlers" />
+            <div className="stat bg-base-200 rounded-xl border border-base-300">
+              <div className="stat-title text-base-content/60 text-xs">Last attempt</div>
+              <div className="stat-value text-base font-bold text-base-content">{data.lastAt ? when(data.lastAt) : "None"}</div>
+            </div>
+          </div>
+
+          {data.attempts === 0 ? (
+            <p className="text-xs text-base-content/60">No wrong passwords in this period.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-200 lg:col-span-2">
+                <table className="table table-sm">
+                  <thead>
+                    <tr className="text-base-content/60">
+                      <th>When</th><th>Where</th><th>Device</th><th className="text-right">Length</th><th>Visitor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.recent.map((r, i) => (
+                      <tr key={i}>
+                        <td className="whitespace-nowrap text-sm">{when(r.created_at)}</td>
+                        <td className="whitespace-nowrap text-sm">{where(r)}</td>
+                        <td className="whitespace-nowrap text-sm text-base-content/70">
+                          {device(r)}
+                          {r.is_bot ? <span className="badge badge-xs badge-warning ml-1.5">bot</span> : null}
+                        </td>
+                        <td className="text-right text-sm tabular-nums">{r.guess_length ?? "—"}</td>
+                        <td className="font-mono text-xs text-base-content/60">{r.visitor_hash ? r.visitor_hash.slice(0, 8) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="px-4 pb-3 pt-1 text-xs text-base-content/60">
+                  Latest {data.recent.length}{data.attempts > data.recent.length ? ` of ${data.attempts}` : ""}. Guesses aren&apos;t stored, only their length.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-base-300 bg-base-200 p-4">
+                <p className="mb-3 text-sm font-medium text-base-content">Tried more than once</p>
+                {data.repeat.length === 0 ? (
+                  <p className="text-xs text-base-content/60">Nobody tried twice in one day.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {data.repeat.map((r) => (
+                      <li key={r.visitor_hash + r.day} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-mono text-xs text-base-content/70">{r.visitor_hash.slice(0, 8)}</p>
+                          <p className="truncate text-xs text-base-content/60">{where(r)} · {device(r)}</p>
+                          <p className="text-xs text-base-content/60">{when(r.first_at)} – {new Date(r.last_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>
+                        </div>
+                        <span className="badge badge-sm badge-error shrink-0">{r.attempts} tries</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [range, setRange] = useState<typeof RANGES[number]>("30d");
@@ -356,9 +474,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                           <td className="text-xs font-medium">
                             {PROJECT_NAMES[p.slug] || p.slug}
                           </td>
-                          <td className="text-right text-sm">{(p.page_view as number) || 0}</td>
-                          <td className="text-right text-sm">{(p.project_card_clicked as number) || 0}</td>
-                          <td className="text-right text-sm">{(p.project_demo_clicked as number) || 0}</td>
+                          <td className="text-right text-sm">{p.counts.page_view ?? 0}</td>
+                          <td className="text-right text-sm">{p.counts.project_card_clicked ?? 0}</td>
+                          <td className="text-right text-sm">{p.counts.project_demo_clicked ?? 0}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -423,6 +541,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             )}
           </>
         )}
+
+        <FinanceAttempts range={range} onLogout={onLogout} />
 
         {/* Self-exclusion controls */}
         <section className="bg-base-200 rounded-xl border border-base-300 p-5">

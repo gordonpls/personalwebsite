@@ -1,5 +1,6 @@
 const express = require("express");
 const { createToken, safeCompare, requireAdmin } = require("../lib/admin-auth");
+const { getDb, getLoginFailures, getStartDay, todayStr } = require("../lib/analytics-db");
 
 const router = express.Router();
 
@@ -23,6 +24,19 @@ router.post("/login", (req, res) => {
 // Validates an existing token — used by the frontend on page load to check session.
 router.post("/verify", requireAdmin, (_req, res) => {
   res.json({ valid: true });
+});
+
+// GET /api/admin/finance-attempts?range=7d|30d|month|all
+// Wrong passwords at the /investments gate (see routes/finance.js).
+router.get("/finance-attempts", requireAdmin, (req, res) => {
+  try {
+    const range = ["7d", "30d", "month", "all"].includes(req.query.range) ? req.query.range : "30d";
+    const startDay = getStartDay(range);
+    res.json({ ...getLoginFailures(getDb(), startDay), range, dateRange: { start: startDay, end: todayStr() } });
+  } catch (err) {
+    console.error("[admin] finance-attempts error:", err.message);
+    res.status(500).json({ error: "Failed to load attempts" });
+  }
 });
 
 module.exports = router;

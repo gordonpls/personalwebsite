@@ -41,6 +41,25 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_ae_path         ON analytics_events(path);
     CREATE INDEX IF NOT EXISTS idx_ae_project_slug ON analytics_events(project_slug);
     CREATE INDEX IF NOT EXISTS idx_ae_visitor_hash ON analytics_events(visitor_hash);
+
+    -- Wrong passwords at the /investments gate. Never the guess itself (people
+    -- type passwords they use elsewhere); only its length.
+    CREATE TABLE IF NOT EXISTS finance_login_failures (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+      day          TEXT NOT NULL,
+      visitor_hash TEXT,
+      guess_length INTEGER,
+      is_bot       INTEGER NOT NULL DEFAULT 0,
+      device_type  TEXT,
+      browser      TEXT,
+      os           TEXT,
+      country      TEXT,
+      region       TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_flf_day     ON finance_login_failures(day);
+    CREATE INDEX IF NOT EXISTS idx_flf_visitor ON finance_login_failures(visitor_hash, day);
   `);
 }
 
@@ -65,6 +84,33 @@ function insertEvent(db, event) {
     event.country ?? null,
     event.region ?? null,
   ]);
+}
+
+function insertLoginFailure(db, row) {
+  db.prepare(`
+    INSERT INTO finance_login_failures
+      (day, visitor_hash, guess_length, is_bot, device_type, browser, os, country, region)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run([
+    row.day,
+    row.visitor_hash ?? null,
+    row.guess_length ?? null,
+    row.is_bot ? 1 : 0,
+    row.device_type ?? null,
+    row.browser ?? null,
+    row.os ?? null,
+    row.country ?? null,
+    row.region ?? null,
+  ]);
+}
+
+// Attempts already logged for this visitor today (for the per-day cap).
+function countLoginFailuresToday(db, visitorHash, day) {
+  if (!visitorHash) return 0;
+  const row = db.prepare(
+    `SELECT COUNT(*) AS n FROM finance_login_failures WHERE visitor_hash = ? AND day = ?`
+  ).get([visitorHash, day]);
+  return row?.n ?? 0;
 }
 
 // ── Read ───────────────────────────────────────────────────────────────────
@@ -197,6 +243,46 @@ function getReferrerBreakdown(db, startDay, limit = 10) {
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 
+// Failed /investments password attempts since `startDay`, for /admin.
+function getLoginFailures(db, startDay) {
+  const totals = db.prepare(`
+    SELECT COUNT(*) AS attempts,
+           COUNT(DISTINCT visitor_hash) AS visitors,
+           SUM(is_bot) AS bots,
+           MAX(created_at) AS last_at
+    FROM finance_login_failures WHERE day >= ?
+  `).get([startDay]);
+
+  const recent = db.prepare(`
+    SELECT created_at, visitor_hash, guess_length, is_bot, device_type, browser, os, country, region
+    FROM finance_login_failures WHERE day >= ?
+    ORDER BY created_at DESC LIMIT 50
+  `).all([startDay]);
+
+  // Visitor hashes rotate daily, so "repeat" means repeated within one day.
+  const repeat = db.prepare(`
+    SELECT visitor_hash, day, COUNT(*) AS attempts,
+           MIN(created_at) AS first_at, MAX(created_at) AS last_at,
+           MAX(country) AS country, MAX(region) AS region,
+           MAX(device_type) AS device_type, MAX(browser) AS browser, MAX(os) AS os
+    FROM finance_login_failures
+    WHERE day >= ? AND visitor_hash IS NOT NULL
+    GROUP BY visitor_hash, day
+    HAVING COUNT(*) > 1
+    ORDER BY attempts DESC, last_at DESC
+    LIMIT 10
+  `).all([startDay]);
+
+  return {
+    attempts: totals?.attempts ?? 0,
+    visitors: totals?.visitors ?? 0,
+    bots: totals?.bots ?? 0,
+    lastAt: totals?.last_at ?? null,
+    recent,
+    repeat,
+  };
+}
+
 function getStartDay(range) {
   const now = new Date();
   switch (range) {
@@ -231,4 +317,7 @@ module.exports = {
   getReferrerBreakdown,
   getStartDay,
   todayStr,
+  insertLoginFailure,
+  countLoginFailuresToday,
+  getLoginFailures,
 };
