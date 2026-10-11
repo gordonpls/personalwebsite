@@ -85,7 +85,7 @@ function mutableItems() {
     return readCatalog() ?? legacyEnvItems();
 }
 
-function addItem({ institution, accessToken, itemId, notes }) {
+function addItem({ institution, accessToken, itemId, plaidInstitutionId, notes }) {
     if (!accessToken) throw new Error("addItem: accessToken is required");
     if (!itemId) throw new Error("addItem: itemId is required (Plaid returns it from itemPublicTokenExchange)");
     if (!institution) throw new Error("addItem: institution label is required");
@@ -103,6 +103,7 @@ function addItem({ institution, accessToken, itemId, notes }) {
                 institution,
                 accessToken,
                 itemId,
+                plaidInstitutionId: plaidInstitutionId ?? null,
                 linkedAt: now,
                 lastSyncedAt: null,
                 notes: notes ?? null,
@@ -180,6 +181,39 @@ function setItemId(accessToken, itemId) {
     return true;
 }
 
+// Trial-cap guard: an existing catalog Item at the same institution, matched by
+// Plaid institution_id when we have it, else by display name. Linking the same
+// login twice creates a duplicate Item that permanently burns a trial slot
+// (/item/remove does NOT give it back), so new-Item flows must check this
+// BEFORE exchanging the public_token.
+function findByInstitution({ institutionId, name }) {
+    const want = String(name || "").trim().toLowerCase();
+    return loadItems().find((i) =>
+        (institutionId && i.plaidInstitutionId === institutionId) ||
+        (want && String(i.institution || "").trim().toLowerCase() === want)
+    ) ?? null;
+}
+
+// Backfill the Plaid institution_id (seen on every holdings response) so the
+// duplicate guard can match on it, not just on the display name.
+function setPlaidInstitutionId(itemId, plaidInstitutionId) {
+    const existing = mutableItems();
+    const idx = existing.findIndex((i) => i.itemId === itemId);
+    if (idx < 0 || existing[idx].plaidInstitutionId === plaidInstitutionId) return;
+    existing[idx] = { ...existing[idx], plaidInstitutionId };
+    writeCatalog(existing);
+}
+
+// Record that an Item's webhook URL was registered (via /item/webhook/update or
+// at link time), so we know when it's safe to lean on webhooks instead of polling.
+function markWebhook(itemId, url) {
+    const existing = mutableItems();
+    const idx = existing.findIndex((i) => i.itemId === itemId);
+    if (idx < 0) return;
+    existing[idx] = { ...existing[idx], webhookUrl: url, webhookRegisteredAt: new Date().toISOString() };
+    writeCatalog(existing);
+}
+
 // Public-safe view: itemId + institution + timestamps + error state, no tokens.
 function listPublic() {
     return loadItems().map((i) => {
@@ -189,4 +223,4 @@ function listPublic() {
     });
 }
 
-module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, setInstitution, setItemId, listPublic, CATALOG_PATH };
+module.exports = { loadItems, addItem, removeItem, markSynced, markError, clearError, setInstitution, setItemId, findByInstitution, setPlaidInstitutionId, markWebhook, listPublic, CATALOG_PATH };

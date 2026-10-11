@@ -32,7 +32,8 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.use(express.json());
+// Keep the raw bytes too: Plaid webhook verification hashes the exact body.
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 // One-time Plaid Link setup page. Gated behind a flag so it's never reachable
 // in production — set PLAID_SETUP_ENABLED=true locally to connect an institution.

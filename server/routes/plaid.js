@@ -5,6 +5,8 @@ const items = require("../lib/plaid-items");
 const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
 const { sendPlaidRelinkEmail } = require("../lib/notify");
 const { requireFinance } = require("../lib/admin-auth");
+const { verifyPlaidWebhook } = require("../lib/plaid-webhook-verify");
+const snapshots = require("../lib/holdings-snapshots");
 
 const router = express.Router();
 
@@ -24,6 +26,11 @@ const plaidConfig = new Configuration({
 
 const plaidClient = new PlaidApi(plaidConfig);
 
+// Public URL Plaid should POST webhooks to (e.g. https://gordonzhong.com/api/plaid/webhook).
+// Explicit-only: leaving it unset in local dev means a dev Link session can never
+// point a production Item's webhooks at localhost.
+const WEBHOOK_URL = process.env.PLAID_WEBHOOK_URL || null;
+
 // Plaid Items live in server/.plaid-items.json (preferred) or legacy env vars
 // (backwards-compat). See server/lib/plaid-items.js for the storage rationale.
 function getTokens() {
@@ -40,8 +47,9 @@ function getTokens() {
 // The returned function also has an .invalidate() method for post-relink cache busting.
 function cached(ttlMs) {
     const s = { at: 0, data: null, inFlight: null };
+    const ttl = () => (typeof ttlMs === "function" ? ttlMs() : ttlMs);
     const fn = (fetcher) => {
-        if (s.data && Date.now() - s.at < ttlMs) return Promise.resolve(s.data);
+        if (s.data && Date.now() - s.at < ttl()) return Promise.resolve(s.data);
         if (s.inFlight) return s.inFlight;
         s.inFlight = Promise.resolve()
             .then(fetcher)
@@ -53,7 +61,16 @@ function cached(ttlMs) {
     fn.invalidate = () => { s.at = 0; s.data = null; };
     return fn;
 }
-const getHoldings = cached(6 * 60 * 60 * 1000); // 6h — Plaid is billed per call
+// Webhooks are "live" once every Item has our current webhook URL registered.
+// Then HOLDINGS: DEFAULT_UPDATE busts the cache whenever Plaid has new data, so
+// the TTL can stretch to 24h as a safety net; until then, poll every 6h.
+function webhooksLive() {
+    const all = items.loadItems();
+    return Boolean(WEBHOOK_URL) && all.length > 0 && all.every((i) => i.webhookUrl === WEBHOOK_URL);
+}
+const HOLDINGS_TTL_POLL = 6 * 60 * 60 * 1000;
+const HOLDINGS_TTL_WEBHOOK = 24 * 60 * 60 * 1000;
+const getHoldings = cached(() => (webhooksLive() ? HOLDINGS_TTL_WEBHOOK : HOLDINGS_TTL_POLL)); // Plaid is billed per call
 const getQuotes = cached(2 * 60 * 1000);        // 2 min — Finnhub free is 60/min
 
 // One-time nonce for the relink completion handshake (prevents CSRF on the callback).
@@ -105,6 +122,15 @@ function portfolioOf(institution, subtype) {
 router.post("/link/token/create", async (req, res) => {
     if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
     const { access_token } = req.body || {};
+    // TRIAL CAP: every new Item permanently consumes one of the 10 Production
+    // trial slots (/item/remove does not refund it). New-Item mode needs a
+    // second, deliberate opt-in on top of PLAID_SETUP_ENABLED. Update mode
+    // (access_token present) reuses the existing Item and is always allowed.
+    if (!access_token && process.env.PLAID_ALLOW_NEW_ITEM !== "true") {
+        return res.status(403).json({
+            error: "New-Item Link is disabled (Plaid trial Item cap). Use update mode, or set PLAID_ALLOW_NEW_ITEM=true for a deliberate one-off.",
+        });
+    }
     try {
         const payload = {
             user: { client_user_id: "owner" },
@@ -112,6 +138,7 @@ router.post("/link/token/create", async (req, res) => {
             country_codes: [CountryCode.Us],
             language: "en",
         };
+        if (WEBHOOK_URL) payload.webhook = WEBHOOK_URL;
         if (access_token) {
             // Update mode: omit `products`, pass the stuck access_token.
             payload.access_token = access_token;
@@ -135,14 +162,29 @@ router.post("/link/token/create", async (req, res) => {
 // belt-and-suspenders backup.
 router.post("/link/token/exchange", async (req, res) => {
     if (process.env.PLAID_SETUP_ENABLED !== "true") return res.status(404).end();
-    const { public_token, institution } = req.body || {};
+    const { public_token, institution, institution_id } = req.body || {};
     if (!public_token) return res.status(400).json({ error: "public_token required" });
+    if (process.env.PLAID_ALLOW_NEW_ITEM !== "true") return res.status(403).json({ error: "New-Item exchange is disabled (Plaid trial Item cap)." });
+    // Duplicate-Item guard (Plaid "Preventing duplicate Items"): check Link's
+    // onSuccess metadata BEFORE exchanging. Not exchanging means no access
+    // token is created, so a repeat link of an institution we already have
+    // doesn't burn a trial slot. Require the metadata so the check can't be skipped.
+    if (!institution_id && !institution) {
+        return res.status(400).json({ error: "institution / institution_id (from Link onSuccess metadata) required for the duplicate check" });
+    }
+    const dup = items.findByInstitution({ institutionId: institution_id, name: institution });
+    if (dup) {
+        logPlaid({ level: "warn", event: "link.exchange.duplicate_blocked", item_id: dup.itemId, institution: dup.institution });
+        return res.status(409).json({
+            error: `${dup.institution} is already linked. Not exchanging, to avoid a duplicate Item; use update mode (/api/plaid/relink) to repair it instead.`,
+        });
+    }
     try {
         const response = await plaidClient.itemPublicTokenExchange({ public_token });
         const { access_token, item_id } = response.data;
         const persistedInstitution = institution || "Unknown";
         try {
-            items.addItem({ institution: persistedInstitution, accessToken: access_token, itemId: item_id });
+            items.addItem({ institution: persistedInstitution, accessToken: access_token, itemId: item_id, plaidInstitutionId: institution_id });
         } catch (e) {
             // Catalog write failure shouldn't lose the token for the operator —
             // they can still copy it from the response. Surface the error in logs.
@@ -260,11 +302,24 @@ router.get("/items/inspect", async (_req, res) => {
     res.json({ items: enriched });
 });
 
+// Flag an Item as errored and email the operator — once per error episode, not on
+// every retry/webhook while it persists (the catalog already has error+errorAt).
+function flagItemAndAlert(itemId, code, institution) {
+    const entry = items.loadItems().find((i) => i.itemId === itemId);
+    const alreadyFlagged = entry?.error;
+    items.markError(itemId, code);
+    if (!alreadyFlagged) {
+        sendPlaidRelinkEmail({ institution: institution || entry?.institution || "Unknown", itemId, errorCode: code })
+            .catch((e) => console.error("[notify] email failed:", e.message));
+    }
+}
+
 // Build the privacy-safe holdings payload from Plaid (no $ amounts/account names).
 async function fetchHoldingsPayload() {
     const agg = new Map(); // "Portfolio|TICKER" -> { ..., value }
     let total = 0, costSum = 0, costValueSum = 0;
     let firstError = null; // remember a per-item failure to surface only if ALL fail
+    const sources = []; // per-institution freshness: { institution, pricesAsOf }
 
     for (const { institution, token, itemId } of getTokens()) {
         let resp;
@@ -278,16 +333,7 @@ async function fetchHoldingsPayload() {
                     `[plaid] ${code} on item ${itemId} (${institution}).\n` +
                     `        Relink required: visit /api/plaid/relink?secret=<PLAID_RELINK_SECRET>`
                 );
-                if (itemId) {
-                    // Only email on the first detection — not on every retry while the
-                    // error persists (the catalog already has error+errorAt at that point).
-                    const alreadyFlagged = items.loadItems().find((i) => i.itemId === itemId)?.error;
-                    items.markError(itemId, code);
-                    if (!alreadyFlagged) {
-                        sendPlaidRelinkEmail({ institution, itemId, errorCode: code })
-                            .catch((e) => console.error("[notify] email failed:", e.message));
-                    }
-                }
+                if (itemId) flagItemAndAlert(itemId, code, institution);
             }
             // Skip this item rather than throwing — one broken brokerage
             // shouldn't blank every other (working / just-re-authed) holding.
@@ -301,6 +347,8 @@ async function fetchHoldingsPayload() {
             // flagged on future errors and auto-targeted for relink.
             if (resolvedItemId !== itemId) items.setItemId(token, resolvedItemId);
             items.markSynced(resolvedItemId);
+            const instId = resp.data?.item?.institution_id;
+            if (instId) items.setPlaidInstitutionId(resolvedItemId, instId);
         }
 
         // Self-heal a missing/"Unknown" institution label (which would otherwise
@@ -330,6 +378,13 @@ async function fetchHoldingsPayload() {
 
         const { holdings, securities, accounts } = resp.data;
         const secMap = Object.fromEntries(securities.map((s) => [s.security_id, s]));
+        // Newest price date the institution reported for this Item ("prices as of").
+        let pricesAsOf = null;
+        for (const h of holdings) {
+            const d = h.institution_price_as_of || secMap[h.security_id]?.close_price_as_of;
+            if (d && (!pricesAsOf || d > pricesAsOf)) pricesAsOf = d;
+        }
+        sources.push({ institution: inst, pricesAsOf });
         const acctSubtype = Object.fromEntries((accounts || []).map((a) => [a.account_id, (a.subtype || "").toLowerCase()]));
 
         for (const h of holdings) {
@@ -385,7 +440,7 @@ async function fetchHoldingsPayload() {
     // Overall total return vs cost basis (% only — never a dollar amount).
     const totalReturnPct = costSum > 0 ? Math.round(((costValueSum - costSum) / costSum) * 1000) / 10 : null;
 
-    return { asOf: new Date().toISOString(), totalReturnPct, holdings };
+    return { asOf: new Date().toISOString(), totalReturnPct, holdings, sources };
 }
 
 // Live daily % change per ticker from Finnhub (free tier: 60/min).
@@ -411,7 +466,9 @@ async function fetchQuotesPayload(tickers) {
 router.get("/holdings", requireFinance, async (_req, res) => {
     if (!getTokens().length) return res.status(503).json({ error: "No access tokens configured" });
     try {
-        res.json(await getHoldings(fetchHoldingsPayload));
+        const payload = await getHoldings(fetchHoldingsPayload);
+        snapshots.record(payload); // no-op unless this payload is new for today
+        res.json(payload);
     } catch (err) {
         console.error("[holdings]", err.response?.data ?? err.message);
         res.status(500).json({ error: "Failed to fetch holdings" });
@@ -556,6 +613,7 @@ router.get("/plaid/relink", async (req, res) => {
             country_codes: [CountryCode.Us],
             language: "en",
             access_token: target.accessToken,
+            ...(WEBHOOK_URL ? { webhook: WEBHOOK_URL } : {}),
         });
         logPlaidResponse("link.token.create", response, { mode: "relink", institution: target.institution });
         link_token = response.data.link_token;
@@ -665,5 +723,124 @@ router.get("/plaid/notify-test", async (req, res) => {
         res.status(500).send(`❌ Email failed: ${err.message}`);
     }
 });
+
+// ── Webhooks ─────────────────────────────────────────────────────────────────
+// Plaid POSTs here (server-to-server, no Origin → passes CORS). Every request
+// must carry a valid Plaid-Verification JWT bound to the exact raw body (see
+// lib/plaid-webhook-verify.js); anything else is 401'd and ignored. Verified
+// webhooks always get a fast 200 so Plaid doesn't retry; work is synchronous
+// but tiny (catalog write, cache bust, fire-and-forget email).
+const ALERT_CODES = new Set(["ERROR", "PENDING_EXPIRATION", "PENDING_DISCONNECT", "USER_PERMISSION_REVOKED", "USER_ACCOUNT_REVOKED"]);
+
+router.post("/plaid/webhook", async (req, res) => {
+    const ok = await verifyPlaidWebhook(plaidClient, req.get("Plaid-Verification"), req.rawBody);
+    if (!ok) {
+        logPlaid({ level: "warn", event: "webhook.rejected", message: "bad or missing Plaid-Verification" });
+        return res.status(401).end();
+    }
+    const { webhook_type: type, webhook_code: code, item_id: itemId, error } = req.body || {};
+    const entry = itemId ? items.loadItems().find((i) => i.itemId === itemId) : null;
+    logPlaid({ level: "info", event: `webhook.${type}.${code}`, item_id: itemId, institution: entry?.institution, error_code: error?.error_code });
+
+    if (!entry) return res.json({ ok: true }); // not one of ours (or already removed)
+
+    if (type === "HOLDINGS" && code === "DEFAULT_UPDATE") {
+        getHoldings.invalidate(); // next request (or the snapshot timer) pulls fresh data
+    } else if (type === "ITEM" && ALERT_CODES.has(code)) {
+        flagItemAndAlert(itemId, code === "ERROR" ? (error?.error_code || "ITEM_ERROR") : code, entry.institution);
+        healthCache.invalidate();
+    } else if (type === "ITEM" && code === "LOGIN_REPAIRED") {
+        items.clearError(itemId);
+        getHoldings.invalidate();
+        healthCache.invalidate();
+    } else if (type === "ITEM" && code === "WEBHOOK_UPDATE_ACKNOWLEDGED") {
+        if (WEBHOOK_URL) items.markWebhook(itemId, WEBHOOK_URL);
+    }
+    res.json({ ok: true });
+});
+
+// One-time: point every EXISTING Item's webhooks at PLAID_WEBHOOK_URL via
+// /item/webhook/update. Updates Items in place — creates no Items, so it's
+// trial-cap safe. GET /api/plaid/webhook/register?secret=<PLAID_RELINK_SECRET>
+router.get("/plaid/webhook/register", async (req, res) => {
+    const secret = process.env.PLAID_RELINK_SECRET;
+    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+    if (!WEBHOOK_URL) return res.status(503).json({ error: "PLAID_WEBHOOK_URL not set" });
+    const results = [];
+    for (const it of items.loadItems()) {
+        try {
+            const r = await plaidClient.itemWebhookUpdate({ access_token: it.accessToken, webhook: WEBHOOK_URL });
+            const id = r.data?.item?.item_id ?? it.itemId;
+            if (id) items.markWebhook(id, WEBHOOK_URL);
+            logPlaidResponse("item.webhook.update", r, { item_id: id, institution: it.institution });
+            results.push({ institution: it.institution, ok: true });
+        } catch (err) {
+            logPlaidError("item.webhook.update", err, { item_id: it.itemId, institution: it.institution });
+            results.push({ institution: it.institution, ok: false, error: err.response?.data?.error_code || err.message });
+        }
+    }
+    res.json({ webhook: WEBHOOK_URL, results });
+});
+
+// ── Password-gated: per-Item connection health for the dashboard chip ──
+// Live state from /item/get (free; doesn't create Items), cached 30 min and busted
+// by webhooks. Only display fields go out — no item_id or tokens.
+const healthCache = cached(30 * 60 * 1000);
+
+async function fetchItemHealth() {
+    return Promise.all(items.loadItems().map(async (it) => {
+        let errorCode = it.error || null;
+        let consentExpiresAt = null;
+        try {
+            const r = await plaidClient.itemGet({ access_token: it.accessToken });
+            const item = r.data?.item;
+            errorCode = item?.error?.error_code || null;
+            consentExpiresAt = item?.consent_expiration_time || null;
+            // Keep the catalog in sync with what Plaid reports.
+            if (it.itemId) {
+                if (errorCode) items.markError(it.itemId, errorCode);
+                else if (it.error) items.clearError(it.itemId);
+                if (WEBHOOK_URL && item?.webhook === WEBHOOK_URL && it.webhookUrl !== WEBHOOK_URL) items.markWebhook(it.itemId, WEBHOOK_URL);
+            }
+        } catch (err) {
+            logPlaidError("item.get", err, { item_id: it.itemId, institution: it.institution });
+            errorCode = err.response?.data?.error_code || errorCode;
+        }
+        return {
+            institution: it.institution || "Unknown",
+            status: errorCode ? "error" : "healthy",
+            errorCode,
+            lastSyncedAt: it.lastSyncedAt || null,
+            consentExpiresAt,
+        };
+    }));
+}
+
+router.get("/plaid/status", requireFinance, async (_req, res) => {
+    try {
+        res.json({ asOf: new Date().toISOString(), webhooks: webhooksLive(), items: await healthCache(fetchItemHealth) });
+    } catch (err) {
+        console.error("[plaid/status]", err.message);
+        res.status(500).json({ error: "Failed to fetch connection status" });
+    }
+});
+
+// ── Password-gated: daily allocation snapshots (weights/% only) ──
+router.get("/holdings/snapshots", requireFinance, (_req, res) => {
+    res.json({ days: snapshots.list() });
+});
+
+// Daily snapshot safety net: if nobody has loaded the dashboard today, take one
+// from the cached holdings (a Plaid call only if the cache is stale/busted).
+// Hourly check while the process is alive; Passenger may idle the app, in which
+// case the next visit records the day instead.
+setInterval(async () => {
+    if (snapshots.hasToday() || !getTokens().length) return;
+    try {
+        snapshots.record(await getHoldings(fetchHoldingsPayload));
+    } catch (err) {
+        console.error("[snapshots] daily capture failed:", err.message);
+    }
+}, 60 * 60 * 1000).unref();
 
 module.exports = router;

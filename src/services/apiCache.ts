@@ -13,7 +13,7 @@
 
 import { FINANCE_AUTH_EVENT, financeAuthHeaders, clearFinanceToken } from "./financeAuth";
 
-const GATED = ["/api/holdings", "/api/quotes", "/api/finance/history", "/api/finance/meta"];
+const GATED = ["/api/holdings", "/api/quotes", "/api/finance/history", "/api/finance/meta", "/api/plaid/status", "/api/holdings/snapshots"];
 
 type Entry = { at: number; promise: Promise<unknown> };
 

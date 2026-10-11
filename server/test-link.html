@@ -90,7 +90,7 @@
             document.getElementById("step2").className = "step active";
             document.getElementById("step1Status").textContent = `✓ Connected: ${metadata.institution?.name ?? "institution"}`;
             document.getElementById("step2Status").textContent = "Exchanging token...";
-            await exchangeToken(public_token);
+            await exchangeToken(public_token, metadata);
           },
           onExit: (err) => {
             document.getElementById("linkBtn").disabled = false;
@@ -105,12 +105,18 @@
       }
     }
 
-    async function exchangeToken(public_token) {
+    async function exchangeToken(public_token, metadata) {
       try {
         const res = await fetch(`${API}/link/token/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ public_token }),
+          // Institution metadata lets the server refuse a duplicate Item BEFORE
+          // exchanging (a duplicate permanently burns a trial-cap slot).
+          body: JSON.stringify({
+            public_token,
+            institution: metadata?.institution?.name,
+            institution_id: metadata?.institution?.institution_id,
+          }),
         });
         const { access_token, item_id, error } = await res.json();
         if (error || !access_token) throw new Error(error || "Exchange failed");

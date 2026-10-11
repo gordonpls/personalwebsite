@@ -12,6 +12,8 @@ import { DrawdownChart } from "./DrawdownChart";
 import { RiskReturnMap } from "./RiskReturnMap";
 import { SectionNav } from "./SectionNav";
 import { PortfolioSwitcher } from "./PortfolioSwitcher";
+import { PlaidStatusChip } from "./PlaidStatusChip";
+import { AllocationHistory } from "./AllocationHistory";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
 // "All" is special: it means no portfolio filter — the heatmap, allocation,
@@ -35,6 +37,7 @@ const SECTIONS = [
     { id: "sec-heatmap", label: "Heatmap" },
     { id: "sec-drivers", label: "Drivers" },
     { id: "sec-calendar", label: "Monthly" },
+    { id: "sec-mix", label: "Mix" },
     { id: "sec-drawdown", label: "Drawdown" },
     { id: "sec-risk", label: "Risk" },
 ];
@@ -113,6 +116,7 @@ export const Portfolios = () => {
                 <p className="text-sm text-base-content/70" aria-live="polite">
                     <span className="font-semibold text-base-content">{active === ALL ? "All portfolios" : active}:</span> {tab.desc}
                 </p>
+                <PlaidStatusChip />
             </header>
 
             {/* Headline numbers for the selected scope. */}
@@ -193,6 +197,11 @@ export const Portfolios = () => {
                     onScopeChange={changeTab}
                     scopeOptions={SCOPE_OPTIONS}
                 />
+            </section>
+
+            {/* How the split across portfolios has moved, from daily server snapshots. */}
+            <section id="sec-mix" className="scroll-mt-28">
+                <AllocationHistory />
             </section>
 
             {/* How deep it fell beside how bumpy each position was for its return. */}
