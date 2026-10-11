@@ -41,14 +41,18 @@ async function finnhubGet(pathWithQuery) {
 
 // Keep every day inside the recent window, but only ~one point per week before
 // that — keeps the committed file small while the long "All" curve stays smooth.
+// Each month's last close is always kept, so monthly/calendar-year returns are
+// measured exactly month-end to month-end even in the thinned years.
 function thin(series) {
     const recentCutoff = new Date(Date.now() - RECENT_DAILY_DAYS * 86400000).toISOString().slice(0, 10);
+    const dates = Object.keys(series).sort();
     const out = {};
     let lastOld = null;
-    for (const d of Object.keys(series).sort()) {
-        if (d >= recentCutoff) { out[d] = series[d]; continue; }
+    dates.forEach((d, i) => {
+        const monthEnd = i === dates.length - 1 || dates[i + 1].slice(0, 7) !== d.slice(0, 7);
+        if (d >= recentCutoff || monthEnd) { out[d] = series[d]; return; }
         if (lastOld === null || Date.parse(d) - Date.parse(lastOld) >= 6 * 86400000) { out[d] = series[d]; lastOld = d; }
-    }
+    });
     return out;
 }
 

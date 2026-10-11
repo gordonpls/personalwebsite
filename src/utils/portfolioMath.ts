@@ -46,11 +46,17 @@ export interface PriceWindow { axis: string[]; series: WindowSeries[]; repW: num
 
 // Closes for every holding on a shared date axis within [from, to],
 // forward-filled, keeping only holdings priced at the first axis date.
+// The axis starts at the last close ON OR BEFORE `from` (the standard base):
+// YTD and calendar years measure from the prior year's final close, not the
+// first trading day's close, so that day's move isn't dropped.
 export function priceWindow(holdings: WeightedHolding[], prices: PriceMap, from: string, to = "9999-12-31"): PriceWindow {
     const totalW = holdings.reduce((s, h) => s + h.weightPct, 0) || 1;
     const items = holdings.filter((h) => h.ticker && prices[h.ticker]);
+    let base = "";
+    for (const h of items) for (const d in prices[h.ticker!]) if (d <= from && d > base) base = d;
+    const lo = base || from;
     const dateSet = new Set<string>();
-    for (const h of items) for (const d in prices[h.ticker!]) if (d >= from && d <= to) dateSet.add(d);
+    for (const h of items) for (const d in prices[h.ticker!]) if (d >= lo && d <= to) dateSet.add(d);
     const axis = [...dateSet].sort();
 
     const series = items.map((h) => {
@@ -115,12 +121,13 @@ export interface YearReturns {
     index: number[];           // growth of $1 from the year's first date
 }
 
-function monthlyFromIndex(axis: string[], index: number[]): (number | null)[] {
+function monthlyFromIndex(year: number, axis: string[], index: number[]): (number | null)[] {
     const months: (number | null)[] = Array(12).fill(null);
-    let prev = 1; // the index starts at 1 on the year's first date
+    let prev = 1; // the index starts at 1 on the base date (prior year's last close)
     for (let m = 0; m < 12; m++) {
+        const ym = `${year}-${String(m + 1).padStart(2, "0")}`; // year-qualified: axis[0] is last December
         let end = -1;
-        for (let i = 0; i < axis.length; i++) if (Number(axis[i].slice(5, 7)) === m + 1) end = i;
+        for (let i = 0; i < axis.length; i++) if (axis[i].startsWith(ym)) end = i;
         if (end < 0) continue;
         months[m] = (index[end] / prev - 1) * 100;
         prev = index[end];
@@ -147,7 +154,7 @@ export function calendarYears(holdings: WeightedHolding[], prices: PriceMap, ben
         const bIndex = bench.series.length ? windowIndex(bench) : null;
         out.push({
             year: y,
-            months: monthlyFromIndex(win.axis, index),
+            months: monthlyFromIndex(y, win.axis, index),
             total: (index[index.length - 1] - 1) * 100,
             benchmark: bIndex ? (bIndex[bIndex.length - 1] - 1) * 100 : null,
             axis: win.axis,
@@ -167,7 +174,9 @@ export function drawdownFromYears(years: YearReturns[]): DrawdownPoint[] {
     const out: DrawdownPoint[] = [];
     let level = 1, peak = 1;
     for (const y of years) {
-        for (let i = 0; i < y.axis.length; i++) {
+        // axis[0] is the base close — the previous year's last point, already
+        // emitted — so skip it after the first year to avoid a duplicate date.
+        for (let i = out.length && y.axis[0] < `${y.year}-01-01` ? 1 : 0; i < y.axis.length; i++) {
             const v = level * y.index[i];
             peak = Math.max(peak, v);
             out.push({ date: y.axis[i], value: (v / peak - 1) * 100 });

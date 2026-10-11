@@ -67,8 +67,13 @@ function buildSeries(range: Range, holdings: Holding[], prices: PriceMap): { dat
     const totalW = holdings.reduce((s, h) => s + h.weightPct, 0) || 1;
     const items = holdings.filter((h) => h.ticker && prices[h.ticker as string]);
 
+    // Start at the last close on/before the cutoff (same base as priceWindow),
+    // so YTD runs from the prior year's final close and matches the calendar.
+    let base = "";
+    for (const h of items) for (const d in prices[h.ticker as string]) if (d <= cutoff && d > base) base = d;
+    const lo = base || cutoff;
     const dateSet = new Set<string>();
-    for (const h of items) for (const d in prices[h.ticker as string]) if (d >= cutoff) dateSet.add(d);
+    for (const h of items) for (const d in prices[h.ticker as string]) if (d >= lo) dateSet.add(d);
     const axis = [...dateSet].sort();
     if (axis.length < 2) return { data: [], coveragePct: 0, asOfLast: null };
 
