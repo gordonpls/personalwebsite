@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 // Refined typing animation; swap back to "./subcomponents/TypingGreeting" to use the classic one.
 import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
 // Caret shape: "block" | "underscore" | "bar"
@@ -6,12 +6,28 @@ const TypingGreeting = () => <TypingGreetingRefined caret="bar" />;
 import InfoItem from "./ProfileCard/InfoItem";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";
+import avatarCartoon from "../assets/avatar.jpeg";
 import { NowPlaying } from "./NowPlaying";
 
 import CLOUDS from "vanta/dist/vanta.clouds.min";
 
+// Star centres relative to the avatar: a large one near the top-right edge
+// and four small ones at the points of a diamond around it, twinkling in turn
+// (centre, then top → right → bottom → left).
+const AVATAR_STARS = [
+    { top: "15%", right: "15%", size: "2.25rem", delay: "2.3s" },
+    { top: "-3%", right: "15%", size: "1rem", delay: "2.45s" },
+    { top: "15%", right: "-3%", size: "1rem", delay: "2.6s" },
+    { top: "33%", right: "15%", size: "0.75rem", delay: "2.75s" },
+    { top: "15%", right: "33%", size: "0.75rem", delay: "2.9s" },
+];
+
 export const Hero = () => {
     const myRef = useRef(null);
+    // Both avatar faces must be loaded before the flip starts, or the spin
+    // could land on a blank cartoon side.
+    const [facesLoaded, setFacesLoaded] = useState(0);
+    const onFaceLoad = () => setFacesLoaded((n) => n + 1);
     useEffect(() => {
         const effect = CLOUDS({
             el: myRef.current,
@@ -31,9 +47,22 @@ export const Hero = () => {
         // reflows it. Vanta only sizes its canvas on init and on window resize,
         // so re-measure whenever the container's own size changes — otherwise the
         // canvas stays at its shorter initial height and leaves a gap at the bottom.
-        const observer = new ResizeObserver(() => effect?.resize());
+        // Only resize on a real size change, at most once per frame: the avatar's
+        // 3D spin fires the observer every frame without changing the size, and
+        // resizing Vanta on each of those starved the page into never loading.
+        let last = "";
+        let frame = 0;
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            const size = `${Math.round(width)}x${Math.round(height)}`;
+            if (size === last) return;
+            last = size;
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => effect?.resize());
+        });
         if (myRef.current) observer.observe(myRef.current);
         return () => {
+            cancelAnimationFrame(frame);
             observer.disconnect();
             effect?.destroy();
         };
@@ -46,11 +75,36 @@ export const Hero = () => {
                 <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:space-x-6 lg:space-x-12">
                     {/* Picture (left) + now-playing under it */}
                     <div className="flex flex-col items-center gap-4 self-center pt-8 md:pt-0">
-                        <img
-                            src={avatar}
-                            alt="Gordon Zhong"
-                            className="max-w-sm h-64 md:h-64 lg:h-84 aspect-square object-cover rounded-full shadow-2xl ring-4 ring-primary business:ring-[#2f6fe0]"
-                        />
+                        {/* Photo spins into the cartoon on load (see .avatar-flip in index.css). */}
+                        <div className={`avatar-flip relative max-w-sm h-64 md:h-64 lg:h-84 aspect-square ${facesLoaded >= 2 ? "is-spinning" : ""}`}>
+                            <div className="avatar-flip-inner">
+                                <img
+                                    src={avatar}
+                                    alt=""
+                                    aria-hidden="true"
+                                    onLoad={onFaceLoad}
+                                    className="avatar-flip-face shadow-2xl ring-4 ring-primary business:ring-[#2f6fe0]"
+                                />
+                                <img
+                                    src={avatarCartoon}
+                                    alt="Gordon Zhong"
+                                    onLoad={onFaceLoad}
+                                    className="avatar-flip-face avatar-flip-back shadow-2xl ring-4 ring-primary business:ring-[#2f6fe0]"
+                                />
+                            </div>
+                            {/* Diamond of four-point stars that twinkle once the cartoon lands. */}
+                            {AVATAR_STARS.map(({ top, right, size, delay }) => (
+                                <svg
+                                    key={`${top}-${right}`}
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                    className="avatar-flip-star"
+                                    style={{ top, right, "--s": size, animationDelay: delay } as CSSProperties}
+                                >
+                                    <path fill="currentColor" d="M12 0C12.9 6.6 17.4 11.1 24 12 17.4 12.9 12.9 17.4 12 24 11.1 17.4 6.6 12.9 0 12 6.6 11.1 11.1 6.6 12 0Z" />
+                                </svg>
+                            ))}
+                        </div>
                         <NowPlaying />
                     </div>
                     {/* Component (right) */}
