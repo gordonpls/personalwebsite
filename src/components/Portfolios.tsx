@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Holdings, type Holding } from "./Holdings";
 import { HoldingsHeatmap } from "./HoldingsHeatmap";
 import { HoldingsPerformance } from "./HoldingsPerformance";
@@ -10,6 +10,7 @@ import { ReturnDrivers } from "./ReturnDrivers";
 import { MonthlyReturns } from "./MonthlyReturns";
 import { DrawdownChart } from "./DrawdownChart";
 import { RiskReturnMap } from "./RiskReturnMap";
+import { SectionNav } from "./SectionNav";
 import { PortfolioSwitcher } from "./PortfolioSwitcher";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
@@ -66,13 +67,15 @@ export const Portfolios = () => {
     // Scroll-spy: highlight whichever section is currently near the middle of the
     // viewport, so the floating section nav always reflects where you are.
     const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+    // While a nav jump is smooth-scrolling, ignore the sections it passes.
+    const jumpLockUntil = useRef(0);
     useEffect(() => {
         const io = new IntersectionObserver(
             (entries) => {
                 const top = entries
                     .filter((e) => e.isIntersecting)
                     .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-                if (top) setActiveSection(top.target.id);
+                if (top && Date.now() > jumpLockUntil.current) setActiveSection(top.target.id);
             },
             { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.5, 1] },
         );
@@ -82,6 +85,13 @@ export const Portfolios = () => {
         });
         return () => io.disconnect();
     }, []);
+    // Show the destination right away rather than waiting for the scroll to land,
+    // so tapping › twice in a row moves two sections.
+    const jumpTo = (id: string) => {
+        jumpLockUntil.current = Date.now() + 900;
+        setActiveSection(id);
+        scrollToSection(id);
+    };
 
     // Layout, top to bottom: live tape → title + scope tabs → headline stats →
     // performance with the spotlight beside it → holdings / detail / allocation
@@ -214,27 +224,8 @@ export const Portfolios = () => {
                 before making investment decisions.
             </p>
 
-            {/* Floating section nav — fixed to the viewport so it's reachable at
-                every scroll position. Highlights the section you're currently in. */}
-            <nav
-                aria-label="Dashboard sections"
-                className="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full border border-base-300 bg-base-100/90 p-1.5 shadow-lg backdrop-blur"
-            >
-                {SECTIONS.map((s) => {
-                    const on = activeSection === s.id;
-                    return (
-                        <button
-                            key={s.id}
-                            type="button"
-                            aria-current={on ? "true" : undefined}
-                            onClick={() => scrollToSection(s.id)}
-                            className={`btn btn-xs sm:btn-sm rounded-full border-none whitespace-nowrap shrink-0 ${on ? "btn-primary" : "btn-ghost text-base-content/70"}`}
-                        >
-                            {s.label}
-                        </button>
-                    );
-                })}
-            </nav>
+            {/* Floating section nav: the current section, prev/next, and a tap-to-open list. */}
+            <SectionNav sections={SECTIONS} active={activeSection} onJump={jumpTo} />
         </div>
     );
 };
