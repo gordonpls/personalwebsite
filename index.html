@@ -10,8 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>G. Zhong</title>
     <!-- Set the theme before first paint to avoid a flash. Everyone starts on
-         dark (business, or a /theme-demo session preview); "light" is only used
-         if chosen under the current key
+         dark (business); "light" is only used if chosen under the current key
          (theme-v2 — the old "theme" key is dropped so returning visitors reset).
          Mirrors src/lib/theme.ts. -->
     <script>
@@ -20,7 +19,7 @@
         var light = localStorage.getItem("theme-v2") === "light";
         document.documentElement.setAttribute(
           "data-theme",
-          light ? "corporate" : sessionStorage.getItem("theme-preview") || "business"
+          light ? "corporate" : "business"
         );
       } catch (e) {
         document.documentElement.setAttribute("data-theme", "business");

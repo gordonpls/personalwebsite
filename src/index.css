@@ -1,9 +1,8 @@
 @import "tailwindcss";
 
-/* `business:` variant → applies only under dark themes (business, plus the
-   dark-* candidates on /theme-demo). Lets the Hero override its colors for the
-   dark sky while leaving light mode untouched. */
-@custom-variant business (&:where([data-theme="business"] *, [data-theme^="dark-"] *));
+/* `business:` variant → applies only under the dark (business) theme. Lets the
+   Hero override its colors for the dark sky while leaving light mode untouched. */
+@custom-variant business (&:where([data-theme="business"] *));
 
 @plugin "daisyui" {
     themes: business, corporate
@@ -14,29 +13,26 @@
     default: false;
     prefersdark: false;
     color-scheme: "light";
-    /* "Lilac Mist" light theme — daytime twin of Twilight Pastels. Faint lilac
-       base and lilac-grey secondary, with Morning Mist's sky-blue primary and
-       teal accent (deepened from the dark theme's pastels to hold contrast). */
-    --color-base-100: oklch(98.5% 0.006 292);   /* page / outer container */
-    --color-base-200: oklch(95.8% 0.012 290);   /* section cards */
-    --color-base-300: oklch(91.5% 0.02 288);    /* mockup window / deepest layer */
-    --color-base-content: oklch(25% 0.035 280);
-    --color-primary: oklch(52% 0.14 245);       /* sky blue */
-    --color-primary-content: oklch(98% 0.01 245);
-    --color-secondary: oklch(52% 0.05 288);     /* lilac grey */
-    --color-secondary-content: oklch(98% 0.008 288);
-    --color-accent: oklch(56% 0.1 182);         /* teal */
-    --color-accent-content: oklch(98% 0.01 182);
-    --color-neutral: oklch(30% 0.03 285);       /* plum slate */
-    --color-neutral-content: oklch(96% 0.01 292);
-    --color-info: oklch(54% 0.12 232);
-    --color-info-content: oklch(98% 0.01 232);
-    --color-success: oklch(54% 0.13 150);
-    --color-success-content: oklch(98% 0.01 150);
-    --color-warning: oklch(76% 0.15 78);
-    --color-warning-content: oklch(26% 0.05 78);
-    --color-error: oklch(56% 0.18 25);
-    --color-error-content: oklch(98% 0.01 25);
+    --color-base-100: oklch(100% 0 0);
+    --color-base-200: oklch(93% 0 0);
+    --color-base-300: oklch(86% 0 0);
+    --color-base-content: oklch(22.389% 0.031 278.072);
+    --color-primary: oklch(58% 0.158 241.966);
+    --color-primary-content: oklch(100% 0 0);
+    --color-secondary: oklch(55% 0.046 257.417);
+    --color-secondary-content: oklch(100% 0 0);
+    --color-accent: oklch(60% 0.118 184.704);
+    --color-accent-content: oklch(100% 0 0);
+    --color-neutral: oklch(0% 0 0);
+    --color-neutral-content: oklch(100% 0 0);
+    --color-info: oklch(60% 0.126 221.723);
+    --color-info-content: oklch(100% 0 0);
+    --color-success: oklch(62% 0.194 149.214);
+    --color-success-content: oklch(100% 0 0);
+    --color-warning: oklch(85% 0.199 91.936);
+    --color-warning-content: oklch(0% 0 0);
+    --color-error: oklch(70% 0.191 22.216);
+    --color-error-content: oklch(0% 0 0);
     --radius-selector: 0.25rem;
     --radius-field: 0.25rem;
     --radius-box: 0.25rem;
@@ -85,196 +81,6 @@
     --noise: 0;
   }
 
-  /* ── Candidate dark themes ──────────────────────────────────────────────
-     Previewed at /theme-demo (session-only, never saved). Named dark-* so the
-     `business:` variant and blog note colors below apply to them too. Once one
-     is chosen, fold it into "business" and delete the rest. */
-
-  @plugin "daisyui/theme" {
-    name: "dark-midnight-lilac";
-    default: false;
-    prefersdark: false;
-    color-scheme: "dark";
-    /* Midnight Lilac — deeper, lilac-tinted base that mirrors the new light
-       theme; sky primary, lilac accent. */
-    --color-base-100: oklch(23% 0.022 290);
-    --color-base-200: oklch(20% 0.024 290);
-    --color-base-300: oklch(17% 0.026 290);
-    --color-base-content: oklch(92% 0.014 292);
-    --color-primary: oklch(80% 0.1 242);
-    --color-primary-content: oklch(25% 0.05 242);
-    --color-secondary: oklch(74% 0.05 290);
-    --color-secondary-content: oklch(24% 0.04 290);
-    --color-accent: oklch(82% 0.08 305);
-    --color-accent-content: oklch(27% 0.05 305);
-    --color-neutral: oklch(36% 0.03 290);
-    --color-neutral-content: oklch(92% 0.014 292);
-    --color-info: oklch(82% 0.08 232);
-    --color-info-content: oklch(26% 0.05 232);
-    --color-success: oklch(83% 0.095 152);
-    --color-success-content: oklch(27% 0.05 152);
-    --color-warning: oklch(86% 0.10 86);
-    --color-warning-content: oklch(30% 0.06 86);
-    --color-error: oklch(76% 0.11 18);
-    --color-error-content: oklch(25% 0.05 18);
-    --radius-selector: 0.25rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
-  }
-
-  @plugin "daisyui/theme" {
-    name: "dark-deep-ocean";
-    default: false;
-    prefersdark: false;
-    color-scheme: "dark";
-    /* Deep Ocean — inky navy base, aqua primary, coral accent.
-       Richer and more saturated than the current theme. */
-    --color-base-100: oklch(23% 0.04 255);
-    --color-base-200: oklch(20% 0.042 255);
-    --color-base-300: oklch(17% 0.044 256);
-    --color-base-content: oklch(92% 0.015 230);
-    --color-primary: oklch(80% 0.11 205);
-    --color-primary-content: oklch(25% 0.05 205);
-    --color-secondary: oklch(72% 0.05 235);
-    --color-secondary-content: oklch(24% 0.04 235);
-    --color-accent: oklch(78% 0.11 30);
-    --color-accent-content: oklch(27% 0.06 30);
-    --color-neutral: oklch(36% 0.04 255);
-    --color-neutral-content: oklch(92% 0.015 230);
-    --color-info: oklch(82% 0.08 232);
-    --color-info-content: oklch(26% 0.05 232);
-    --color-success: oklch(83% 0.095 152);
-    --color-success-content: oklch(27% 0.05 152);
-    --color-warning: oklch(86% 0.10 86);
-    --color-warning-content: oklch(30% 0.06 86);
-    --color-error: oklch(76% 0.11 18);
-    --color-error-content: oklch(25% 0.05 18);
-    --radius-selector: 0.25rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
-  }
-
-  @plugin "daisyui/theme" {
-    name: "dark-graphite";
-    default: false;
-    prefersdark: false;
-    color-scheme: "dark";
-    /* Graphite — near-neutral charcoal, sky primary, mint accent.
-       Closest to a true dark mode; the pastels pop hardest here. */
-    --color-base-100: oklch(21% 0.004 260);
-    --color-base-200: oklch(18.5% 0.004 260);
-    --color-base-300: oklch(16% 0.004 260);
-    --color-base-content: oklch(92% 0.004 260);
-    --color-primary: oklch(82% 0.09 242);
-    --color-primary-content: oklch(24% 0.04 242);
-    --color-secondary: oklch(72% 0.02 255);
-    --color-secondary-content: oklch(22% 0.01 255);
-    --color-accent: oklch(85% 0.085 175);
-    --color-accent-content: oklch(27% 0.05 175);
-    --color-neutral: oklch(34% 0.006 260);
-    --color-neutral-content: oklch(92% 0.004 260);
-    --color-info: oklch(82% 0.08 232);
-    --color-info-content: oklch(26% 0.05 232);
-    --color-success: oklch(83% 0.095 152);
-    --color-success-content: oklch(27% 0.05 152);
-    --color-warning: oklch(86% 0.10 86);
-    --color-warning-content: oklch(30% 0.06 86);
-    --color-error: oklch(76% 0.11 18);
-    --color-error-content: oklch(25% 0.05 18);
-    --radius-selector: 0.25rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
-  }
-
-  @plugin "daisyui/theme" {
-    name: "dark-ember";
-    default: false;
-    prefersdark: false;
-    color-scheme: "dark";
-    /* Ember — warm charcoal base, amber primary, rose accent.
-       Cozy and evening-like; a deliberate contrast to the cool light theme. */
-    --color-base-100: oklch(23% 0.012 50);
-    --color-base-200: oklch(20% 0.013 50);
-    --color-base-300: oklch(17% 0.014 50);
-    --color-base-content: oklch(92% 0.014 80);
-    --color-primary: oklch(82% 0.12 75);
-    --color-primary-content: oklch(27% 0.06 75);
-    --color-secondary: oklch(74% 0.04 60);
-    --color-secondary-content: oklch(25% 0.03 60);
-    --color-accent: oklch(77% 0.1 10);
-    --color-accent-content: oklch(26% 0.05 10);
-    --color-neutral: oklch(36% 0.02 50);
-    --color-neutral-content: oklch(92% 0.014 80);
-    --color-info: oklch(82% 0.08 232);
-    --color-info-content: oklch(26% 0.05 232);
-    --color-success: oklch(83% 0.095 152);
-    --color-success-content: oklch(27% 0.05 152);
-    --color-warning: oklch(86% 0.10 86);
-    --color-warning-content: oklch(30% 0.06 86);
-    --color-error: oklch(76% 0.11 18);
-    --color-error-content: oklch(25% 0.05 18);
-    --radius-selector: 0.25rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
-  }
-
-  @plugin "daisyui/theme" {
-    name: "dark-forest-night";
-    default: false;
-    prefersdark: false;
-    color-scheme: "dark";
-    /* Forest Night — green-black base, mint primary, gold accent.
-       Natural and calm, pairs with the photo gallery. */
-    --color-base-100: oklch(23% 0.018 165);
-    --color-base-200: oklch(20% 0.02 165);
-    --color-base-300: oklch(17% 0.022 165);
-    --color-base-content: oklch(92% 0.014 150);
-    --color-primary: oklch(82% 0.1 165);
-    --color-primary-content: oklch(26% 0.05 165);
-    --color-secondary: oklch(73% 0.04 170);
-    --color-secondary-content: oklch(24% 0.03 170);
-    --color-accent: oklch(85% 0.11 90);
-    --color-accent-content: oklch(28% 0.06 90);
-    --color-neutral: oklch(35% 0.025 165);
-    --color-neutral-content: oklch(92% 0.014 150);
-    --color-info: oklch(82% 0.08 232);
-    --color-info-content: oklch(26% 0.05 232);
-    --color-success: oklch(83% 0.095 152);
-    --color-success-content: oklch(27% 0.05 152);
-    --color-warning: oklch(86% 0.10 86);
-    --color-warning-content: oklch(30% 0.06 86);
-    --color-error: oklch(76% 0.11 18);
-    --color-error-content: oklch(25% 0.05 18);
-    --radius-selector: 0.25rem;
-    --radius-field: 0.25rem;
-    --radius-box: 0.25rem;
-    --size-selector: 0.25rem;
-    --size-field: 0.25rem;
-    --border: 1px;
-    --depth: 0;
-    --noise: 0;
-  }
-
   html {
     scroll-behavior: smooth;
   }
@@ -287,7 +93,7 @@
     --blog-tape-bg: oklch(94% 0.025 85);
     --blog-header-bg: oklch(96% 0.025 85);
   }
-  [data-theme="business"], [data-theme^="dark-"] {
+  [data-theme="business"] {
     --blog-note-bg: oklch(28% 0.014 256);
     --blog-note-border: oklch(36% 0.018 256);
     --blog-note-shadow: 2px 4px 14px oklch(8% 0 0 / 0.5);
