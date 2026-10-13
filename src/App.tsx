@@ -13,6 +13,7 @@ const AllocationPage = lazy(() => import("./components/AllocationPage"));
 const Stablecoin = lazy(() => import("./components/Stablecoin"));
 const Fortune = lazy(() => import("./components/Fortune"));
 const ButtonAnimDemo = lazy(() => import("./components/ButtonAnimDemo"));
+const ThemeDemo = lazy(() => import("./components/ThemeDemo"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const Admin = lazy(() => import("./components/Admin").then((m) => ({ default: m.Admin })));
 const AnalyticsPage = lazy(() => import("./components/Analytics").then((m) => ({ default: m.AnalyticsPage })));
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="/fortune" element={<Fortune />} />
                 <Route path="/button-demo" element={<ButtonAnimDemo />} />
+                <Route path="/theme-demo" element={<ThemeDemo />} />
                 {/* Analytics */}
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/admin" element={<Admin />} />

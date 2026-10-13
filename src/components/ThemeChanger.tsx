@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { themeChange } from 'theme-change';
+import { useState, useEffect } from 'react';
+import { applyMode, getMode, type Mode } from '@/lib/theme';
 
 export const ThemeChanger = () => {
-  // Get the theme from localStorage or default to 'business' (dark)
-  const storedTheme = localStorage.getItem('theme') || 'business';
-  const [theme, setTheme] = useState(storedTheme);
+  const [theme, setTheme] = useState<Mode>(getMode);
 
   useEffect(() => {
-    // Initialize themeChange; pass false for React
-    themeChange(false);
-    // Set the theme on mount
-    document.documentElement.setAttribute('data-theme', theme);
+    applyMode(theme);
+    // Stay in sync when the command palette or /theme-demo changes the mode.
+    const onChange = (e: Event) => setTheme((e as CustomEvent<Mode>).detail);
+    window.addEventListener('themechange', onChange);
+    return () => window.removeEventListener('themechange', onChange);
   }, []);
 
-  useEffect(() => {
-    // Apply theme and store it in localStorage whenever it changes
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Toggle between "business" and "corporate"
   const toggleTheme = (e) => {
-    const newTheme = e.target.checked ? 'corporate' : 'business';
-    setTheme(newTheme);
+    const next: Mode = e.target.checked ? 'light' : 'dark';
+    setTheme(next);
+    applyMode(next);
   };
 
   return (
@@ -32,7 +25,7 @@ export const ThemeChanger = () => {
           type="checkbox"
           className="rounded-full"
           onChange={toggleTheme}
-          checked={theme === 'corporate'}
+          checked={theme === 'light'}
         />
         
         {/* Moon icon (business mode) */}

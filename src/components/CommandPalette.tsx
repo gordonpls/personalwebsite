@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { applyMode, getMode } from "@/lib/theme";
 
 interface Cmd { label: string; hint?: string; path?: string; anchor?: string; action?: () => void }
 
 function toggleTheme() {
-    const next = document.documentElement.getAttribute("data-theme") === "business" ? "corporate" : "business";
-    document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem("theme", next); } catch { /* ignore */ }
+    applyMode(getMode() === "dark" ? "light" : "dark");
 }
 
 // ⌘K / Ctrl+K command palette — jump to any section or page.
