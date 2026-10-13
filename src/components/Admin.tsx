@@ -202,37 +202,50 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
-// ── Dashboard password attempts ──────────────────────────────────────────
+// ── Password attempts ───────────────────────────────────────────────────
+
+type Gate = "blog" | "investments";
+const GATES: { id: Gate; label: string }[] = [
+  { id: "blog", label: "Blog" },
+  { id: "investments", label: "Investments" },
+];
 
 interface AttemptRow {
-  created_at: string; visitor_hash: string | null; guess: string | null; guess_length: number | null; is_bot: number;
+  created_at: string; ip: string | null; visitor_hash: string | null; guess: string | null; guess_length: number | null; is_bot: number;
   device_type: string | null; browser: string | null; os: string | null; country: string | null; region: string | null;
 }
 interface RepeatRow {
-  visitor_hash: string; day: string; attempts: number; first_at: string; last_at: string;
+  visitor_hash: string; day: string; attempts: number; first_at: string; last_at: string; ip: string | null;
   country: string | null; region: string | null; device_type: string | null; browser: string | null; os: string | null;
 }
 interface Attempts { attempts: number; visitors: number; bots: number; lastAt: string | null; recent: AttemptRow[]; repeat: RepeatRow[] }
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const regionNames = (() => { try { return new Intl.DisplayNames(["en"], { type: "region" }); } catch { return null; } })();
+const countryName = (c: string | null) => {
+  if (!c) return null;
+  if (/^[A-Z]{2}$/.test(c)) { try { return regionNames?.of(c) ?? c; } catch { return c; } }
+  return c;
+};
 const where = (r: { country: string | null; region: string | null }) =>
-  r.country ? [r.region, r.country].filter(Boolean).join(", ") : "Unknown";
+  [r.region, countryName(r.country)].filter(Boolean).join(", ") || "Unknown";
 const device = (r: { device_type: string | null; browser: string | null; os: string | null }) =>
   [r.device_type, r.browser, r.os].filter(Boolean).join(" · ") || "Unknown";
 
-// Wrong passwords at the /investments gate, with the guess as typed. Guesses
-// are blanked after 30 days (only the length remains), since people sometimes
-// type passwords they use elsewhere. Visitor IDs rotate daily, so "repeat"
-// means within one day.
-function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => void }) {
+// Wrong passwords at the blog and /investments gates: the guess as typed, the
+// IP (to block a persistent guesser at the host or CDN), where, and on what
+// device. Guesses and IPs are blanked after 30 days. Visitor IDs rotate daily,
+// so "repeat" means repeated within one day.
+function PasswordAttempts({ range, onLogout }: { range: string; onLogout: () => void }) {
+  const [gate, setGate] = useState<Gate>("blog");
   const [data, setData] = useState<Attempts | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setError(false);
-    fetch(`/api/admin/finance-attempts?range=${range}`, { headers: authHeaders() })
+    setData(null); setError(false);
+    fetch(`/api/admin/finance-attempts?range=${range}&gate=${gate}`, { headers: authHeaders() })
       .then((r) => {
         if (r.status === 401) { onLogout(); return null; }
         if (!r.ok) throw new Error();
@@ -241,84 +254,80 @@ function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => v
       .then((d) => { if (!cancelled && d) setData(d); })
       .catch(() => { if (!cancelled) setError(true); });
     return () => { cancelled = true; };
-  }, [range, onLogout]);
+  }, [range, gate, onLogout]);
 
   return (
     <section>
-      <SectionTitle>Investments password attempts</SectionTitle>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-base-content/60">Password attempts</h2>
+        <div role="tablist" className="join">
+          {GATES.map((g) => (
+            <button key={g.id} type="button" role="tab" aria-selected={gate === g.id} onClick={() => setGate(g.id)}
+              className={`btn btn-xs join-item ${gate === g.id ? "btn-primary" : "btn-ghost text-base-content/70"}`}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {error ? (
         <p className="text-sm text-error">Failed to load attempts.</p>
       ) : !data ? (
         <div className="h-24 rounded-xl bg-base-200 animate-pulse" />
       ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard label="Failed attempts" value={data.attempts} />
-            <StatCard label="~Unique visitors" value={data.visitors} sub="Approximate (daily hash)" />
-            <StatCard label="From bots" value={data.bots} sub="Scripts and crawlers" />
-            <div className="stat bg-base-200 rounded-xl border border-base-300">
-              <div className="stat-title text-base-content/60 text-xs">Last attempt</div>
-              <div className="stat-value text-base font-bold text-base-content">{data.lastAt ? when(data.lastAt) : "None"}</div>
-            </div>
-          </div>
-
+        <div className="overflow-hidden rounded-xl border border-base-300 bg-base-200">
+          <p className="flex flex-wrap gap-x-4 gap-y-1 border-b border-base-300 px-4 py-2.5 text-xs text-base-content/70">
+            <span><b className="text-base-content tabular-nums">{data.attempts}</b> failed</span>
+            <span><b className="text-base-content tabular-nums">{data.visitors}</b> ~visitors</span>
+            <span><b className="text-base-content tabular-nums">{data.bots}</b> from bots</span>
+            <span>last {data.lastAt ? when(data.lastAt) : "never"}</span>
+          </p>
           {data.attempts === 0 ? (
-            <p className="text-xs text-base-content/60">No wrong passwords in this period.</p>
+            <p className="px-4 py-3 text-xs text-base-content/60">No wrong passwords in this period.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-200 lg:col-span-2">
-                <table className="table table-sm">
+            <>
+              {data.repeat.length > 0 && (
+                <div className="flex flex-wrap gap-2 border-b border-base-300 px-4 py-2.5 text-xs">
+                  <span className="text-base-content/70">Tried more than once:</span>
+                  {data.repeat.map((r) => (
+                    <span key={r.visitor_hash + r.day} className="badge badge-sm badge-error badge-outline gap-1" title={`${where(r)} · ${device(r)} · ${when(r.first_at)}–${when(r.last_at)}`}>
+                      <span className="font-mono">{r.ip ?? r.visitor_hash.slice(0, 8)}</span> × {r.attempts}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="table table-xs">
                   <thead>
                     <tr className="text-base-content/60">
-                      <th>When</th><th>Guess</th><th>Where</th><th>Device</th><th>Visitor</th>
+                      <th>When</th><th>Guess</th><th>IP</th><th>Where</th><th>Device</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.recent.map((r, i) => (
-                      <tr key={i}>
-                        <td className="whitespace-nowrap text-sm">{when(r.created_at)}</td>
-                        <td className="max-w-[12rem] truncate font-mono text-sm" title={r.guess ?? undefined}>
+                      <tr key={i} className="hover:bg-base-300/40">
+                        <td className="whitespace-nowrap">{when(r.created_at)}</td>
+                        <td className="max-w-[12rem] truncate font-mono" title={r.guess ?? undefined}>
                           {r.guess ?? (
                             <span className="text-base-content/60" title="Older than 30 days; only the length is kept">
                               {"•".repeat(Math.min(r.guess_length ?? 0, 12)) || "—"}
                             </span>
                           )}
                         </td>
-                        <td className="whitespace-nowrap text-sm">{where(r)}</td>
-                        <td className="whitespace-nowrap text-sm text-base-content/70">
+                        <td className="whitespace-nowrap font-mono text-base-content/80">{r.ip ?? <span className="text-base-content/60">—</span>}</td>
+                        <td className="whitespace-nowrap">{where(r)}</td>
+                        <td className="whitespace-nowrap text-base-content/70">
                           {device(r)}
                           {r.is_bot ? <span className="badge badge-xs badge-warning ml-1.5">bot</span> : null}
                         </td>
-                        <td className="font-mono text-xs text-base-content/60">{r.visitor_hash ? r.visitor_hash.slice(0, 8) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <p className="px-4 pb-3 pt-1 text-xs text-base-content/60">
-                  Latest {data.recent.length}{data.attempts > data.recent.length ? ` of ${data.attempts}` : ""}. Guesses are deleted after 30 days.
-                </p>
               </div>
-
-              <div className="rounded-xl border border-base-300 bg-base-200 p-4">
-                <p className="mb-3 text-sm font-medium text-base-content">Tried more than once</p>
-                {data.repeat.length === 0 ? (
-                  <p className="text-xs text-base-content/60">Nobody tried twice in one day.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {data.repeat.map((r) => (
-                      <li key={r.visitor_hash + r.day} className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-mono text-xs text-base-content/70">{r.visitor_hash.slice(0, 8)}</p>
-                          <p className="truncate text-xs text-base-content/60">{where(r)} · {device(r)}</p>
-                          <p className="text-xs text-base-content/60">{when(r.first_at)} – {new Date(r.last_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>
-                        </div>
-                        <span className="badge badge-sm badge-error shrink-0">{r.attempts} tries</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+              <p className="border-t border-base-300 px-4 py-2 text-xs text-base-content/60">
+                Latest {data.recent.length}{data.attempts > data.recent.length ? ` of ${data.attempts}` : ""}. Guesses and IPs are deleted after 30 days.
+              </p>
+            </>
           )}
         </div>
       )}
@@ -328,23 +337,16 @@ function FinanceAttempts({ range, onLogout }: { range: string; onLogout: () => v
 
 // ── Visitors ─────────────────────────────────────────────────────────────
 
-interface JourneyEvent { at: string; type: string; path: string | null; project: string | null }
+interface TrailPage { path: string; views: number; seconds: number | null }
 interface VisitorRow {
   visitor_hash: string; first_at: string; last_at: string;
   views: number; pages: number; clicks: number;
   country: string | null; region: string | null;
   device_type: string | null; browser: string | null; os: string | null;
-  referrer_host: string | null; journey: JourneyEvent[];
+  referrer_host: string | null; trail: TrailPage[];
 }
 
 const PAGE_SIZE = 50;
-const regionNames = (() => { try { return new Intl.DisplayNames(["en"], { type: "region" }); } catch { return null; } })();
-const countryName = (c: string | null) => {
-  if (!c) return null;
-  if (/^[A-Z]{2}$/.test(c)) { try { return regionNames?.of(c) ?? c; } catch { return c; } }
-  return c;
-};
-const placeOf = (v: VisitorRow) => [v.region, countryName(v.country)].filter(Boolean).join(", ") || "Unknown location";
 const ago = (iso: string) => {
   const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
   if (m < 1) return "just now";
@@ -352,27 +354,23 @@ const ago = (iso: string) => {
   if (m < 60 * 24) return `${Math.round(m / 60)}h ago`;
   return when(iso);
 };
-const timeOnly = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-const span = (a: string, b: string) => {
-  const m = Math.round((Date.parse(b) - Date.parse(a)) / 60000);
-  return m < 1 ? "under a minute" : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
+const dur = (s: number) => (s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`);
+const visitLength = (a: string, b: string) => {
+  const s = (Date.parse(b) - Date.parse(a)) / 1000;
+  return s < 5 ? "—" : dur(s);
 };
-const EVENT_LABELS: Record<string, string> = {
-  page_view: "Viewed",
-  project_card_clicked: "Opened card",
-  project_demo_clicked: "Clicked demo",
-};
-const eventLabel = (t: string) => EVENT_LABELS[t] ?? t.replace(/_/g, " ");
+const trailText = (t: TrailPage[]) =>
+  t.map((p) => `${p.path}${p.views > 1 ? ` ×${p.views}` : ""}${p.seconds != null ? ` (${dur(p.seconds)})` : ""}`).join(" → ");
 
-// One row per visitor, newest activity first; a row expands into the pages and
-// clicks in order. Visitor IDs rotate with the hash salt (daily by default), so
-// the same person on two days shows up as two rows.
+// One compact row per visitor, newest activity first: where they're from, how
+// they arrived, what they used, and the pages they read with time on each
+// (time until their next action, so the last page's time is unknown). Visitor
+// IDs rotate with the hash salt (daily by default): a return visit is a new row.
 function Visitors({ range, onLogout }: { range: string; onLogout: () => void }) {
   const [rows, setRows] = useState<VisitorRow[] | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
 
   const fetchPage = useCallback(async (offset: number) => {
     const r = await fetch(`/api/analytics/visitors?range=${range}&limit=${PAGE_SIZE}&offset=${offset}`, { headers: authHeaders() });
@@ -383,7 +381,7 @@ function Visitors({ range, onLogout }: { range: string; onLogout: () => void }) 
 
   useEffect(() => {
     let cancelled = false;
-    setRows(null); setError(false); setOpen(null);
+    setRows(null); setError(false);
     fetchPage(0)
       .then((d) => { if (!cancelled && d) { setRows(d.visitors); setTotal(d.total); } })
       .catch(() => { if (!cancelled) setError(true); });
@@ -411,70 +409,42 @@ function Visitors({ range, onLogout }: { range: string; onLogout: () => void }) 
         <p className="text-xs text-base-content/60">No visitors in this period.</p>
       ) : (
         <div className="overflow-hidden rounded-xl border border-base-300 bg-base-200">
-          <ul className="divide-y divide-base-300">
-            {rows.map((v) => {
-              const expanded = open === v.visitor_hash;
-              return (
-                <li key={v.visitor_hash}>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(expanded ? null : v.visitor_hash)}
-                    aria-expanded={expanded}
-                    className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition hover:bg-base-300/40 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_6rem_1rem] ${expanded ? "bg-base-300/40" : ""}`}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-base-content">{placeOf(v)}</span>
-                      <span className="block truncate text-xs text-base-content/60">{device(v)}</span>
-                    </span>
-                    <span className="hidden min-w-0 truncate text-sm text-base-content/70 md:block">
-                      {v.referrer_host ?? <span className="text-base-content/60">Direct</span>}
-                    </span>
-                    <span className="hidden text-right text-sm tabular-nums text-base-content/80 md:block">
-                      {v.pages} {v.pages === 1 ? "page" : "pages"}
-                      {v.clicks > 0 && <span className="block text-xs text-base-content/60">{v.clicks} {v.clicks === 1 ? "click" : "clicks"}</span>}
-                    </span>
-                    <span className="text-right text-xs text-base-content/60 whitespace-nowrap">
-                      {ago(v.last_at)}
-                      {/* On phones the source and activity fold under the time. */}
-                      <span className="block md:hidden">{v.pages} {v.pages === 1 ? "page" : "pages"}</span>
-                    </span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
-                      className={`hidden h-4 w-4 text-base-content/60 transition-transform md:block ${expanded ? "rotate-180" : ""}`}>
-                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-
-                  {expanded && (
-                    <div className="border-t border-base-300 bg-base-100/50 px-4 py-4">
-                      <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
-                        <div><dt className="text-base-content/60">Source</dt><dd className="text-base-content">{v.referrer_host ?? "Direct"}</dd></div>
-                        <div><dt className="text-base-content/60">Visit</dt><dd className="text-base-content">{when(v.first_at)} · {span(v.first_at, v.last_at)}</dd></div>
-                        <div><dt className="text-base-content/60">Page views</dt><dd className="text-base-content tabular-nums">{v.views}</dd></div>
-                        <div><dt className="text-base-content/60">Visitor ID</dt><dd className="font-mono text-base-content/70">{v.visitor_hash.slice(0, 8)}</dd></div>
-                      </dl>
-                      <ol className="space-y-1.5 border-l border-base-300 pl-4">
-                        {v.journey.map((e, i) => (
-                          <li key={i} className="relative flex items-baseline gap-3 text-xs">
-                            <span className={`absolute -left-[1.29rem] top-1 h-2 w-2 rounded-full ${e.type === "page_view" ? "bg-base-content/40" : "bg-primary"}`} />
-                            <span className="w-16 shrink-0 tabular-nums text-base-content/60">{timeOnly(e.at)}</span>
-                            <span className={e.type === "page_view" ? "text-base-content/70" : "font-medium text-primary"}>{eventLabel(e.type)}</span>
-                            <span className="min-w-0 truncate font-mono text-base-content/80">
-                              {e.project ? (PROJECT_NAMES[e.project] ?? e.project) : (e.path || "/")}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                      {v.journey.length < v.views + v.clicks && (
-                        <p className="mt-2 text-xs text-base-content/60">First {v.journey.length} of {v.views + v.clicks} events.</p>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <div className="flex items-center justify-between gap-3 border-t border-base-300 px-4 py-2.5 text-xs text-base-content/60">
-            <span>Showing {rows.length} of {total} · visitor IDs reset each day (or month), so a return visit is a new row</span>
+          <div className="max-h-[28rem] overflow-auto">
+            <table className="table table-xs table-pin-rows">
+              <thead>
+                <tr className="text-base-content/60">
+                  <th>Seen</th><th>From</th><th>Source</th><th>Device</th><th>Pages (time on each)</th><th className="text-right">Visit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((v) => {
+                  const text = trailText(v.trail);
+                  return (
+                    <tr key={v.visitor_hash} className="hover:bg-base-300/40">
+                      <td className="whitespace-nowrap text-base-content/70" title={`${when(v.first_at)} – ${when(v.last_at)}`}>{ago(v.last_at)}</td>
+                      <td className="max-w-[10rem] truncate" title={where(v)}>{where(v)}</td>
+                      <td className="max-w-[8rem] truncate text-base-content/70">{v.referrer_host ?? "Direct"}</td>
+                      <td className="whitespace-nowrap text-base-content/70">{device(v)}</td>
+                      <td className="max-w-[22rem] truncate font-mono text-base-content/80" title={text}>
+                        {v.trail.length ? v.trail.map((p, i) => (
+                          <span key={p.path}>
+                            {i > 0 && <span className="text-base-content/60"> → </span>}
+                            {p.path}
+                            {p.views > 1 && <span className="text-base-content/60"> ×{p.views}</span>}
+                            {p.seconds != null && <span className="text-base-content/60"> {dur(p.seconds)}</span>}
+                          </span>
+                        )) : <span className="text-base-content/60">—</span>}
+                        {v.clicks > 0 && <span className="badge badge-xs badge-primary badge-outline ml-1.5">{v.clicks} {v.clicks === 1 ? "click" : "clicks"}</span>}
+                      </td>
+                      <td className="whitespace-nowrap text-right tabular-nums text-base-content/70">{visitLength(v.first_at, v.last_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-base-300 px-4 py-2 text-xs text-base-content/60">
+            <span>Showing {rows.length} of {total} · hover a row for full details · IDs reset daily, so a return visit is a new row</span>
             {rows.length < total && (
               <button type="button" className="btn btn-xs btn-ghost" onClick={loadMore} disabled={loadingMore}>
                 {loadingMore ? "Loading…" : "Load more"}
@@ -685,7 +655,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </>
         )}
 
-        <FinanceAttempts range={range} onLogout={onLogout} />
+        <PasswordAttempts range={range} onLogout={onLogout} />
 
         {/* Self-exclusion controls */}
         <section className="bg-base-200 rounded-xl border border-base-300 p-5">

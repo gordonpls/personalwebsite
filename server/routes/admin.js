@@ -26,13 +26,14 @@ router.post("/verify", requireAdmin, (_req, res) => {
   res.json({ valid: true });
 });
 
-// GET /api/admin/finance-attempts?range=7d|30d|month|all
-// Wrong passwords at the /investments gate (see routes/finance.js).
+// GET /api/admin/finance-attempts?range=7d|30d|month|all&gate=investments|blog
+// Wrong passwords at a password gate (logged by lib/login-failures.js).
 router.get("/finance-attempts", requireAdmin, (req, res) => {
   try {
     const range = ["7d", "30d", "month", "all"].includes(req.query.range) ? req.query.range : "30d";
+    const gate = req.query.gate === "blog" ? "blog" : "investments";
     const startDay = getStartDay(range);
-    res.json({ ...getLoginFailures(getDb(), startDay), range, dateRange: { start: startDay, end: todayStr() } });
+    res.json({ ...getLoginFailures(getDb(), startDay, gate), gate, range, dateRange: { start: startDay, end: todayStr() } });
   } catch (err) {
     console.error("[admin] finance-attempts error:", err.message);
     res.status(500).json({ error: "Failed to load attempts" });

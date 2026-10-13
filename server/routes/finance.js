@@ -1,56 +1,9 @@
 const express = require("express");
 const path = require("path");
 const { createToken, safeCompare, requireFinance } = require("../lib/admin-auth");
-const { isBot, isExcludedIp, getVisitorHash, parseUserAgent, getGeoFromHeaders } = require("../lib/request-meta");
-const { resolveGeo } = require("../lib/geoip");
-const { getDb, insertLoginFailure, countLoginFailuresToday, purgeOldGuesses, todayStr } = require("../lib/analytics-db");
+const { logFailedAttempt } = require("../lib/login-failures");
 
 const router = express.Router();
-
-// Longest guess kept; anything past this is a script pasting junk.
-const MAX_GUESS_CHARS = 200;
-
-// A visitor who keeps guessing stops being logged after this many per day, so
-// a script hammering the form can't bloat the database.
-const MAX_LOGGED_PER_VISITOR_PER_DAY = 100;
-
-// Record a wrong password for /admin: when, roughly where, on what device, and
-// the guess as typed (blanked after GUESS_RETENTION_DAYS). Runs after the
-// response is sent and swallows its own errors, so logging can never slow or
-// break the login.
-function logFailedAttempt(req, guess) {
-  try {
-    const ip = req.ip || "";
-    if (isExcludedIp(ip)) return; // the owner testing from a known IP
-    const ua = req.headers["user-agent"] || "";
-    const day = todayStr();
-    const visitorHash = getVisitorHash(ip, ua);
-    const db = getDb();
-    if (countLoginFailuresToday(db, visitorHash, day) >= MAX_LOGGED_PER_VISITOR_PER_DAY) return;
-
-    const { deviceType, browser, os } = parseUserAgent(ua);
-    const row = {
-      day, visitor_hash: visitorHash,
-      guess: guess.slice(0, MAX_GUESS_CHARS), guess_length: guess.length,
-      is_bot: isBot(ua), device_type: deviceType, browser, os,
-    };
-    const persist = (geo) => {
-      try {
-        const db = getDb();
-        insertLoginFailure(db, { ...row, country: geo.country ?? null, region: geo.region ?? null });
-        purgeOldGuesses(db);
-      } catch (err) {
-        console.error("[finance] failed-login log insert failed:", err.message);
-      }
-    };
-    // Same geo order as analytics: host headers first, else a cached IP lookup.
-    const headerGeo = getGeoFromHeaders(req);
-    if (headerGeo.country) persist(headerGeo);
-    else resolveGeo(ip).then((g) => persist(g.country ? g : headerGeo)).catch(() => persist(headerGeo));
-  } catch (err) {
-    console.error("[finance] failed-login log failed:", err.message);
-  }
-}
 
 // POST /api/finance/login
 // Body: { password: string }
@@ -67,7 +20,7 @@ router.post("/login", (req, res) => {
   const guess = typed.toLowerCase();
   if (!guess || !safeCompare(guess, financePassword.trim().toLowerCase())) {
     res.status(401).json({ error: "Invalid password" });
-    logFailedAttempt(req, typed); // as typed, before lowercasing
+    logFailedAttempt(req, typed, "investments"); // as typed, before lowercasing
     return;
   }
   res.json({ token: createToken(financePassword, "finance") });

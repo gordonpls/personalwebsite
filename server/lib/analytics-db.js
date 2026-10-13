@@ -42,9 +42,10 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_ae_project_slug ON analytics_events(project_slug);
     CREATE INDEX IF NOT EXISTS idx_ae_visitor_hash ON analytics_events(visitor_hash);
 
-    -- Wrong passwords at the /investments gate. The guess is kept as typed for
-    -- GUESS_RETENTION_DAYS, then blanked (people type passwords they use
-    -- elsewhere); its length stays.
+    -- Wrong passwords at a password gate (gate = 'investments' | 'blog'; NULL
+    -- on rows from before the column = 'investments'). The guess and IP are
+    -- kept for GUESS_RETENTION_DAYS, then blanked (people type passwords they
+    -- use elsewhere); the guess length stays. The table name predates the blog gate.
     CREATE TABLE IF NOT EXISTS finance_login_failures (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
@@ -67,6 +68,12 @@ function initSchema(db) {
   const cols = db.prepare(`PRAGMA table_info(finance_login_failures)`).all([]);
   if (!cols.some((c) => c.name === "guess")) {
     db.exec(`ALTER TABLE finance_login_failures ADD COLUMN guess TEXT`);
+  }
+  if (!cols.some((c) => c.name === "gate")) {
+    db.exec(`ALTER TABLE finance_login_failures ADD COLUMN gate TEXT`);
+  }
+  if (!cols.some((c) => c.name === "ip")) {
+    db.exec(`ALTER TABLE finance_login_failures ADD COLUMN ip TEXT`);
   }
 }
 
@@ -96,10 +103,12 @@ function insertEvent(db, event) {
 function insertLoginFailure(db, row) {
   db.prepare(`
     INSERT INTO finance_login_failures
-      (day, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (day, gate, ip, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run([
     row.day,
+    row.gate,
+    row.ip ?? null,
     row.visitor_hash ?? null,
     row.guess ?? null,
     row.guess_length ?? null,
@@ -252,7 +261,28 @@ function getReferrerBreakdown(db, startDay, limit = 10) {
 // One row per visitor since `startDay`, most recently active first, each with
 // its trail of events. A visitor is a visitor_hash, which rotates with the
 // salt period (daily by default), so one person on two days is two rows.
-const JOURNEY_MAX = 40;
+// Time on a page = until that visitor's next event (any type), capped at
+// IDLE_CAP_S so a tab left open doesn't count as reading. The last page of a
+// visit has no next event, so its time is unknown (null), not zero.
+const IDLE_CAP_S = 30 * 60;
+const TRAIL_MAX = 12;
+function pageTrail(events) {
+  const pages = new Map(); // path -> { path, views, seconds, known }
+  events.forEach((ev, i) => {
+    if (ev.event_type !== "page_view") return;
+    const path = ev.path || "/";
+    const p = pages.get(path) ?? { path, views: 0, seconds: 0, known: false };
+    p.views += 1;
+    const next = events[i + 1];
+    if (next) {
+      const s = (Date.parse(next.created_at) - Date.parse(ev.created_at)) / 1000;
+      if (s >= 0) { p.seconds += Math.min(s, IDLE_CAP_S); p.known = true; }
+    }
+    pages.set(path, p);
+  });
+  // First-visited order, so it reads as the path through the site.
+  return [...pages.values()].slice(0, TRAIL_MAX).map((p) => ({ path: p.path, views: p.views, seconds: p.known ? Math.round(p.seconds) : null }));
+}
 function getVisitors(db, startDay, limit = 50, offset = 0) {
   const total = db.prepare(`
     SELECT COUNT(DISTINCT visitor_hash) AS n
@@ -280,33 +310,32 @@ function getVisitors(db, startDay, limit = 50, offset = 0) {
   if (rows.length) {
     const hashes = rows.map((r) => r.visitor_hash);
     const events = db.prepare(`
-      SELECT visitor_hash, created_at, event_type, path, project_slug
+      SELECT visitor_hash, created_at, event_type, path
       FROM analytics_events
       WHERE day >= ? AND visitor_hash IN (${hashes.map(() => "?").join(",")})
       ORDER BY created_at, id
     `).all([startDay, ...hashes]);
-    const byHash = new Map(rows.map((r) => [r.visitor_hash, (r.journey = [])]));
-    for (const ev of events) {
-      const j = byHash.get(ev.visitor_hash);
-      if (j.length < JOURNEY_MAX) j.push({ at: ev.created_at, type: ev.event_type, path: ev.path, project: ev.project_slug });
-    }
+    const byHash = new Map();
+    for (const ev of events) byHash.set(ev.visitor_hash, [...(byHash.get(ev.visitor_hash) ?? []), ev]);
+    for (const r of rows) r.trail = pageTrail(byHash.get(r.visitor_hash) ?? []);
   }
   return { total, visitors: rows };
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 
-// Stored guesses are blanked after this many days; the attempt row stays.
+// Stored guesses and IPs are blanked after this many days; the attempt row stays.
 const GUESS_RETENTION_DAYS = 30;
 function purgeOldGuesses(db) {
   db.prepare(`
-    UPDATE finance_login_failures SET guess = NULL
-    WHERE guess IS NOT NULL AND created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
+    UPDATE finance_login_failures SET guess = NULL, ip = NULL
+    WHERE (guess IS NOT NULL OR ip IS NOT NULL) AND created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)
   `).run([`-${GUESS_RETENTION_DAYS} days`]);
 }
 
-// Failed /investments password attempts since `startDay`, for /admin.
-function getLoginFailures(db, startDay) {
+// Failed password attempts at one gate since `startDay`, for /admin.
+const GATE_SQL = `COALESCE(gate, 'investments') = ?`;
+function getLoginFailures(db, startDay, gate = "investments") {
   // Also runs on every logged attempt; doing it here too means expired guesses
   // are never shown even if nobody has guessed in a while.
   purgeOldGuesses(db);
@@ -315,28 +344,28 @@ function getLoginFailures(db, startDay) {
            COUNT(DISTINCT visitor_hash) AS visitors,
            SUM(is_bot) AS bots,
            MAX(created_at) AS last_at
-    FROM finance_login_failures WHERE day >= ?
-  `).get([startDay]);
+    FROM finance_login_failures WHERE day >= ? AND ${GATE_SQL}
+  `).get([startDay, gate]);
 
   const recent = db.prepare(`
-    SELECT created_at, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region
-    FROM finance_login_failures WHERE day >= ?
+    SELECT created_at, ip, visitor_hash, guess, guess_length, is_bot, device_type, browser, os, country, region
+    FROM finance_login_failures WHERE day >= ? AND ${GATE_SQL}
     ORDER BY created_at DESC LIMIT 50
-  `).all([startDay]);
+  `).all([startDay, gate]);
 
   // Visitor hashes rotate daily, so "repeat" means repeated within one day.
   const repeat = db.prepare(`
     SELECT visitor_hash, day, COUNT(*) AS attempts,
-           MIN(created_at) AS first_at, MAX(created_at) AS last_at,
+           MIN(created_at) AS first_at, MAX(created_at) AS last_at, MAX(ip) AS ip,
            MAX(country) AS country, MAX(region) AS region,
            MAX(device_type) AS device_type, MAX(browser) AS browser, MAX(os) AS os
     FROM finance_login_failures
-    WHERE day >= ? AND visitor_hash IS NOT NULL
+    WHERE day >= ? AND visitor_hash IS NOT NULL AND ${GATE_SQL}
     GROUP BY visitor_hash, day
     HAVING COUNT(*) > 1
     ORDER BY attempts DESC, last_at DESC
     LIMIT 10
-  `).all([startDay]);
+  `).all([startDay, gate]);
 
   return {
     attempts: totals?.attempts ?? 0,

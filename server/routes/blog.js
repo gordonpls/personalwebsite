@@ -3,6 +3,8 @@ const crypto = require("crypto");
 const { getDb, getAllPosts, createPost, updatePost, deletePost } = require("../lib/blog-db");
 const { snapshot } = require("../lib/blog-backup");
 
+const { logFailedAttempt } = require("../lib/login-failures");
+
 const router = express.Router();
 // Long-lived so a one-time login persists (token is stored client-side and
 // HMAC-signed with ADMIN_PASSWORD; this is a private single-author journal).
@@ -83,7 +85,9 @@ router.post("/auth", (req, res) => {
     }
   })();
   if (!valid) {
-    return res.status(401).json({ error: "Invalid password" });
+    res.status(401).json({ error: "Invalid password" });
+    logFailedAttempt(req, String(password ?? ""), "blog");
+    return;
   }
   res.json({ token: createToken(process.env.ADMIN_PASSWORD) });
 });
