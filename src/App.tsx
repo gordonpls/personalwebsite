@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Home } from "./components/Home";
 import { CommandPalette } from "./components/CommandPalette";
 import { AnalyticsRouteTracker } from "./components/AnalyticsRouteTracker";
+import { RandomSparkles } from "./components/sparkles/RandomSparkles";
 
 // Home is the landing page (eager). The secondary routes — and their heavy deps
 // (recharts, react-pdf, the fortune canvas) — are code-split so visiting "/"
@@ -32,6 +33,7 @@ function App() {
             <CommandPalette />
             {/* Tracks route changes and fires analytics events. Must be inside BrowserRouter. */}
             <AnalyticsRouteTracker />
+            <RandomSparkles />
             <Suspense fallback={<RouteFallback />}>
             <Routes>
                 <Route path="/" element={<Home />} />

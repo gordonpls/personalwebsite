@@ -1,0 +1,59 @@
+/* Random sparkles: decorative screen effects that sometimes follow a click.
+   Every star is a positioned box centred on its point (negative margins by
+   half its size, --s) with --c as its color; only transform/opacity
+   animate so it stays cheap. */
+
+.sparkle-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    overflow: hidden;
+}
+.sparkle-fx { position: absolute; width: 0; height: 0; }
+
+.sparkle-star {
+    position: absolute;
+    width: var(--s);
+    height: var(--s);
+    margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+    color: var(--c);
+    filter: drop-shadow(0 0 6px var(--c)) drop-shadow(0 0 2px rgb(255 255 255 / 0.9));
+    opacity: 0;
+}
+
+/* Twinkle: the avatar's diamond of stars, popping in turn. */
+@keyframes sparkle-twinkle {
+    0%   { opacity: 0; transform: scale(0) rotate(-45deg); }
+    35%  { opacity: 1; transform: scale(1.1) rotate(0deg); }
+    55%  { opacity: 1; transform: scale(0.75) rotate(10deg); }
+    75%  { opacity: 1; transform: scale(1) rotate(20deg); }
+    100% { opacity: 0; transform: scale(0) rotate(45deg); }
+}
+.sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out both; }
+
+/* Float: stars drift upward with a sideways sway (--sway). */
+@keyframes sparkle-float {
+    0%   { opacity: 0; transform: translate(0, 0) scale(0.3) rotate(0deg); }
+    20%  { opacity: 1; transform: translate(calc(var(--sway) * -0.5), -15px) scale(1) rotate(15deg); }
+    60%  { opacity: 1; transform: translate(var(--sway), -55px) scale(0.9) rotate(-10deg); }
+    100% { opacity: 0; transform: translate(0, -95px) scale(0.4) rotate(20deg); }
+}
+.sparkle-float { animation: sparkle-float 1.6s ease-out both; }
+
+@keyframes sparkle-label-fade { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Localhost-only label naming what triggered the effect. */
+.sparkle-debug {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font: 600 11px/1.4 ui-monospace, monospace;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: rgb(0 0 0 / 0.7);
+    color: #fff;
+    animation: sparkle-label-fade 1.8s ease-out both;
+}

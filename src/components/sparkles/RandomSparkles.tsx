@@ -1,0 +1,160 @@
+// Random sparkles: every so often, clicking something interactive (or finishing
+// a scroll) makes a sparkle appear exactly where you clicked (or at the
+// pointer, for scrolls), so it feels like the site has a mind of its own. Two variants built on the Hero avatar's
+// four-point star (twinkle: the avatar's diamond; float: stars drifting up),
+// each randomly rotated, mirrored, sized and colored.
+// On localhost it fires every time (with a label naming the trigger) so you
+// can see what counts; in production it's a dice roll with a cooldown.
+// Skipped entirely under prefers-reduced-motion.
+
+import { useEffect, useState, type CSSProperties } from "react";
+import "./sparkles.css";
+
+const IS_LOCAL = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+const CHANCE = 1 / 8;          // production odds per qualifying click
+const COOLDOWN_MS = 12_000;    // production: at most one effect per window
+
+// What counts as "interacting": anything clickable.
+const INTERACTIVE = "button, a, summary, label, select, [role=button], [role=tab], [role=link], input[type=checkbox], input[type=radio], input[type=range]";
+
+const COLORS = ["#FFC94D", "#FF8FB8", "#7CC4FF", "#B79CFF", "#6FE3B5"];
+const KINDS = ["twinkle", "float"] as const;
+type Kind = (typeof KINDS)[number];
+const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last star's delay + its animation
+const SCROLL_MIN_PX = 400;     // a scroll gesture must travel this far to count
+const SCROLL_IDLE_MS = 180;    // scroll is "finished" after this long with no movement
+
+interface Fx { id: number; kind: Kind; x: number; y: number; color: string; label: string; orient: string }
+
+// Random orientation per cluster so repeats never look identical: a twinkle
+// takes any rotation (which also changes the direction its stars pop in) and
+// a mirror on either axis; a float only tilts and mirrors sideways, so it
+// still drifts up. Both vary a little in size.
+const randomOrient = (kind: Kind) => {
+    const r = (a: number, b: number) => a + Math.random() * (b - a);
+    const rot = kind === "float" ? r(-30, 30) : r(0, 360);
+    const flipX = Math.random() < 0.5 ? -1 : 1;
+    const flipY = kind === "float" ? 1 : Math.random() < 0.5 ? -1 : 1;
+    const size = r(0.85, 1.2);
+    return `rotate(${rot.toFixed(0)}deg) scale(${(flipX * size).toFixed(2)}, ${(flipY * size).toFixed(2)})`;
+};
+
+const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+const Star = ({ className, style }: { className: string; style: CSSProperties }) => (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`sparkle-star ${className}`} style={style}>
+        <path fill="currentColor" d="M12 0C12.9 6.6 17.4 11.1 24 12 17.4 12.9 12.9 17.4 12 24 11.1 17.4 6.6 12.9 0 12 6.6 11.1 11.1 6.6 12 0Z" />
+    </svg>
+);
+
+const v = (o: Record<string, string | number>) => o as CSSProperties;
+
+// Twinkle mirrors the avatar layout: a big centre star, four small satellites.
+const TWINKLE = [
+    { x: 0, y: 0, s: 44, d: 0 },
+    { x: 0, y: -40, s: 20, d: 0.15 },
+    { x: 40, y: 0, s: 20, d: 0.3 },
+    { x: 0, y: 40, s: 14, d: 0.45 },
+    { x: -40, y: 0, s: 14, d: 0.6 },
+];
+
+const Effect = ({ fx }: { fx: Fx }) => {
+    const c = fx.color;
+    return (
+        <div className="sparkle-fx" style={{ left: fx.x, top: fx.y }}>
+            <div className="sparkle-fx" style={{ transform: fx.orient }}>
+                {fx.kind === "twinkle" &&
+                    TWINKLE.map((p, i) => (
+                        <Star key={i} className="sparkle-twinkle" style={v({ left: p.x, top: p.y, "--s": `${p.s}px`, "--c": c, animationDelay: `${p.d}s` })} />
+                    ))}
+                {fx.kind === "float" &&
+                    // Small stars drift upward from a loose row, swaying as they go.
+                    [-50, -25, 0, 25, 50].map((x, i) => (
+                        <Star key={i} className="sparkle-float" style={v({
+                            left: x, top: (i % 2) * 14, "--s": i % 2 ? "14px" : "20px", "--c": pick(COLORS),
+                            "--sway": `${i % 2 ? -14 : 14}px`, animationDelay: `${i * 0.12}s`,
+                        })} />
+                    ))}
+            </div>
+            {IS_LOCAL && <span className="sparkle-debug">{fx.kind} ← {fx.label}</span>}
+        </div>
+    );
+};
+
+type Pt = { x: number; y: number };
+
+export const RandomSparkles = () => {
+    const [effects, setEffects] = useState<Fx[]>([]);
+
+    useEffect(() => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        let lastAt = 0;
+        let nextId = 0;
+
+        const timers: number[] = [];
+        const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
+
+        const trigger = (label: string, anchor: Pt) => {
+            if (!IS_LOCAL) {
+                const now = Date.now();
+                if (now - lastAt < COOLDOWN_MS || Math.random() > CHANCE) return;
+                lastAt = now;
+            }
+            const kind = pick(KINDS);
+            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, color: pick(COLORS), label, orient: randomOrient(kind) };
+            setEffects((cur) => [...cur, fx]);
+            later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
+        };
+
+        const onClick = (e: MouseEvent) => {
+            const el = (e.target as Element | null)?.closest?.(INTERACTIVE);
+            if (!el) return;
+            // The sparkle lands exactly where the click happened. Keyboard
+            // "clicks" (Enter/Space) have no pointer position (detail 0), so
+            // those fall back to the element's centre.
+            const r = el.getBoundingClientRect();
+            const anchor = e.detail > 0 ? { x: e.clientX, y: e.clientY } : { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+            trigger(`${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 24)}`, anchor);
+        };
+
+        // Last known pointer spot (mouse position, or where a swipe started),
+        // used as the scroll trigger's anchor. Defaults to screen centre.
+        let pointer: Pt = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        const onPointer = (e: PointerEvent) => { pointer = { x: e.clientX, y: e.clientY }; };
+
+        // Scroll counts once per gesture: when scrolling settles, if it
+        // travelled far enough since it started.
+        let scrollStartY: number | null = null;
+        let idle = 0;
+        const onScroll = () => {
+            if (scrollStartY === null) scrollStartY = window.scrollY;
+            window.clearTimeout(idle);
+            idle = window.setTimeout(() => {
+                const dy = window.scrollY - (scrollStartY ?? window.scrollY);
+                scrollStartY = null;
+                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(`scroll ${dy > 0 ? "↓" : "↑"} ${Math.round(Math.abs(dy))}px`, pointer);
+            }, SCROLL_IDLE_MS);
+        };
+
+        // Capture phase so links that stop propagation still count.
+        document.addEventListener("click", onClick, true);
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("pointermove", onPointer, { passive: true });
+        window.addEventListener("pointerdown", onPointer, { passive: true });
+        return () => {
+            document.removeEventListener("click", onClick, true);
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("pointermove", onPointer);
+            window.removeEventListener("pointerdown", onPointer);
+            window.clearTimeout(idle);
+            timers.forEach((t) => window.clearTimeout(t));
+        };
+    }, []);
+
+    if (!effects.length) return null;
+    return (
+        <div className="sparkle-layer" aria-hidden="true">
+            {effects.map((fx) => <Effect key={fx.id} fx={fx} />)}
+        </div>
+    );
+};
