@@ -3,8 +3,8 @@
 // pointer, for scrolls), so it feels like the site has a mind of its own. Two variants built on the Hero avatar's
 // four-point star (twinkle: the avatar's diamond; float: stars drifting up),
 // each randomly rotated, mirrored, sized and colored.
-// On localhost it fires every time (with a label naming the trigger) so you
-// can see what counts; in production it's a dice roll with a cooldown.
+// On localhost it fires every time so you can see what counts; in production
+// it's a dice roll with a cooldown.
 // Skipped entirely under prefers-reduced-motion.
 
 import { useEffect, useState, type CSSProperties } from "react";
@@ -24,7 +24,7 @@ const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last s
 const SCROLL_MIN_PX = 400;     // a scroll gesture must travel this far to count
 const SCROLL_IDLE_MS = 180;    // scroll is "finished" after this long with no movement
 
-interface Fx { id: number; kind: Kind; x: number; y: number; color: string; label: string; orient: string }
+interface Fx { id: number; kind: Kind; x: number; y: number; color: string; orient: string }
 
 // Random orientation per cluster so repeats never look identical: a twinkle
 // takes any rotation (which also changes the direction its stars pop in) and
@@ -76,7 +76,6 @@ const Effect = ({ fx }: { fx: Fx }) => {
                         })} />
                     ))}
             </div>
-            {IS_LOCAL && <span className="sparkle-debug">{fx.kind} ← {fx.label}</span>}
         </div>
     );
 };
@@ -94,14 +93,14 @@ export const RandomSparkles = () => {
         const timers: number[] = [];
         const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
 
-        const trigger = (label: string, anchor: Pt) => {
+        const trigger = (anchor: Pt) => {
             if (!IS_LOCAL) {
                 const now = Date.now();
                 if (now - lastAt < COOLDOWN_MS || Math.random() > CHANCE) return;
                 lastAt = now;
             }
             const kind = pick(KINDS);
-            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, color: pick(COLORS), label, orient: randomOrient(kind) };
+            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, color: pick(COLORS), orient: randomOrient(kind) };
             setEffects((cur) => [...cur, fx]);
             later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
         };
@@ -114,7 +113,7 @@ export const RandomSparkles = () => {
             // those fall back to the element's centre.
             const r = el.getBoundingClientRect();
             const anchor = e.detail > 0 ? { x: e.clientX, y: e.clientY } : { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-            trigger(`${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 24)}`, anchor);
+            trigger(anchor);
         };
 
         // Last known pointer spot (mouse position, or where a swipe started),
@@ -132,7 +131,7 @@ export const RandomSparkles = () => {
             idle = window.setTimeout(() => {
                 const dy = window.scrollY - (scrollStartY ?? window.scrollY);
                 scrollStartY = null;
-                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(`scroll ${dy > 0 ? "↓" : "↑"} ${Math.round(Math.abs(dy))}px`, pointer);
+                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(pointer);
             }, SCROLL_IDLE_MS);
         };
 

@@ -40,20 +40,3 @@
     100% { opacity: 0; transform: translate(0, -95px) scale(0.4) rotate(20deg); }
 }
 .sparkle-float { animation: sparkle-float 1.6s ease-out both; }
-
-@keyframes sparkle-label-fade { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
-
-/* Localhost-only label naming what triggered the effect. */
-.sparkle-debug {
-    position: absolute;
-    top: 64px;
-    left: 0;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font: 600 11px/1.4 ui-monospace, monospace;
-    padding: 2px 8px;
-    border-radius: 9999px;
-    background: rgb(0 0 0 / 0.7);
-    color: #fff;
-    animation: sparkle-label-fade 1.8s ease-out both;
-}
