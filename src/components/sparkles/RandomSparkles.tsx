@@ -1,17 +1,21 @@
-// Random sparkles: every so often, clicking something interactive (or finishing
-// a scroll) makes a sparkle appear exactly where you clicked (or at the
-// pointer, for scrolls), so it feels like the site has a mind of its own. Two variants built on the Hero avatar's
-// four-point star (twinkle: the avatar's diamond; float: stars drifting up),
-// each randomly rotated, mirrored, sized and colored.
+// Random sparkles: every so often, clicking something interactive, finishing a
+// scroll, or just moving the mouse around makes a sparkle appear right there
+// (at the click, or at the pointer), so it feels like the site has a mind of
+// its own. Two variants built on the Hero avatar's four-point star (twinkle:
+// the avatar's diamond; float: stars drifting up), each randomly rotated,
+// mirrored and sized, with every star its own random color.
 // On localhost it fires every time so you can see what counts; in production
-// it's a dice roll with a cooldown.
+// it's a dice roll with a shared cooldown, and mouse movement rolls far less
+// often (once per long stretch of travel, at much lower odds).
 // Skipped entirely under prefers-reduced-motion.
 
 import { useEffect, useState, type CSSProperties } from "react";
 import "./sparkles.css";
 
 const IS_LOCAL = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-const CHANCE = 1 / 8;          // production odds per qualifying click
+const CHANCE = 1 / 8;          // production odds per click / finished scroll
+const MOVE_CHANCE = 1 / 30;    // production odds per MOVE_STEP_PX of mouse travel
+const MOVE_STEP_PX = 2000;     // mouse travel between rolls (a few screen sweeps)
 const COOLDOWN_MS = 12_000;    // production: at most one effect per window
 
 // What counts as "interacting": anything clickable.
@@ -24,7 +28,7 @@ const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last s
 const SCROLL_MIN_PX = 400;     // a scroll gesture must travel this far to count
 const SCROLL_IDLE_MS = 180;    // scroll is "finished" after this long with no movement
 
-interface Fx { id: number; kind: Kind; x: number; y: number; color: string; orient: string }
+interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; orient: string }
 
 // Random orientation per cluster so repeats never look identical: a twinkle
 // takes any rotation (which also changes the direction its stars pop in) and
@@ -59,19 +63,18 @@ const TWINKLE = [
 ];
 
 const Effect = ({ fx }: { fx: Fx }) => {
-    const c = fx.color;
     return (
         <div className="sparkle-fx" style={{ left: fx.x, top: fx.y }}>
             <div className="sparkle-fx" style={{ transform: fx.orient }}>
                 {fx.kind === "twinkle" &&
                     TWINKLE.map((p, i) => (
-                        <Star key={i} className="sparkle-twinkle" style={v({ left: p.x, top: p.y, "--s": `${p.s}px`, "--c": c, animationDelay: `${p.d}s` })} />
+                        <Star key={i} className="sparkle-twinkle" style={v({ left: p.x, top: p.y, "--s": `${p.s}px`, "--c": fx.colors[i], animationDelay: `${p.d}s` })} />
                     ))}
                 {fx.kind === "float" &&
                     // Small stars drift upward from a loose row, swaying as they go.
                     [-50, -25, 0, 25, 50].map((x, i) => (
                         <Star key={i} className="sparkle-float" style={v({
-                            left: x, top: (i % 2) * 14, "--s": i % 2 ? "14px" : "20px", "--c": pick(COLORS),
+                            left: x, top: (i % 2) * 14, "--s": i % 2 ? "14px" : "20px", "--c": fx.colors[i],
                             "--sway": `${i % 2 ? -14 : 14}px`, animationDelay: `${i * 0.12}s`,
                         })} />
                     ))}
@@ -93,14 +96,14 @@ export const RandomSparkles = () => {
         const timers: number[] = [];
         const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
 
-        const trigger = (anchor: Pt) => {
+        const trigger = (anchor: Pt, chance = CHANCE) => {
             if (!IS_LOCAL) {
                 const now = Date.now();
-                if (now - lastAt < COOLDOWN_MS || Math.random() > CHANCE) return;
+                if (now - lastAt < COOLDOWN_MS || Math.random() > chance) return;
                 lastAt = now;
             }
             const kind = pick(KINDS);
-            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, color: pick(COLORS), orient: randomOrient(kind) };
+            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, () => pick(COLORS)), orient: randomOrient(kind) };
             setEffects((cur) => [...cur, fx]);
             later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
         };
@@ -121,6 +124,18 @@ export const RandomSparkles = () => {
         let pointer: Pt = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         const onPointer = (e: PointerEvent) => { pointer = { x: e.clientX, y: e.clientY }; };
 
+        // Mouse movement: add up distance travelled and roll once per
+        // MOVE_STEP_PX, so idle wiggles never fire and it stays rare.
+        let travelled = 0;
+        const onMove = (e: PointerEvent) => {
+            if (e.pointerType !== "mouse") return; // touch swipes are scrolls
+            travelled += Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y);
+            onPointer(e);
+            if (travelled < MOVE_STEP_PX) return;
+            travelled = 0;
+            trigger(pointer, MOVE_CHANCE);
+        };
+
         // Scroll counts once per gesture: when scrolling settles, if it
         // travelled far enough since it started.
         let scrollStartY: number | null = null;
@@ -138,12 +153,12 @@ export const RandomSparkles = () => {
         // Capture phase so links that stop propagation still count.
         document.addEventListener("click", onClick, true);
         window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("pointermove", onPointer, { passive: true });
+        window.addEventListener("pointermove", onMove, { passive: true });
         window.addEventListener("pointerdown", onPointer, { passive: true });
         return () => {
             document.removeEventListener("click", onClick, true);
             window.removeEventListener("scroll", onScroll);
-            window.removeEventListener("pointermove", onPointer);
+            window.removeEventListener("pointermove", onMove);
             window.removeEventListener("pointerdown", onPointer);
             window.clearTimeout(idle);
             timers.forEach((t) => window.clearTimeout(t));
