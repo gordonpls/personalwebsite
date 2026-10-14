@@ -36,10 +36,11 @@ export const Home = () => {
     }, [location.hash]);
 
     return (
-        <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
-            <Navbar></Navbar>
-            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
-                <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md space-y-6">
+        // overflow-x-clip (not hidden) so the sticky title-bar navbar still sticks.
+        <div className="container mx-auto w-full pt-4 overflow-x-clip bg-base-100 rounded-md">
+            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden">
+                <Navbar embedded />
+                <div className="px-4 pt-2 pb-8 space-y-6">
                     <section>
                         <Hero />
                     </section>

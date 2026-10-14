@@ -12,7 +12,9 @@ const PROJECT_LINKS = [
   { label: "Daily Fortune Cookie", href: "/fortune" },
 ];
 
-export const Navbar = () => {
+// `embedded` renders the navbar as the title bar of the page's mockup-window
+// (sticky inside it, traffic-light dots included) instead of a fixed page bar.
+export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
   const location = useLocation();
   const [projectsOpen, setProjectsOpen] = useState(false);
 
@@ -33,9 +35,23 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-base-300 shadow-sm">
+    <div
+      className={
+        embedded
+          ? "navbar sticky top-0 z-50 bg-base-300/85 backdrop-blur-md rounded-t-[inherit] px-3"
+          : "navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-base-300 shadow-sm"
+      }
+    >
       {/* Navbar Start with Mobile Dropdown */}
       <div className="navbar-start">
+        {embedded && (
+          // Window "traffic lights": muted at rest, bloom into color on hover.
+          <div className="group hidden sm:flex items-center gap-2 pl-2 pr-3" aria-hidden="true">
+            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 group-hover:bg-[#ff5f57]" />
+            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 delay-75 group-hover:bg-[#febc2e]" />
+            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 delay-150 group-hover:bg-[#28c840]" />
+          </div>
+        )}
         <div className="dropdown md:hidden">
           <div tabIndex={0} role="button" aria-label="Open navigation menu" aria-haspopup="true" className="btn btn-ghost btn-circle">
             <svg

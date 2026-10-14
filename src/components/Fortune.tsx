@@ -73,10 +73,10 @@ export default function Fortune() {
     const isOpen = state.kind === "open";
 
     return (
-        <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md min-h-screen flex flex-col">
-            <Navbar />
-            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible flex-1">
-                <div className="border-t !border-neutral dark:border-white px-4 pt-4 pb-8 rounded-md">
+        <div className="container mx-auto w-full pt-4 overflow-x-clip bg-base-100 rounded-md min-h-screen flex flex-col">
+            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden flex-1">
+                <Navbar embedded />
+                <div className="px-4 pt-4 pb-8">
                     {/* min-h-[70vh] keeps the closed state from looking truncated on
                         small viewports; once cracked the content grows naturally. */}
                     <section className="max-w-5xl mx-auto px-2 md:px-6 py-4 md:py-8 min-h-[70vh] flex flex-col">

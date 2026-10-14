@@ -68,10 +68,10 @@ const DEMOS = [
 
 export default function ButtonAnimDemo() {
     return (
-        <div className="container mx-auto w-full overflow-x-hidden pt-18 bg-base-100 rounded-md">
-            <Navbar />
-            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
-                <div className="border-t !border-neutral dark:border-white px-4 pt-8 pb-12 rounded-md">
+        <div className="container mx-auto w-full pt-4 overflow-x-clip bg-base-100 rounded-md">
+            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden">
+                <Navbar embedded />
+                <div className="px-4 pt-8 pb-12">
                     <div className="max-w-2xl mx-auto">
                         <p className="text-xs uppercase tracking-[0.3em] text-primary font-semibold mb-2">
                             Design Preview

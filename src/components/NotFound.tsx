@@ -3,10 +3,10 @@ import { Footer } from "./Footer";
 
 export default function NotFound() {
     return (
-        <div className="container mx-auto w-full pt-4 overflow-x-hidden pt-18 bg-base-100 rounded-md">
-            <Navbar />
-            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible">
-                <div className="border-t !border-neutral dark:border-white px-4 py-24 rounded-md flex flex-col items-center text-center gap-3">
+        <div className="container mx-auto w-full pt-4 overflow-x-clip bg-base-100 rounded-md">
+            <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden">
+                <Navbar embedded />
+                <div className="px-4 py-24 flex flex-col items-center text-center gap-3">
                     <p className="text-7xl font-extrabold text-primary tracking-tight">404</p>
                     <h1 className="text-2xl font-bold text-base-content">Page not found</h1>
                     <p className="text-base-content/60 max-w-md">

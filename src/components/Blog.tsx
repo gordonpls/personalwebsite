@@ -513,9 +513,9 @@ export default function Blog() {
   }
 
   return (
-    <div className="container mx-auto w-full pt-4 overflow-x-hidden bg-base-100 rounded-md">
-      <Navbar />
-      <div className="mockup-window border bg-base-300">
+    <div className="container mx-auto w-full pt-4 overflow-x-clip bg-base-100 rounded-md">
+      <div className="mockup-window border bg-base-300 !overflow-visible !pt-0 before:!hidden">
+        <Navbar embedded />
         <div className="px-4 pt-4 pb-12">
 
           {!authed ? (
