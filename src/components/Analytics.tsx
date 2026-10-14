@@ -209,7 +209,7 @@ function DeviceDonut({ data }: { data: PublicSummary["deviceBreakdown"] }) {
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ background: "var(--fallback-b2,oklch(var(--b2)))", border: "1px solid var(--fallback-b3,oklch(var(--b3)))", borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: "var(--color-base-200)", border: "1px solid var(--color-base-300)", borderRadius: 8, fontSize: 12 }}
             formatter={(value: number, name: string) => [`${value} (${Math.round(value / total * 100)}%)`, name]}
           />
         </PieChart>

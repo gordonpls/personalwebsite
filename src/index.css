@@ -13,26 +13,30 @@
     default: false;
     prefersdark: false;
     color-scheme: "light";
-    --color-base-100: oklch(100% 0 0);
-    --color-base-200: oklch(93% 0 0);
-    --color-base-300: oklch(86% 0 0);
-    --color-base-content: oklch(22.389% 0.031 278.072);
-    --color-primary: oklch(58% 0.158 241.966);
-    --color-primary-content: oklch(100% 0 0);
-    --color-secondary: oklch(55% 0.046 257.417);
-    --color-secondary-content: oklch(100% 0 0);
-    --color-accent: oklch(60% 0.118 184.704);
-    --color-accent-content: oklch(100% 0 0);
-    --color-neutral: oklch(0% 0 0);
-    --color-neutral-content: oklch(100% 0 0);
-    --color-info: oklch(60% 0.126 221.723);
-    --color-info-content: oklch(100% 0 0);
-    --color-success: oklch(62% 0.194 149.214);
-    --color-success-content: oklch(100% 0 0);
-    --color-warning: oklch(85% 0.199 91.936);
-    --color-warning-content: oklch(0% 0 0);
-    --color-error: oklch(70% 0.191 22.216);
-    --color-error-content: oklch(0% 0 0);
+    /* "Lilac Mist" light theme — daytime twin of Twilight Pastels. Faint lilac
+       surfaces stepped like the original light theme (page → cards → frame) so
+       the layers stay distinct, with Morning Mist's sky-blue primary and teal
+       accent deepened from the dark theme's pastels to hold contrast on light. */
+    --color-base-100: oklch(98.6% 0.008 292);   /* page / outer container */
+    --color-base-200: oklch(94.8% 0.018 290);   /* section cards, navbar */
+    --color-base-300: oklch(88.5% 0.03 288);    /* mockup window / deepest layer */
+    --color-base-content: oklch(25% 0.035 280); /* deep ink with a violet cast */
+    --color-primary: oklch(52% 0.14 245);       /* sky blue */
+    --color-primary-content: oklch(98% 0.01 245);
+    --color-secondary: oklch(50% 0.06 288);     /* lilac grey — Hero frame & badges */
+    --color-secondary-content: oklch(98% 0.008 288);
+    --color-accent: oklch(55% 0.1 182);         /* teal */
+    --color-accent-content: oklch(98% 0.01 182);
+    --color-neutral: oklch(32% 0.035 285);      /* plum slate — window outlines */
+    --color-neutral-content: oklch(97% 0.01 292);
+    --color-info: oklch(54% 0.12 232);
+    --color-info-content: oklch(98% 0.01 232);
+    --color-success: oklch(52% 0.13 150);
+    --color-success-content: oklch(98% 0.01 150);
+    --color-warning: oklch(76% 0.15 78);
+    --color-warning-content: oklch(26% 0.05 78);
+    --color-error: oklch(55% 0.18 25);
+    --color-error-content: oklch(98% 0.01 25);
     --radius-selector: 0.25rem;
     --radius-field: 0.25rem;
     --radius-box: 0.25rem;

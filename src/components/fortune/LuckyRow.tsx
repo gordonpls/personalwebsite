@@ -29,7 +29,7 @@ export const LuckyRow = ({ lucky }: { lucky: Lucky }) => (
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.6, type: "spring", stiffness: 220 }}
-                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-error text-white flex items-center justify-center text-xs md:text-sm font-bold tabular-nums shadow"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-error text-error-content flex items-center justify-center text-xs md:text-sm font-bold tabular-nums shadow"
                     title="Powerball"
                 >
                     {lucky.powerball}

@@ -159,7 +159,7 @@ const PROJECTS: Project[] = [
         title: "Allocation Quiz",
         href: "/allocation",
         tag: "Interactive",
-        accent: "text-warning",
+        accent: "text-[oklch(52%_0.12_70)] business:text-warning", // warning amber is too light for small text on the light theme
         glow: "from-warning/15 via-warning/0 to-primary/10",
         description:
             "A risk-tolerance quiz that drives an interactive hypothetical portfolio simulator. Tweak the equity split, replay historical drawdowns, and see the trade-off between risk and return.",
