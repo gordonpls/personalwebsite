@@ -10,6 +10,7 @@ const PROJECT_LINKS = [
   { label: "Investing Dashboard", href: "/investments" },
   { label: "Stablecoin Dashboard", href: "/stablecoin", newTab: true },
   { label: "Daily Fortune Cookie", href: "/fortune" },
+  { label: "Typing Game", href: "/typing" },
 ];
 
 // `embedded` renders the navbar as the title bar of the page's mockup-window

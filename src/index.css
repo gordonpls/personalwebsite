@@ -226,6 +226,23 @@
 }
 .project-peg-pulse { transform-origin: 170px 60px; animation: project-peg-pulse 1.6s ease-out infinite; }
 
+/* Typing Game keycaps: each key presses down in turn on hover (delay set
+   inline per key); the caret only blinks once the word is "typed". */
+@keyframes project-key-press {
+    0%, 100% { transform: translateY(0); }
+    40%      { transform: translateY(4px); }
+}
+.group:hover .project-key,
+.group[data-play] .project-key { animation: project-key-press 0.32s ease-out both; }
+@keyframes project-caret-blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.project-key-caret { opacity: 0; }
+.group:hover .project-key-caret,
+.group[data-play] .project-key-caret { animation: project-caret-blink 1s steps(1) 0.7s infinite; }
+
+/* Typing Game teaser caret: blinks while waiting for the first keystroke. */
+@keyframes typer-caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.typer-caret-idle { animation: typer-caret-blink 1.05s steps(1) infinite; }
+
 /* About-Me photo deck carets: a gentle horizontal nudge hinting navigation.
    These animate `transform` only; vertical centering uses Tailwind's separate
    `translate` property, so the two compose without clobbering each other. */
@@ -436,6 +453,9 @@
     .group[data-play] .project-donut,
     .group[data-play] .project-cookie,
     .project-peg-pulse,
+    .group:hover .project-key,
+    .group[data-play] .project-key,
+    .typer-caret-idle,
     .eq-bar,
     .deck-caret-left,
     .deck-caret-right,

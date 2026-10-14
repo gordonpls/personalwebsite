@@ -146,12 +146,29 @@ const PegPreview = () => (
     </svg>
 );
 
+// Inline keycaps spelling TYPE: on hover each key presses down in turn, like
+// someone typing the word, then a caret blinks after the last key.
+const KeysPreview = () => (
+    <svg viewBox="0 0 200 120" className="w-full h-full" aria-hidden="true">
+        {["T", "Y", "P", "E"].map((k, i) => (
+            <g key={k} className="project-key" style={{ animationDelay: `${i * 0.14}s` }}>
+                {/* Keycap: darker base (the key's side) + lighter top face. */}
+                <rect x={22 + i * 40} y="42" width="34" height="38" rx="7" fill="currentColor" opacity="0.18" />
+                <rect x={22 + i * 40} y="38" width="34" height="36" rx="7" className="fill-base-100" stroke="currentColor" strokeOpacity="0.25" />
+                <text x={39 + i * 40} y="61" textAnchor="middle" fontSize="15" fontWeight="700" fill="currentColor" opacity="0.75" fontFamily="ui-monospace, monospace">{k}</text>
+            </g>
+        ))}
+        <rect x="183" y="40" width="3" height="32" rx="1.5" className="fill-primary project-key-caret" />
+    </svg>
+);
+
 // Slug used for analytics event tracking
 const PROJECT_SLUGS: Record<string, string> = {
     "/allocation": "allocation-quiz",
     "/investments": "investing-dashboard",
     "/stablecoin": "stablecoin-dashboard",
     "/fortune": "fortune-cookie",
+    "/typing": "typing-game",
 };
 
 const PROJECTS: Project[] = [
@@ -198,6 +215,17 @@ const PROJECTS: Project[] = [
             "A daily fortune cookie with a cracking animation, lucky numbers, a Chinese phrase of the day, and a shareable card you can download. A mulberry32 PRNG seeded by (date, IP-hash) locks each visitor's payload for the calendar day.",
         tags: ["Framer Motion", "Canvas", "Web Speech"],
         preview: <CookiePreview />,
+    },
+    {
+        title: "Typing Game",
+        href: "/typing",
+        tag: "Coming soon",
+        accent: "text-primary",
+        glow: "from-primary/15 via-primary/0 to-secondary/10",
+        description:
+            "A typing speed game with timed runs, themed word packs, and personal bests. Still in the works, but the coming-soon sign is already typeable.",
+        tags: ["React", "Framer Motion", "Game"],
+        preview: <KeysPreview />,
     },
 ];
 

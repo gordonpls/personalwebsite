@@ -12,6 +12,7 @@ const Portfolio = lazy(() => import("./components/Portfolio"));
 const AllocationPage = lazy(() => import("./components/AllocationPage"));
 const Stablecoin = lazy(() => import("./components/Stablecoin"));
 const Fortune = lazy(() => import("./components/Fortune"));
+const TypingGame = lazy(() => import("./components/typing/TypingGame"));
 const ButtonAnimDemo = lazy(() => import("./components/ButtonAnimDemo"));
 const NotFound = lazy(() => import("./components/NotFound"));
 const Admin = lazy(() => import("./components/Admin").then((m) => ({ default: m.Admin })));
@@ -46,6 +47,7 @@ function App() {
                 <Route path="/allocation" element={<AllocationPage />} />
                 <Route path="/stablecoin" element={<Stablecoin />} />
                 <Route path="/fortune" element={<Fortune />} />
+                <Route path="/typing" element={<TypingGame />} />
                 <Route path="/button-demo" element={<ButtonAnimDemo />} />
                 {/* Analytics */}
                 <Route path="/analytics" element={<AnalyticsPage />} />
