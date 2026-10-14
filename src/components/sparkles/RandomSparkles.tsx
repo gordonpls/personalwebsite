@@ -3,7 +3,7 @@
 // (at the click, or at the pointer), so it feels like the site has a mind of
 // its own. Two variants built on the Hero avatar's four-point star (twinkle:
 // the avatar's diamond; float: stars drifting up), each randomly rotated,
-// mirrored and sized, with every star its own random color.
+// mirrored and sized, with every star its own randomly generated color.
 // On localhost it fires every time so you can see what counts; in production
 // it's a dice roll with a shared cooldown, and mouse movement rolls far less
 // often (once per long stretch of travel, at much lower odds).
@@ -21,7 +21,6 @@ const COOLDOWN_MS = 12_000;    // production: at most one effect per window
 // What counts as "interacting": anything clickable.
 const INTERACTIVE = "button, a, summary, label, select, [role=button], [role=tab], [role=link], input[type=checkbox], input[type=radio], input[type=range]";
 
-const COLORS = ["#FFC94D", "#FF8FB8", "#7CC4FF", "#B79CFF", "#6FE3B5"];
 const KINDS = ["twinkle", "float"] as const;
 type Kind = (typeof KINDS)[number];
 const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last star's delay + its animation
@@ -44,6 +43,24 @@ const randomOrient = (kind: Kind) => {
 };
 
 const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+// A fresh color per star: any hue, in one of three moods so the mix has both
+// stars that pop and quieter ones. OKLCH keeps each mood's brightness even
+// across hues (no muddy yellows or glaring blues).
+// Weights are [dark, light]: pastels nearly vanish on the light theme, so
+// they're rarer there, with the difference going to the deeper jewel tones.
+const MOODS = [
+    { weight: [0.5, 0.55], l: [70, 82], c: [0.17, 0.24] },  // vivid: the eye-catchers
+    { weight: [0.3, 0.1], l: [86, 94], c: [0.04, 0.1] },    // pastel: soft and subtle
+    { weight: [0.2, 0.35], l: [56, 66], c: [0.14, 0.2] },   // jewel: deep, reads on light pages
+];
+const randomColor = () => {
+    const r = (a: number, b: number) => a + Math.random() * (b - a);
+    const light = document.documentElement.getAttribute("data-theme") !== "business";
+    let roll = Math.random();
+    const mood = MOODS.find((m) => (roll -= m.weight[light ? 1 : 0]) < 0) ?? MOODS[0];
+    return `oklch(${r(mood.l[0], mood.l[1]).toFixed(1)}% ${r(mood.c[0], mood.c[1]).toFixed(3)} ${r(0, 360).toFixed(0)})`;
+};
 
 const Star = ({ className, style }: { className: string; style: CSSProperties }) => (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={`sparkle-star ${className}`} style={style}>
@@ -103,7 +120,7 @@ export const RandomSparkles = () => {
                 lastAt = now;
             }
             const kind = pick(KINDS);
-            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, () => pick(COLORS)), orient: randomOrient(kind) };
+            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind) };
             setEffects((cur) => [...cur, fx]);
             later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
         };
