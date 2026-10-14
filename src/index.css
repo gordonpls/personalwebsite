@@ -46,7 +46,11 @@
   @plugin "daisyui/theme" {
     name: "business";
     default: true;
-    prefersdark: true;
+    /* Keep false: prefersdark emits an unscoped `:root` rule under
+       prefers-color-scheme: dark that ties [data-theme=corporate] on
+       specificity and wins on order, so OS-dark visitors could never see
+       light mode. The pre-paint script in index.html already defaults to dark. */
+    prefersdark: false;
     color-scheme: "dark";
     /* "Twilight Pastels" dark theme — soft cool slate-violet base (near-neutral
        so pastels pop), analogous periwinkle/lavender with a mint complement.
