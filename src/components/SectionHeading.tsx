@@ -22,7 +22,7 @@ export function SectionHeading({
     return (
         <div className={className}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="h-px w-10 bg-primary/60" />
+                <span className="h-px w-10 bg-lilac/60" />
                 <span className="text-sm uppercase tracking-[0.3em] text-primary font-semibold">
                     {eyebrow}
                 </span>

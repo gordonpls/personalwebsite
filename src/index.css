@@ -4,6 +4,13 @@
    Hero override its colors for the dark sky while leaving light mode untouched. */
 @custom-variant business (&:where([data-theme="business"] *));
 
+/* `lilac` — a quiet secondary accent for small details (heading rules, quote
+   borders). Lilac in light mode; in dark it resolves to
+   the primary sky-blue so the dark theme looks exactly as before. */
+@theme inline {
+  --color-lilac: var(--lilac);
+}
+
 @plugin "daisyui" {
     themes: business, corporate
   }
@@ -13,22 +20,22 @@
     default: false;
     prefersdark: false;
     color-scheme: "light";
-    /* "Lilac Mist" light theme — daytime twin of Twilight Pastels. Faint lilac
-       surfaces stepped like the original light theme (page → cards → frame) so
-       the layers stay distinct, with Morning Mist's sky-blue primary and teal
-       accent deepened from the dark theme's pastels to hold contrast on light. */
-    --color-base-100: oklch(98.6% 0.008 292);   /* page / outer container */
-    --color-base-200: oklch(94.8% 0.018 290);   /* section cards, navbar */
-    --color-base-300: oklch(88.5% 0.03 288);    /* mockup window / deepest layer */
-    --color-base-content: oklch(25% 0.035 280); /* deep ink with a violet cast */
+    /* "Morning Mist" light theme — daytime twin of Twilight Pastels: cool
+       blue-grey surfaces stepped like the original (page → cards → frame) so
+       the layers stay distinct, slate secondary, deepened sky-blue primary and
+       teal accent. Lilac appears only as a quiet detail via --lilac below. */
+    --color-base-100: oklch(98.6% 0.005 250);   /* page / outer container */
+    --color-base-200: oklch(95% 0.011 250);     /* section cards, navbar */
+    --color-base-300: oklch(89% 0.018 252);     /* mockup window / deepest layer */
+    --color-base-content: oklch(26% 0.03 260);
     --color-primary: oklch(52% 0.14 245);       /* sky blue */
     --color-primary-content: oklch(98% 0.01 245);
-    --color-secondary: oklch(50% 0.06 288);     /* lilac grey — Hero frame & badges */
-    --color-secondary-content: oklch(98% 0.008 288);
-    --color-accent: oklch(55% 0.1 182);         /* teal */
+    --color-secondary: oklch(52% 0.045 256);    /* slate blue-grey — Hero frame & badges */
+    --color-secondary-content: oklch(98% 0.005 256);
+    --color-accent: oklch(56% 0.1 182);         /* teal */
     --color-accent-content: oklch(98% 0.01 182);
-    --color-neutral: oklch(32% 0.035 285);      /* plum slate — window outlines */
-    --color-neutral-content: oklch(97% 0.01 292);
+    --color-neutral: oklch(30% 0.02 256);       /* slate — window outlines */
+    --color-neutral-content: oklch(96% 0.006 256);
     --color-info: oklch(54% 0.12 232);
     --color-info-content: oklch(98% 0.01 232);
     --color-success: oklch(52% 0.13 150);
@@ -91,6 +98,16 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  :root, [data-theme="corporate"] { --lilac: oklch(76% 0.08 315); }
+  [data-theme="business"] { --lilac: var(--color-primary); }
+
+  /* Section dividers: a neutral rule in the text color at low opacity, so it
+     reads on both themes' surfaces without adding a hue. */
+  .divider-quiet::before,
+  .divider-quiet::after {
+    background-color: color-mix(in oklch, var(--color-base-content) 22%, transparent);
   }
 
   /* Blog note card colors — warm paper in light, muted slate in dark */

@@ -48,7 +48,7 @@ export const AboutMe = () => {
 
                         {/* Pull quote echoes the optimism line in the paragraph above */}
                         <figure className="my-10">
-                            <blockquote className="border-l-4 border-primary/70 pl-6 italic text-xl md:text-2xl lg:text-[1.65rem] leading-snug text-base-content">
+                            <blockquote className="border-l-4 border-lilac/70 pl-6 italic text-xl md:text-2xl lg:text-[1.65rem] leading-snug text-base-content">
                                 <span aria-hidden="true" className="text-primary/60 pr-1 text-2xl">“</span>
                                 {PULL_QUOTE}
                                 <span aria-hidden="true" className="text-primary/60 pl-0.5 text-2xl">”</span>
