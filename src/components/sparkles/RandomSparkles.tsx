@@ -1,25 +1,12 @@
-// Random sparkles: every so often, clicking something interactive, finishing a
-// scroll, or just moving the mouse around makes a sparkle appear right there
-// (at the click, or at the pointer), so it feels like the site has a mind of
-// its own. Two variants built on the Hero avatar's four-point star (twinkle:
+// Sparkles: every click makes a sparkle appear right where you clicked, and
+// every finished scroll makes one appear on the right edge, at the height
+// matching how far down the page you are (like a scrollbar thumb). Two variants built on the Hero avatar's four-point star (twinkle:
 // the avatar's diamond; float: stars drifting up), each randomly rotated,
 // mirrored and sized, with every star its own randomly generated color.
-// On localhost it fires every time so you can see what counts; in production
-// it's a dice roll with a shared cooldown, and mouse movement rolls far less
-// often (once per long stretch of travel, at much lower odds).
 // Skipped entirely under prefers-reduced-motion.
 
 import { useEffect, useState, type CSSProperties } from "react";
 import "./sparkles.css";
-
-const IS_LOCAL = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-const CHANCE = 1 / 8;          // production odds per click / finished scroll
-const MOVE_CHANCE = 1 / 30;    // production odds per MOVE_STEP_PX of mouse travel
-const MOVE_STEP_PX = 2000;     // mouse travel between rolls (a few screen sweeps)
-const COOLDOWN_MS = 12_000;    // production: at most one effect per window
-
-// What counts as "interacting": anything clickable.
-const INTERACTIVE = "button, a, summary, label, select, [role=button], [role=tab], [role=link], input[type=checkbox], input[type=radio], input[type=range]";
 
 const KINDS = ["twinkle", "float"] as const;
 type Kind = (typeof KINDS)[number];
@@ -107,18 +94,12 @@ export const RandomSparkles = () => {
 
     useEffect(() => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-        let lastAt = 0;
         let nextId = 0;
 
         const timers: number[] = [];
         const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
 
-        const trigger = (anchor: Pt, chance = CHANCE) => {
-            if (!IS_LOCAL) {
-                const now = Date.now();
-                if (now - lastAt < COOLDOWN_MS || Math.random() > chance) return;
-                lastAt = now;
-            }
+        const trigger = (anchor: Pt) => {
             const kind = pick(KINDS);
             const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind) };
             setEffects((cur) => [...cur, fx]);
@@ -126,31 +107,24 @@ export const RandomSparkles = () => {
         };
 
         const onClick = (e: MouseEvent) => {
-            const el = (e.target as Element | null)?.closest?.(INTERACTIVE);
-            if (!el) return;
             // The sparkle lands exactly where the click happened. Keyboard
             // "clicks" (Enter/Space) have no pointer position (detail 0), so
-            // those fall back to the element's centre.
+            // those fall back to the focused element's centre.
+            if (e.detail > 0) return trigger({ x: e.clientX, y: e.clientY });
+            const el = e.target as Element | null;
+            if (!el?.getBoundingClientRect) return;
             const r = el.getBoundingClientRect();
-            const anchor = e.detail > 0 ? { x: e.clientX, y: e.clientY } : { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-            trigger(anchor);
+            if (!r.width || !r.height) return; // e.g. a script clicking a hidden download link
+            trigger({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
         };
 
-        // Last known pointer spot (mouse position, or where a swipe started),
-        // used as the scroll trigger's anchor. Defaults to screen centre.
-        let pointer: Pt = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        const onPointer = (e: PointerEvent) => { pointer = { x: e.clientX, y: e.clientY }; };
-
-        // Mouse movement: add up distance travelled and roll once per
-        // MOVE_STEP_PX, so idle wiggles never fire and it stays rare.
-        let travelled = 0;
-        const onMove = (e: PointerEvent) => {
-            if (e.pointerType !== "mouse") return; // touch swipes are scrolls
-            travelled += Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y);
-            onPointer(e);
-            if (travelled < MOVE_STEP_PX) return;
-            travelled = 0;
-            trigger(pointer, MOVE_CHANCE);
+        // Scroll sparkles hug the right edge, at the height of a scrollbar
+        // thumb for the current scroll position (top of page → top of screen).
+        const scrollAnchor = (): Pt => {
+            const max = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = max > 0 ? window.scrollY / max : 0;
+            const pad = 70; // keep the whole twinkle on screen
+            return { x: window.innerWidth - 48, y: pad + progress * (window.innerHeight - pad * 2) };
         };
 
         // Scroll counts once per gesture: when scrolling settles, if it
@@ -163,20 +137,16 @@ export const RandomSparkles = () => {
             idle = window.setTimeout(() => {
                 const dy = window.scrollY - (scrollStartY ?? window.scrollY);
                 scrollStartY = null;
-                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(pointer);
+                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(scrollAnchor());
             }, SCROLL_IDLE_MS);
         };
 
-        // Capture phase so links that stop propagation still count.
+        // Capture phase so clicks that stop propagation still count.
         document.addEventListener("click", onClick, true);
         window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("pointermove", onMove, { passive: true });
-        window.addEventListener("pointerdown", onPointer, { passive: true });
         return () => {
             document.removeEventListener("click", onClick, true);
             window.removeEventListener("scroll", onScroll);
-            window.removeEventListener("pointermove", onMove);
-            window.removeEventListener("pointerdown", onPointer);
             window.clearTimeout(idle);
             timers.forEach((t) => window.clearTimeout(t));
         };
