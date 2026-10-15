@@ -8,6 +8,7 @@ const adminRoutes = require("./routes/admin");
 const financeRoutes = require("./routes/finance");
 const analyticsRoutes = require("./routes/analytics");
 const blogRoutes = require("./routes/blog");
+const typingRoutes = require("./routes/typing");
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/finance", financeRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/typing", typingRoutes);
 
 app.get(["/health", "/api/health"], (_req, res) => res.json({ status: "ok" }));
 

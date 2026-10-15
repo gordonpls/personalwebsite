@@ -115,6 +115,7 @@ jobs:
             --exclude blog.db --exclude 'blog.db-shm' --exclude 'blog.db-wal' \
             --exclude '*.db.lock' \
             --exclude blog-backups --exclude blog-export.json \
+            --exclude 'typingScores.json*' --exclude typing-secret.key \
             -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
             server/ "$SSH_USER@$SSH_HOST:$SERVER_ROOT"
 

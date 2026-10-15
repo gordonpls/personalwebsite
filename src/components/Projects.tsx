@@ -219,11 +219,11 @@ const PROJECTS: Project[] = [
     {
         title: "Typing Game",
         href: "/typing",
-        tag: "Coming soon",
+        tag: "Game",
         accent: "text-primary",
         glow: "from-primary/15 via-primary/0 to-secondary/10",
         description:
-            "A typing speed game with timed runs, themed word packs, and personal bests. Still in the works, but the coming-soon sign is already typeable.",
+            "A typing speed game with 30- and 60-second runs, themed word packs (code, finance, food), and a shared top-10 leaderboard for each run length.",
         tags: ["React", "Framer Motion", "Game"],
         preview: <KeysPreview />,
     },

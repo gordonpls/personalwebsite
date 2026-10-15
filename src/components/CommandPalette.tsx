@@ -27,7 +27,7 @@ export const CommandPalette = () => {
         { label: "Investing Dashboard", hint: "Live holdings & performance", path: "/investments" },
         { label: "Stablecoin dashboard", path: "/stablecoin" },
         { label: "Daily Fortune Cookie", hint: "Crack today's fortune cookie", path: "/fortune" },
-        { label: "Typing Game", hint: "Coming soon (but typeable)", path: "/typing" },
+        { label: "Typing Game", hint: "Timed runs & a top-10 board", path: "/typing" },
         { label: "Toggle light / dark", action: toggleTheme },
     ];
 

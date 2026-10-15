@@ -23,6 +23,10 @@ server/data/blog.db-wal
 # Blog backups + export — PRIVATE journal content, never commit.
 server/data/blog-export.json
 server/data/blog-backups/
+# Typing Game leaderboard — runtime data, never commit.
+server/data/typingScores.json
+server/data/typingScores.json.tmp
+server/data/typing-secret.key
 # SQLite stale-lock directories (node-sqlite3-wasm mkdir mutex).
 server/data/*.db.lock/
 dist
