@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ALBUM_NAMES, IMAGES, type GalleryImage } from "./GalleryImages";
 import { SectionHeading } from "../SectionHeading";
 
+// Blur-up gallery thumbs: mark images that finished loading before React
+// attached onLoad (cache hits), so they don't stay blurred.
+const markIfLoaded = (img: HTMLImageElement | null) => {
+    if (img?.complete && img.naturalWidth) img.dataset.loaded = "";
+};
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 // Grid tile rendered width per breakpoint (cols: 2 / 3 / 4 / 5), so the browser
 // can pick the smallest adequate thumbnail from srcset.
@@ -107,7 +113,10 @@ function MasonryGrid({
                                 alt={img.alt}
                                 loading="lazy"
                                 decoding="async"
-                                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                                // Blur-up: sharpen once loaded (ref covers images already cached).
+                                ref={markIfLoaded}
+                                onLoad={(e) => { e.currentTarget.dataset.loaded = ""; }}
+                                className="blur-up absolute inset-0 h-full w-full object-cover duration-500 ease-out group-hover:scale-105"
                             />
                             {showAlbum && <AlbumPill category={img.category} />}
                         </button>

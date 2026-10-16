@@ -1,6 +1,7 @@
 // Sparkles: every click makes a sparkle appear right where you clicked, and
-// every finished scroll makes one appear on the right edge, at the height
-// matching how far down the page you are (like a scrollbar thumb). Two variants built on the Hero avatar's four-point star (twinkle:
+// while you scroll a steady trail of smaller sparkles streams off the right
+// edge, at the height matching how far down the page you are (like a
+// scrollbar thumb). Two variants built on the Hero avatar's four-point star (twinkle:
 // the avatar's diamond; float: stars drifting up), each randomly rotated,
 // mirrored and sized, with every star its own randomly generated color.
 // Skipped entirely under prefers-reduced-motion.
@@ -11,8 +12,8 @@ import "./sparkles.css";
 const KINDS = ["twinkle", "float"] as const;
 type Kind = (typeof KINDS)[number];
 const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last star's delay + its animation
-const SCROLL_MIN_PX = 400;     // a scroll gesture must travel this far to count
-const SCROLL_IDLE_MS = 180;    // scroll is "finished" after this long with no movement
+const SCROLL_EMIT_MS = 110;    // while scrolling, one trail sparkle per this interval
+const SCROLL_SCALE = 0.6;      // trail sparkles are smaller than click ones
 
 interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; orient: string }
 
@@ -20,12 +21,12 @@ interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; o
 // takes any rotation (which also changes the direction its stars pop in) and
 // a mirror on either axis; a float only tilts and mirrors sideways, so it
 // still drifts up. Both vary a little in size.
-const randomOrient = (kind: Kind) => {
+const randomOrient = (kind: Kind, scale = 1) => {
     const r = (a: number, b: number) => a + Math.random() * (b - a);
     const rot = kind === "float" ? r(-30, 30) : r(0, 360);
     const flipX = Math.random() < 0.5 ? -1 : 1;
     const flipY = kind === "float" ? 1 : Math.random() < 0.5 ? -1 : 1;
-    const size = r(0.85, 1.2);
+    const size = r(0.85, 1.2) * scale;
     return `rotate(${rot.toFixed(0)}deg) scale(${(flipX * size).toFixed(2)}, ${(flipY * size).toFixed(2)})`;
 };
 
@@ -99,9 +100,9 @@ export const RandomSparkles = () => {
         const timers: number[] = [];
         const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
 
-        const trigger = (anchor: Pt) => {
+        const trigger = (anchor: Pt, scale = 1) => {
             const kind = pick(KINDS);
-            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind) };
+            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind, scale) };
             setEffects((cur) => [...cur, fx]);
             later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
         };
@@ -127,18 +128,15 @@ export const RandomSparkles = () => {
             return { x: window.innerWidth - 48, y: pad + progress * (window.innerHeight - pad * 2) };
         };
 
-        // Scroll counts once per gesture: when scrolling settles, if it
-        // travelled far enough since it started.
-        let scrollStartY: number | null = null;
-        let idle = 0;
+        // While scrolling, emit a small sparkle every SCROLL_EMIT_MS (throttled,
+        // not per scroll event), jittered a little so the trail looks loose.
+        let lastEmit = 0;
         const onScroll = () => {
-            if (scrollStartY === null) scrollStartY = window.scrollY;
-            window.clearTimeout(idle);
-            idle = window.setTimeout(() => {
-                const dy = window.scrollY - (scrollStartY ?? window.scrollY);
-                scrollStartY = null;
-                if (Math.abs(dy) >= SCROLL_MIN_PX) trigger(scrollAnchor());
-            }, SCROLL_IDLE_MS);
+            const now = performance.now();
+            if (now - lastEmit < SCROLL_EMIT_MS) return;
+            lastEmit = now;
+            const { x, y } = scrollAnchor();
+            trigger({ x: x + (Math.random() - 0.5) * 28, y: y + (Math.random() - 0.5) * 36 }, SCROLL_SCALE * (0.8 + Math.random() * 0.5));
         };
 
         // Capture phase so clicks that stop propagation still count.
@@ -147,7 +145,6 @@ export const RandomSparkles = () => {
         return () => {
             document.removeEventListener("click", onClick, true);
             window.removeEventListener("scroll", onScroll);
-            window.clearTimeout(idle);
             timers.forEach((t) => window.clearTimeout(t));
         };
     }, []);

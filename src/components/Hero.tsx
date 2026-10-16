@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
 // Caret shape: "block" | "underscore" | "bar"
 const TypingGreeting = () => <TypingGreetingRefined caret="bar" />;
-import InfoItem from "./ProfileCard/InfoItem";
+import { trackEvent } from "../lib/analytics";
+import CopyEmail from "./ProfileCard/CopyEmail";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";
 import avatarCartoon from "../assets/avatar.jpeg";
@@ -21,6 +22,12 @@ const AVATAR_STARS = [
     { top: "33%", right: "15%", size: "0.75rem", delay: "2.75s" },
     { top: "15%", right: "33%", size: "0.75rem", delay: "2.9s" },
 ];
+
+const BADGES = ["BSCS", "MBA", "MSF", "ESTJ-A", "Foodie"];
+// Frosted-glass surface shared by badges and contact chips. The sky behind is
+// light in both themes, so dark ink on white glass reads everywhere.
+const GLASS = "rounded-full bg-white/55 text-slate-800 ring-1 ring-white/70 shadow-sm backdrop-blur-md";
+const CHIP = `${GLASS} flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium [&>svg]:size-5`;
 
 export const Hero = () => {
     const myRef = useRef(null);
@@ -112,29 +119,31 @@ export const Hero = () => {
                         <div className="flex justify-center">
                             <TypingGreeting />
                         </div>
-                        <div className="">
-                            <div className="p-4 mx-auto border border-secondary border-4 business:border-[#2f6fe0]">
-                                <div className="flex flex-wrap gap-2 justify-center mx-auto self-center">
-                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">BSCS</div>
-                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">MBA</div>
-                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">MSF</div>
-                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">ESTJ-A</div>
-                                    <div className="badge badge-secondary business:!bg-[#2f6fe0] business:!text-white business:!border-transparent">Foodie</div>
-                                </div>
-
-                                <div className="flex flex-col lg:flex-row gap-2 pt-4 justify-center place-self-center">
-                                    <InfoItem
-                                        icon={emailIcon}
-                                        text="me@gordonzhong.com"
-                                        url="mailto:me@gordonzhong.com"
-                                    />
-                                    <InfoItem
-                                        icon={linkedInIcon}
-                                        text="in/gordon-zhong"
-                                        url="https://linkedin.com/in/gordon-zhong"
-                                    />
-                                    <InfoItem icon={locationIcon} text="Medford, MA 02155" url=""/>
-                                </div>
+                        {/* Badges + contact chips: frosted glass over the sky, no frame. */}
+                        <div className="mx-auto flex max-w-xl flex-col items-center gap-4 pt-2">
+                            <ul className="flex flex-wrap justify-center gap-2">
+                                {BADGES.map((b) => (
+                                    <li key={b} className={`${GLASS} px-3.5 py-1 text-sm font-semibold tracking-wide transition-transform duration-200 hover:-translate-y-0.5`}>
+                                        {b}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="flex flex-wrap justify-center gap-2.5">
+                                <CopyEmail icon={emailIcon} email="me@gordonzhong.com" className={CHIP} />
+                                <a
+                                    href="https://linkedin.com/in/gordon-zhong"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => trackEvent("linkedin_clicked")}
+                                    className={`${CHIP} transition-colors hover:bg-white/80`}
+                                >
+                                    {linkedInIcon}
+                                    in/gordon-zhong
+                                </a>
+                                <span className={CHIP}>
+                                    {locationIcon}
+                                    New York, NY
+                                </span>
                             </div>
                         </div>
                         {/* <div className="justify-self-center py-4">

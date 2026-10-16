@@ -61,7 +61,7 @@ export const ProfileCard = () => {
                     text="in/gordon-zhong"
                     url="https://linkedin.com/in/gordon-zhong"
                 />
-                <InfoItem icon={locationIcon} text="Medford, MA 02155" url="" />
+                <InfoItem icon={locationIcon} text="New York, NY" url="" />
             </div>
         </div>
     );

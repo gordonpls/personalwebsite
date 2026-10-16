@@ -236,7 +236,7 @@ const ProjectCard = ({ p }: { p: Project }) => (
         rel="noopener noreferrer"
         data-track="project_card_clicked"
         data-project={PROJECT_SLUGS[p.href] ?? p.href.replace("/", "")}
-        className="group relative flex flex-col h-full overflow-hidden rounded-2xl bg-base-100 border border-base-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="group relative flex flex-col h-full overflow-hidden rounded-2xl bg-base-100 border border-base-300 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-primary/40 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
         {/* Soft hover gradient backdrop */}
         <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${p.glow}`} />
@@ -307,7 +307,7 @@ const FeaturedHero = () => {
             data-track="project_card_clicked"
             data-project={PROJECT_SLUGS[portfolio.href] ?? "investing-dashboard"}
             data-locked={unlocked ? undefined : "true"}
-            className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="group relative block overflow-hidden rounded-2xl bg-base-100 border border-primary/40 ring-1 ring-primary/20 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-primary/40 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
             <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${portfolio.glow}`} />
             <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">

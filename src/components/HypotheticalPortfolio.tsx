@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { CountUp } from "./CountUp";
 import {
     LineChart,
     Line,
@@ -239,7 +240,7 @@ export const HypotheticalPortfolio = ({ appliedEquityPct }: PortfolioProps = {})
                                 <span className="text-xs text-base-content">{label}</span>
                             </div>
                             <p className="text-3xl font-bold tracking-tight" style={{ color }}>
-                                {pct.toFixed(0)}<span className="text-lg font-medium opacity-70">%</span>
+                                <CountUp value={pct} /><span className="text-lg font-medium opacity-70">%</span>
                             </p>
                             <div className="w-full h-1 rounded-full bg-base-300 mt-1">
                                 <div
@@ -264,7 +265,7 @@ export const HypotheticalPortfolio = ({ appliedEquityPct }: PortfolioProps = {})
                         </div>
                         <p className="text-3xl font-bold tracking-tight text-warning">
                             {last.portfolio > 0 ? "+" : ""}
-                            {last.portfolio.toFixed(2)}
+                            <CountUp value={last.portfolio} decimals={2} />
                             <span className="text-lg font-medium opacity-70">%</span>
                             <span className="text-base font-medium text-base-content/60 ml-1.5">
                                 ({fmtDollar(last.portfolio)})

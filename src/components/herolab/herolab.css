@@ -1,0 +1,86 @@
+/* /hero-lab preview styles. Throwaway: only the chosen effect moves to Hero. */
+
+.lab-sky { background: linear-gradient(180deg, #8ec5e6 0%, #b9d8ee 60%, #dfeaf5 100%); }
+
+/* 1. Split-flap: dark tiles with a hinge line, flipping on the X axis. */
+.lab-flap-cell {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.35em;
+    height: 1.7em;
+    font: 700 clamp(0.9rem, 2.2vw, 1.25rem)/1 ui-monospace, monospace;
+    color: #f5f7fb;
+    background: linear-gradient(180deg, #2b3445 50%, #232b3a 50%);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.25);
+    perspective: 300px;
+    overflow: hidden;
+}
+.lab-flap-cell::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 1px;
+    background: rgb(0 0 0 / 0.45);
+}
+.lab-flap-face { display: block; transform-origin: center; backface-visibility: hidden; }
+
+/* 4. Ink brush: each character wiped in left→right by a soft-edged mask. */
+.lab-ink-zh { font-family: "Ma Shan Zheng", "KaiTi", serif; }
+.lab-ink-en { font-family: "Caveat", cursive; font-weight: 600; }
+.lab-ink span {
+    display: inline-block;
+    -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+            mask-image: linear-gradient(90deg, #000 40%, transparent 60%);
+    -webkit-mask-size: 260% 100%;
+            mask-size: 260% 100%;
+    -webkit-mask-position: 100% 0;
+            mask-position: 100% 0;
+    animation: lab-ink 0.5s ease-out forwards;
+}
+@keyframes lab-ink { to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+
+/* 5. Cloud cut-out: drifting sky + cloud gradients clipped to the letters. */
+.lab-cloud-name {
+    color: transparent;
+    background:
+        radial-gradient(40% 60% at 20% 40%, #fff 0%, transparent 70%),
+        radial-gradient(35% 50% at 70% 60%, #f4f8fc 0%, transparent 70%),
+        radial-gradient(30% 45% at 45% 30%, #e8f0f8 0%, transparent 70%),
+        linear-gradient(180deg, #3d7fc4, #6fa8dc 60%, #a9cbea);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-stroke: 1px rgb(255 255 255 / 0.5);
+    filter: drop-shadow(0 6px 14px rgb(30 60 110 / 0.35));
+    animation: lab-cloud-drift 14s linear infinite alternate;
+}
+@keyframes lab-cloud-drift { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+
+/* 6. Sunlit sweep: a warm highlight band glides across every few seconds. */
+.lab-sunlit-name {
+    color: transparent;
+    background: linear-gradient(110deg, #fff 0%, #fff 42%, #fff4c9 48%, #ffd27a 50%, #fff4c9 52%, #fff 58%, #fff 100%);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    filter: drop-shadow(0 4px 10px rgb(30 60 110 / 0.35));
+    animation: lab-sunlit 4.5s ease-in-out infinite;
+}
+@keyframes lab-sunlit {
+    0%, 35% { background-position: 100% 0; }
+    85%, 100% { background-position: 0% 0; }
+}
+
+/* 7. Bilingual: big faint Chinese watermark behind the name. */
+.lab-watermark { color: rgb(255 255 255 / 0.28); }
+
+/* 8. Variable weight. */
+.lab-weight-name { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+.lab-weight-name span { display: inline-block; transition: font-variation-settings 0.15s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+    .lab-ink span { animation: none; -webkit-mask-image: none; mask-image: none; }
+    .lab-cloud-name, .lab-sunlit-name { animation: none; }
+}

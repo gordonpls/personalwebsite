@@ -43,6 +43,8 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
           : "navbar fixed top-0 left-0 z-50 bg-base-200 border-t border-base-300 shadow-sm"
       }
     >
+      {/* Hairline that fills as the page scrolls (pure CSS; see index.css). */}
+      <div className="scroll-progress" aria-hidden="true" />
       {/* Navbar Start with Mobile Dropdown */}
       <div className="navbar-start">
         {embedded && (
@@ -108,9 +110,9 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
       {/* Centered Menu (hidden on small screens, shown on md+) */}
       <div className="navbar-center hidden md:flex">
         <ul className="menu menu-horizontal px-1">
-          <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
-          <li><a className="link link-hover link-info" href="/#about">About</a></li>
-          <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
+          <li><a className="link link-info no-underline nav-underline" href="/" onClick={handleHomeClick}>Home</a></li>
+          <li><a className="link link-info no-underline nav-underline" href="/#about">About</a></li>
+          <li><a className="link link-info no-underline nav-underline" href="/#resume">Resume</a></li>
           <li
             className="relative"
             onMouseEnter={() => setProjectsOpen(true)}
@@ -121,7 +123,7 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
             <a
               aria-haspopup="true"
               aria-expanded={projectsOpen}
-              className="link link-hover link-info gap-1"
+              className="link link-info no-underline nav-underline gap-1"
               href="/#projects"
               onClick={handleProjectsClick}
             >
@@ -140,8 +142,8 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
               </ul>
             )}
           </li>
-          <li><a className="link link-hover link-info" href="/#highlights">Highlights</a></li>
-          <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
+          <li><a className="link link-info no-underline nav-underline" href="/#highlights">Highlights</a></li>
+          <li><a className="link link-info no-underline nav-underline" href="/#gallery">Gallery</a></li>
         </ul>
       </div>
 

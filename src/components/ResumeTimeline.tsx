@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import resumePDF from "../assets/Gordon Zhong 2026 Resume.pdf";
 import { SectionHeading } from "./SectionHeading";
+import { useSpotlight } from "../hooks/useSpotlight";
 import { TIMELINE_ENTRIES, type TimelineEntry, type EntryType } from "../data/timelineData";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -158,6 +159,8 @@ export function ResumeTimeline() {
         break: TIMELINE_ENTRIES.filter(e => e.type === "break").length,
     }), []);
 
+    const spotlight = useSpotlight();
+
     function applyFilter(f: Filter) {
         if (f === filter) return;
         setFilter(f);
@@ -166,8 +169,9 @@ export function ResumeTimeline() {
 
     return (
         <div
-            className="text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary scroll-mt-24"
+            className="spotlight text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary scroll-mt-24"
             id="resume"
+            onPointerMove={spotlight}
         >
             {/* Breadcrumbs + download: snug right of breadcrumbs on sm+, stacked below on mobile */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">

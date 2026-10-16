@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { applyMode, getMode, type Mode } from '@/lib/theme';
+import { applyMode, applyModeWithReveal, getMode, type Mode } from '@/lib/theme';
 
 export const ThemeChanger = () => {
   const [theme, setTheme] = useState<Mode>(getMode);
@@ -15,7 +15,9 @@ export const ThemeChanger = () => {
   const toggleTheme = (e) => {
     const next: Mode = e.target.checked ? 'light' : 'dark';
     setTheme(next);
-    applyMode(next);
+    // The new theme ripples out from the toggle's centre.
+    const r = e.target.closest('label')?.getBoundingClientRect();
+    applyModeWithReveal(next, r && { x: r.left + r.width / 2, y: r.top + r.height / 2 });
   };
 
   return (
