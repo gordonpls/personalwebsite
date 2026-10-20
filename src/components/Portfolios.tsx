@@ -11,7 +11,7 @@ import { MonthlyReturns } from "./MonthlyReturns";
 import { DrawdownChart } from "./DrawdownChart";
 import { RiskReturnMap } from "./RiskReturnMap";
 import { SectionNav } from "./SectionNav";
-import { PortfolioSwitcher } from "./PortfolioSwitcher";
+import { PortfolioSwitcher, PortfolioIcon } from "./PortfolioSwitcher";
 import { AllocationHistory } from "./AllocationHistory";
 
 // `id` matches the `portfolio` value returned by /api/holdings.
@@ -27,6 +27,8 @@ const TABS: { id: string; short: string; tiny?: string; desc: string }[] = [
     { id: "Retirement", short: "Traditional & Roth IRA", desc: "Traditional & Roth IRA." },
 ];
 const SCOPE_OPTIONS = TABS.map((t) => t.id);
+// The same scopes for the floating nav's compact switcher.
+const NAV_SCOPES = TABS.map((t) => ({ id: t.id, label: t.id === ALL ? "All portfolios" : t.id, icon: <PortfolioIcon id={t.id} /> }));
 
 // Quick-nav pills that jump to each section of the dashboard.
 const SECTIONS = [
@@ -148,7 +150,17 @@ export const Portfolios = () => {
             <section id="sec-holdings" className="scroll-mt-28 grid gap-4 lg:grid-cols-12">
                 <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 lg:col-span-12 lg:h-[34rem] lg:flex-row xl:col-span-9">
                     <div className="relative h-[24rem] shrink-0 lg:h-full lg:w-96 lg:border-r lg:border-base-300">
-                        <Holdings bare portfolio={portfolioFilter} title="" selectedTicker={selected?.ticker ?? null} onSelect={setSelected} reveal={reveal} />
+                        <Holdings
+                            bare
+                            portfolio={portfolioFilter}
+                            title=""
+                            selectedTicker={selected?.ticker ?? null}
+                            onSelect={setSelected}
+                            reveal={reveal}
+                            scopeLabel={active}
+                            onScopeChange={changeTab}
+                            scopeOptions={SCOPE_OPTIONS}
+                        />
                         <div aria-hidden="true" className="lg:hidden pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-base-100 to-transparent" />
                     </div>
                     <div className="min-w-0 flex-1 border-t border-base-300 lg:h-full lg:border-t-0">
@@ -231,8 +243,9 @@ export const Portfolios = () => {
                 before making investment decisions.
             </p>
 
-            {/* Floating section nav: the current section, prev/next, and a tap-to-open list. */}
-            <SectionNav sections={SECTIONS} active={activeSection} onJump={jumpTo} />
+            {/* Floating section nav: the current section and portfolio, prev/next,
+                and a tap-to-open list (with a portfolio row on top). */}
+            <SectionNav sections={SECTIONS} active={activeSection} onJump={jumpTo} scope={{ options: NAV_SCOPES, active, onChange: changeTab }} />
         </div>
     );
 };

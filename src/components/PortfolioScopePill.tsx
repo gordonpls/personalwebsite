@@ -9,6 +9,7 @@ export const PortfolioScopePill = ({
     onChange,
     options,
     align = "end",
+    compact = false,
 }: {
     current: string;
     onChange: (next: string) => void;
@@ -17,6 +18,8 @@ export const PortfolioScopePill = ({
     // left edge of a narrow column so the menu opens rightward and isn't
     // clipped by the page's overflow-x-hidden.
     align?: "start" | "end";
+    // Smaller, no "Showing" prefix: for tight headers (e.g. the holdings list).
+    compact?: boolean;
 }) => (
     <div className={`dropdown shrink-0 ${align === "end" ? "dropdown-end" : ""}`}>
         <div
@@ -24,10 +27,10 @@ export const PortfolioScopePill = ({
             role="button"
             aria-label={`Switch portfolio scope; currently showing ${current}. Click to change.`}
             title="Click to switch portfolio"
-            className="btn btn-sm btn-outline normal-case font-normal gap-2"
+            className={`btn btn-outline normal-case font-normal ${compact ? "btn-xs gap-1.5 rounded-full" : "btn-sm gap-2"}`}
         >
-            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Showing</span>
-            <span className="font-semibold text-base-content">{current}</span>
+            {!compact && <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Showing</span>}
+            <span className={`font-semibold text-base-content ${compact ? "max-w-[10rem] truncate" : ""}`}>{current}</span>
             <svg width="11" height="11" viewBox="0 0 10 10" className="opacity-80" aria-hidden="true">
                 <path
                     d="M2 3.5l3 3 3-3"

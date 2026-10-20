@@ -4,6 +4,7 @@ import { HoldingLogo, type LogoMeta } from "./HoldingLogo";
 import { cachedJson } from "../services/apiCache";
 import { formatWeightPct } from "../utils/format";
 import { categoryOf } from "../utils/holdingCategory";
+import { PortfolioScopePill } from "./PortfolioScopePill";
 
 export interface Holding {
     portfolio: string;
@@ -26,6 +27,10 @@ interface HoldingsProps {
     // Bring a holding into view: scroll the list to its row and flash it. A new
     // `nonce` replays it (e.g. clicking "View details" twice on the same pick).
     reveal?: { ticker: string; nonce: number } | null;
+    // Portfolio picker in the header (same pill as the other dashboard cards).
+    scopeLabel?: string;
+    onScopeChange?: (next: string) => void;
+    scopeOptions?: readonly string[];
 }
 
 type SortKey = "weight" | "return" | "az";
@@ -96,7 +101,7 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
     return null;
 }
 
-export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = false, reveal = null }: HoldingsProps = {}) => {
+export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = false, reveal = null, scopeLabel, onScopeChange, scopeOptions }: HoldingsProps = {}) => {
     const [holdings, setHoldings] = useState<Holding[] | null>(null);
     const [meta, setMeta] = useState<MetaMap>({});
     const [error, setError] = useState(false);
@@ -215,7 +220,11 @@ export const Holdings = ({ portfolio, title, selectedTicker, onSelect, bare = fa
                         </span>
                         Live positions
                     </p>
-                    {rows.length > 0 && (
+                    {/* The portfolio picker takes the count's spot; the category
+                        dropdown below already shows how many holdings are in scope. */}
+                    {scopeLabel && onScopeChange && scopeOptions ? (
+                        <PortfolioScopePill current={scopeLabel} onChange={onScopeChange} options={scopeOptions} compact />
+                    ) : rows.length > 0 && (
                         <span className="text-xs tabular-nums text-base-content/60">
                             {cat === ALL ? `${rows.length} holdings` : `${shown.length} of ${rows.length}`}
                         </span>

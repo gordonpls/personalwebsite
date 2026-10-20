@@ -14,7 +14,7 @@ const PROJECT_LINKS = [
 ];
 
 // `embedded` renders the navbar as the title bar of the page's mockup-window
-// (sticky inside it, traffic-light dots included) instead of a fixed page bar.
+// (sticky inside it) instead of a fixed page bar.
 export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
   const location = useLocation();
   const [projectsOpen, setProjectsOpen] = useState(false);
@@ -47,17 +47,17 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
       <div className="scroll-progress" aria-hidden="true" />
       {/* Navbar Start with Mobile Dropdown */}
       <div className="navbar-start">
-        {embedded && (
-          // Decorative nod to window "traffic lights": the three colors overlap
-          // into a single mark (and never react to hover) so macOS users don't
-          // read them as close/minimize/zoom buttons. The ring in the navbar's
-          // own color carves each circle out of the one beneath it.
-          <div className="pointer-events-none hidden sm:flex items-center pl-2 pr-3" aria-hidden="true">
-            <span className="size-3.5 rounded-full bg-[#ff5f57]" />
-            <span className="-ml-1.5 size-3.5 rounded-full bg-[#febc2e] ring-2 ring-base-300" />
-            <span className="-ml-1.5 size-3.5 rounded-full bg-[#28c840] ring-2 ring-base-300" />
-          </div>
-        )}
+        {/* Private journal: a faint lock tucked into the top-left corner. */}
+        <Link
+          to="/blog"
+          className="btn btn-ghost btn-circle btn-sm -ml-1 text-base-content/20 hover:text-base-content/50 transition-colors"
+          aria-label="Private journal"
+          title=""
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </Link>
         <div className="dropdown md:hidden">
           <div tabIndex={0} role="button" aria-label="Open navigation menu" aria-haspopup="true" className="btn btn-ghost btn-circle">
             <svg
@@ -98,16 +98,6 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
             <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
           </ul>
         </div>
-        <Link
-          to="/blog"
-          className="btn btn-ghost btn-circle btn-sm text-base-content/20 hover:text-base-content/50 transition-colors"
-          aria-label="Private journal"
-          title=""
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </Link>
       </div>
 
       {/* Centered Menu (hidden on small screens, shown on md+) */}

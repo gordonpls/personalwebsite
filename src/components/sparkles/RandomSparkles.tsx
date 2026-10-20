@@ -13,9 +13,11 @@ const KINDS = ["twinkle", "float"] as const;
 type Kind = (typeof KINDS)[number];
 const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last star's delay + its animation
 const SCROLL_EMIT_MS = 55;     // while scrolling, a sparkle on each side per this interval
+const CLICK_SCALE = 0.5;       // click sparkles: a small accent, not a burst
+const CLICK_OPACITY = 0.75;    // ...and a touch see-through
 const SCROLL_SCALE = 0.3;      // trail sparkles are half the old trail size, well under click ones
 
-interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; orient: string }
+interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; orient: string; opacity?: number }
 
 // Random orientation per cluster so repeats never look identical: a twinkle
 // takes any rotation (which also changes the direction its stars pop in) and
@@ -71,7 +73,7 @@ const TWINKLE = [
 // re-rendering whenever a new one is added (the scroll trail adds ~36/s).
 const Effect = memo(({ fx }: { fx: Fx }) => {
     return (
-        <div className="sparkle-fx" style={{ left: fx.x, top: fx.y }}>
+        <div className="sparkle-fx" style={{ left: fx.x, top: fx.y, opacity: fx.opacity }}>
             <div className="sparkle-fx" style={{ transform: fx.orient }}>
                 {fx.kind === "twinkle" &&
                     TWINKLE.map((p, i) => (
@@ -110,7 +112,7 @@ export const RandomSparkles = () => {
             setEffects((cur) => [...cur, ...fxs]);
             for (const fx of fxs) later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[fx.kind]);
         };
-        const trigger = (anchor: Pt, scale = 1) => show(makeFx(anchor, scale));
+        const trigger = (anchor: Pt) => show({ ...makeFx(anchor, CLICK_SCALE), opacity: CLICK_OPACITY });
 
         const onClick = (e: MouseEvent) => {
             // The sparkle lands exactly where the click happened. Keyboard

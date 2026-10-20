@@ -1,11 +1,19 @@
 // Floating "where am I" pill for long pages: shows the current section and its
 // position, ‹ › step to the previous/next section, and tapping the name opens
 // a list of every section. Compact replacement for a row of section pills.
+// Optionally carries the page's portfolio scope too: the pill shows the
+// current portfolio's icon, and the menu opens with a row to switch it, so the
+// pick stays visible and changeable after the main switcher scrolls away.
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export interface NavSection { id: string; label: string }
+export interface NavScope {
+    options: { id: string; label: string; icon: React.ReactNode }[];
+    active: string;
+    onChange: (id: string) => void;
+}
 
 const Chevron = ({ d }: { d: string }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="h-4 w-4" aria-hidden="true">
@@ -13,10 +21,11 @@ const Chevron = ({ d }: { d: string }) => (
     </svg>
 );
 
-export const SectionNav = ({ sections, active, onJump }: {
+export const SectionNav = ({ sections, active, onJump, scope }: {
     sections: NavSection[];
     active: string;
     onJump: (id: string) => void;
+    scope?: NavScope;
 }) => {
     const [open, setOpen] = useState(false);
     const rootRef = useRef<HTMLElement>(null);
@@ -26,6 +35,7 @@ export const SectionNav = ({ sections, active, onJump }: {
     const i = Math.max(0, sections.findIndex((s) => s.id === active));
     const cur = sections[i];
     const go = (idx: number) => { setOpen(false); onJump(sections[idx].id); };
+    const curScope = scope?.options.find((o) => o.id === scope.active);
 
     // Close on outside click or Escape (returning focus to the trigger).
     useEffect(() => {
@@ -56,16 +66,41 @@ export const SectionNav = ({ sections, active, onJump }: {
         <nav ref={rootRef} aria-label="Dashboard sections" className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2">
             <AnimatePresence>
                 {open && (
-                    <motion.ul
-                        role="menu"
-                        aria-label="Jump to section"
+                    <motion.div
                         onKeyDown={onMenuKey}
                         initial={{ opacity: 0, y: 8, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 8, scale: 0.98 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-1/2 mb-2 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-base-300 bg-base-100/95 p-1.5 shadow-xl backdrop-blur"
+                        className="absolute bottom-full left-1/2 mb-2 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-base-300 bg-base-100/95 p-1.5 shadow-xl backdrop-blur"
                     >
+                    {scope && (
+                        <div className="border-b border-base-300 px-1.5 pb-2 pt-1">
+                            <p id="section-nav-scope" className="px-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/60">
+                                Portfolio · <span className="normal-case tracking-normal text-base-content">{curScope?.label}</span>
+                            </p>
+                            <div role="radiogroup" aria-labelledby="section-nav-scope" className="grid grid-cols-4 gap-1">
+                                {scope.options.map((o) => {
+                                    const on = o.id === scope.active;
+                                    return (
+                                        <button
+                                            key={o.id}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={on}
+                                            aria-label={o.label}
+                                            title={o.label}
+                                            onClick={() => scope.onChange(o.id)}
+                                            className={`flex h-9 items-center justify-center rounded-xl transition [&>svg]:h-4 [&>svg]:w-4 ${on ? "bg-primary text-primary-content" : "text-base-content/70 hover:bg-base-200 hover:text-base-content"}`}
+                                        >
+                                            {o.icon}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                    <ul role="menu" aria-label="Jump to section" className={scope ? "pt-1.5" : ""}>
                         {sections.map((s, idx) => {
                             const on = idx === i;
                             return (
@@ -84,7 +119,8 @@ export const SectionNav = ({ sections, active, onJump }: {
                                 </li>
                             );
                         })}
-                    </motion.ul>
+                    </ul>
+                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -98,11 +134,17 @@ export const SectionNav = ({ sections, active, onJump }: {
                     onClick={() => setOpen((o) => !o)}
                     aria-haspopup="menu"
                     aria-expanded={open}
-                    aria-label={`Current section: ${cur.label}, ${i + 1} of ${sections.length}. Show all sections`}
+                    aria-label={`Current section: ${cur.label}, ${i + 1} of ${sections.length}.${curScope ? ` Portfolio: ${curScope.label}.` : ""} Show all sections`}
                     className="flex h-9 min-w-[9.5rem] items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold text-base-content transition hover:bg-base-200"
                 >
+                    {/* With a scope, its icon takes the counter's spot (the menu still numbers sections). */}
+                    {curScope && (
+                        <span title={curScope.label} className="-ml-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-content [&>svg]:h-3.5 [&>svg]:w-3.5">
+                            {curScope.icon}
+                        </span>
+                    )}
                     <span>{cur.label}</span>
-                    <span className="text-xs font-medium tabular-nums text-base-content/60">{i + 1}/{sections.length}</span>
+                    {!curScope && <span className="text-xs font-medium tabular-nums text-base-content/60">{i + 1}/{sections.length}</span>}
                     <motion.span animate={{ rotate: open ? 180 : 0 }} className="text-base-content/60"><Chevron d="M6 15l6-6 6 6" /></motion.span>
                 </button>
                 <button type="button" className={arrow} onClick={() => go(i + 1)} disabled={i === sections.length - 1} aria-label={i < sections.length - 1 ? `Next section: ${sections[i + 1].label}` : "Next section"}>
