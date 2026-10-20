@@ -1,19 +1,19 @@
 // Sparkles: every click makes a sparkle appear right where you clicked, and
-// while you scroll a steady trail of smaller sparkles streams off the right
-// edge, at the height matching how far down the page you are (like a
-// scrollbar thumb). Two variants built on the Hero avatar's four-point star (twinkle:
+// while you scroll a steady trail of small sparkles rides the scrollbar
+// thumb on the right edge, with a mirror-image twin on the left edge at the
+// same height (same stars and colors, flipped left-to-right). Two variants built on the Hero avatar's four-point star (twinkle:
 // the avatar's diamond; float: stars drifting up), each randomly rotated,
 // mirrored and sized, with every star its own randomly generated color.
 // Skipped entirely under prefers-reduced-motion.
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import "./sparkles.css";
 
 const KINDS = ["twinkle", "float"] as const;
 type Kind = (typeof KINDS)[number];
 const DURATION: Record<Kind, number> = { twinkle: 1700, float: 2100 }; // last star's delay + its animation
-const SCROLL_EMIT_MS = 110;    // while scrolling, one trail sparkle per this interval
-const SCROLL_SCALE = 0.6;      // trail sparkles are smaller than click ones
+const SCROLL_EMIT_MS = 55;     // while scrolling, a sparkle on each side per this interval
+const SCROLL_SCALE = 0.3;      // trail sparkles are half the old trail size, well under click ones
 
 interface Fx { id: number; kind: Kind; x: number; y: number; colors: string[]; orient: string }
 
@@ -67,7 +67,9 @@ const TWINKLE = [
     { x: -40, y: 0, s: 14, d: 0.6 },
 ];
 
-const Effect = ({ fx }: { fx: Fx }) => {
+// Memoized: each fx object never changes, so existing sparkles skip
+// re-rendering whenever a new one is added (the scroll trail adds ~36/s).
+const Effect = memo(({ fx }: { fx: Fx }) => {
     return (
         <div className="sparkle-fx" style={{ left: fx.x, top: fx.y }}>
             <div className="sparkle-fx" style={{ transform: fx.orient }}>
@@ -86,7 +88,7 @@ const Effect = ({ fx }: { fx: Fx }) => {
             </div>
         </div>
     );
-};
+});
 
 type Pt = { x: number; y: number };
 
@@ -100,12 +102,15 @@ export const RandomSparkles = () => {
         const timers: number[] = [];
         const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
 
-        const trigger = (anchor: Pt, scale = 1) => {
+        const makeFx = (anchor: Pt, scale = 1): Fx => {
             const kind = pick(KINDS);
-            const fx: Fx = { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind, scale) };
-            setEffects((cur) => [...cur, fx]);
-            later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[kind]);
+            return { id: nextId++, kind, x: anchor.x, y: anchor.y, colors: Array.from({ length: 5 }, randomColor), orient: randomOrient(kind, scale) };
         };
+        const show = (...fxs: Fx[]) => {
+            setEffects((cur) => [...cur, ...fxs]);
+            for (const fx of fxs) later(() => setEffects((cur) => cur.filter((f) => f.id !== fx.id)), DURATION[fx.kind]);
+        };
+        const trigger = (anchor: Pt, scale = 1) => show(makeFx(anchor, scale));
 
         const onClick = (e: MouseEvent) => {
             // The sparkle lands exactly where the click happened. Keyboard
@@ -119,24 +124,33 @@ export const RandomSparkles = () => {
             trigger({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
         };
 
-        // Scroll sparkles hug the right edge, at the height of a scrollbar
-        // thumb for the current scroll position (top of page → top of screen).
+        // The centre of the scrollbar thumb, just inside the right edge.
         const scrollAnchor = (): Pt => {
-            const max = document.documentElement.scrollHeight - window.innerHeight;
+            const doc = document.documentElement;
+            const vh = window.innerHeight;
+            const max = doc.scrollHeight - vh;
             const progress = max > 0 ? window.scrollY / max : 0;
-            const pad = 70; // keep the whole twinkle on screen
-            return { x: window.innerWidth - 48, y: pad + progress * (window.innerHeight - pad * 2) };
+            const thumbH = Math.max(40, (vh * vh) / doc.scrollHeight);
+            const thumbY = progress * (vh - thumbH) + thumbH / 2;
+            const inset = 12; // just inside the scrollbar, so the twinkle isn't clipped
+            return { x: doc.clientWidth - inset, y: thumbY };
         };
 
         // While scrolling, emit a small sparkle every SCROLL_EMIT_MS (throttled,
         // not per scroll event), jittered a little so the trail looks loose.
+        // Each tick, the left edge gets the right sparkle's mirror image: same
+        // height, colors and stars, flipped left-to-right (the jitter too).
         let lastEmit = 0;
         const onScroll = () => {
             const now = performance.now();
             if (now - lastEmit < SCROLL_EMIT_MS) return;
             lastEmit = now;
             const { x, y } = scrollAnchor();
-            trigger({ x: x + (Math.random() - 0.5) * 28, y: y + (Math.random() - 0.5) * 36 }, SCROLL_SCALE * (0.8 + Math.random() * 0.5));
+            const right = makeFx({ x: x + (Math.random() - 0.5) * 6, y: y + (Math.random() - 0.5) * 24 }, SCROLL_SCALE * (0.8 + Math.random() * 0.5));
+            const width = document.documentElement.clientWidth;
+            // scale(-1, 1) applied after the star's own orientation mirrors the whole shape.
+            const left: Fx = { ...right, id: nextId++, x: width - right.x, orient: `scale(-1, 1) ${right.orient}` };
+            show(right, left);
         };
 
         // Capture phase so clicks that stop propagation still count.

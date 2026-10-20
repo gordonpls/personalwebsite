@@ -5,6 +5,7 @@ import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
 const TypingGreeting = () => <TypingGreetingRefined caret="bar" />;
 import { trackEvent } from "../lib/analytics";
 import CopyEmail from "./ProfileCard/CopyEmail";
+import { BADGES, HeroBadge } from "./HeroBadge";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
 import avatar from "../assets/avatar.webp";
 import avatarCartoon from "../assets/avatar.jpeg";
@@ -23,7 +24,6 @@ const AVATAR_STARS = [
     { top: "15%", right: "33%", size: "0.75rem", delay: "2.9s" },
 ];
 
-const BADGES = ["BSCS", "MBA", "MSF", "ESTJ-A", "Foodie"];
 // Frosted-glass surface shared by badges and contact chips. The sky behind is
 // light in both themes, so dark ink on white glass reads everywhere.
 const GLASS = "rounded-full bg-white/55 text-slate-800 ring-1 ring-white/70 shadow-sm backdrop-blur-md";
@@ -122,11 +122,7 @@ export const Hero = () => {
                         {/* Badges + contact chips: frosted glass over the sky, no frame. */}
                         <div className="mx-auto flex max-w-xl flex-col items-center gap-4 pt-2">
                             <ul className="flex flex-wrap justify-center gap-2">
-                                {BADGES.map((b) => (
-                                    <li key={b} className={`${GLASS} px-3.5 py-1 text-sm font-semibold tracking-wide transition-transform duration-200 hover:-translate-y-0.5`}>
-                                        {b}
-                                    </li>
-                                ))}
+                                {BADGES.map((b) => <HeroBadge key={b.label} badge={b} />)}
                             </ul>
                             <div className="flex flex-wrap justify-center gap-2.5">
                                 <CopyEmail icon={emailIcon} email="me@gordonzhong.com" className={CHIP} />

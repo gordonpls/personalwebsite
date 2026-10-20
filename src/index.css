@@ -103,6 +103,20 @@
   :root, [data-theme="corporate"] { --lilac: oklch(76% 0.08 315); }
   [data-theme="business"] { --lilac: var(--color-primary); }
 
+  /* Native scrollbar, tinted: the thumb takes the lilac accent (sky blue in
+     dark) so the scroll sparkle trail reads as coming off it. Standard
+     properties for Chrome/Firefox; the -webkit- pseudos cover Safari. */
+  html { scrollbar-color: color-mix(in oklch, var(--lilac) 75%, transparent) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--lilac) 75%, transparent);
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--lilac); }
+
   /* Section dividers: a neutral rule in the text color at low opacity, so it
      reads on both themes' surfaces without adding a hue. */
   .divider-quiet::before,

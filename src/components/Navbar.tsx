@@ -48,11 +48,14 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
       {/* Navbar Start with Mobile Dropdown */}
       <div className="navbar-start">
         {embedded && (
-          // Window "traffic lights": muted at rest, bloom into color on hover.
-          <div className="group hidden sm:flex items-center gap-2 pl-2 pr-3" aria-hidden="true">
-            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 group-hover:bg-[#ff5f57]" />
-            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 delay-75 group-hover:bg-[#febc2e]" />
-            <span className="size-3 rounded-full bg-base-content/25 transition-colors duration-300 delay-150 group-hover:bg-[#28c840]" />
+          // Decorative nod to window "traffic lights": the three colors overlap
+          // into a single mark (and never react to hover) so macOS users don't
+          // read them as close/minimize/zoom buttons. The ring in the navbar's
+          // own color carves each circle out of the one beneath it.
+          <div className="pointer-events-none hidden sm:flex items-center pl-2 pr-3" aria-hidden="true">
+            <span className="size-3.5 rounded-full bg-[#ff5f57]" />
+            <span className="-ml-1.5 size-3.5 rounded-full bg-[#febc2e] ring-2 ring-base-300" />
+            <span className="-ml-1.5 size-3.5 rounded-full bg-[#28c840] ring-2 ring-base-300" />
           </div>
         )}
         <div className="dropdown md:hidden">
