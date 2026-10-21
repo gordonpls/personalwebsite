@@ -1,264 +1,114 @@
 {
   "quizTitle": "Asset Allocation Quiz",
-  "version": "1.3",
-  "description": "Six-question quiz that maps users to a stock and bond allocation based on goals, time horizon, general risk attitude, financial cushion, preferred risk and reward tradeoff, and reaction to losses.",
-  "scoringMethod": {
-    "type": "sum_points",
-    "answerPoints": {
-      "A": 1,
-      "B": 2,
-      "C": 3,
-      "D": 4
-    },
-    "minScore": 6,
-    "maxScore": 24
-  },
+  "version": "2.0",
+  "description": "Five multiple-choice questions plus two sliders (age, time horizon). Answers are scored on two separate axes, willingness (risk tolerance) and ability (risk capacity), then combined with an age anchor and a time-horizon cap into a stock / bond split.",
   "questions": [
     {
       "id": "goal",
-      "prompt": "What is the primary goal of this investment?",
+      "dimension": "willingness",
+      "prompt": "What do you want this money to do?",
       "options": [
-        {
-          "id": "A",
-          "text": "Preserve what I have and avoid losses",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "Steady, modest growth with low volatility",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "Grow meaningfully over time, with some bumps along the way",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "Maximize long-term growth and accept high volatility",
-          "points": 4
-        }
+        { "id": "A", "text": "Stay safe. I mostly don't want to lose any of it", "points": 1 },
+        { "id": "B", "text": "Keep up with inflation without much drama", "points": 2 },
+        { "id": "C", "text": "Grow steadily toward a big goal like retirement", "points": 3 },
+        { "id": "D", "text": "Grow as much as possible, even if the ride is bumpy", "points": 4 }
       ]
     },
     {
-      "id": "time_horizon",
-      "prompt": "When do you expect to need most of this money?",
+      "id": "range",
+      "dimension": "willingness",
+      "prompt": "You invest $10,000 for one year. Which range of outcomes would you sign up for?",
       "options": [
-        {
-          "id": "A",
-          "text": "Within 1 to 3 years",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "In 3 to 7 years",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "In 7 to 15 years",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "In 15+ years",
-          "points": 4
-        }
+        { "id": "A", "text": "Ends between $10,100 and $10,500", "points": 1 },
+        { "id": "B", "text": "Ends between $9,400 and $11,200", "points": 2 },
+        { "id": "C", "text": "Ends between $8,500 and $12,500", "points": 3 },
+        { "id": "D", "text": "Ends between $7,000 and $14,000", "points": 4 }
       ]
     },
     {
-      "id": "general_risk_attitude",
-      "prompt": "Which statement sounds most like you?",
+      "id": "drop",
+      "dimension": "willingness",
+      "prompt": "A few months in, that $10,000 is worth $7,500. What do you actually do?",
       "options": [
-        {
-          "id": "A",
-          "text": "I would rather earn less if it means fewer losses",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "I want moderate growth without taking too much risk",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "I can handle ups and downs for better returns",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "I accept big swings if the long-term payoff may be higher",
-          "points": 4
-        }
+        { "id": "A", "text": "Sell everything before it gets worse", "points": 1 },
+        { "id": "B", "text": "Sell some so I can sleep at night", "points": 2 },
+        { "id": "C", "text": "Leave it alone and wait", "points": 3 },
+        { "id": "D", "text": "Buy more while it's on sale", "points": 4 }
       ]
     },
     {
-      "id": "financial_safety_net",
-      "prompt": "How would you describe your current financial safety net?",
+      "id": "cushion",
+      "dimension": "ability",
+      "prompt": "If your income stopped tomorrow, how long could you pay your bills without touching this money?",
       "options": [
-        {
-          "id": "A",
-          "text": "I have little to no safety net, and this is most of my savings",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "I have some emergency savings, but this money still matters a lot",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "I have a solid emergency fund, and this is extra money",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "I am very financially comfortable, and this is purely for growth",
-          "points": 4
-        }
+        { "id": "A", "text": "Less than a month", "points": 1 },
+        { "id": "B", "text": "One to three months", "points": 2 },
+        { "id": "C", "text": "Three to six months", "points": 3 },
+        { "id": "D", "text": "More than six months", "points": 4 }
       ]
     },
     {
-      "id": "risk_reward_preference",
-      "prompt": "Which scenario would you prefer?",
+      "id": "experience",
+      "dimension": "experience",
+      "prompt": "Have you had money invested during a big market drop (like 2020 or 2022)?",
       "options": [
-        {
-          "id": "A",
-          "text": "I earn a guaranteed 4% each year, and my balance never goes down",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "I usually earn about 6% each year, but in a bad year my portfolio could fall around 5%",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "I usually earn about 8% each year, but in a bad year my portfolio could fall around 20%",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "I usually earn about 11% each year, but in a bad year my portfolio could fall around 40%",
-          "points": 4
-        }
+        { "id": "A", "text": "No, I'm new to investing", "points": 1 },
+        { "id": "B", "text": "Yes, and I sold some or all of it", "points": 2 },
+        { "id": "C", "text": "Yes, and I held on", "points": 3 },
+        { "id": "D", "text": "Yes, and I bought more", "points": 4 }
       ]
+    }
+  ],
+  "sliders": [
+    {
+      "id": "age",
+      "prompt": "How old are you?",
+      "min": 18,
+      "max": 80,
+      "step": 1,
+      "default": 49,
+      "unit": "years old"
     },
     {
-      "id": "loss_reaction",
-      "prompt": "How would you respond if this investment fell 15% in a bad year?",
-      "options": [
-        {
-          "id": "A",
-          "text": "I would want to move to something safer right away",
-          "points": 1
-        },
-        {
-          "id": "B",
-          "text": "I would feel uneasy, but I would probably stay invested",
-          "points": 2
-        },
-        {
-          "id": "C",
-          "text": "I would stay invested and wait for recovery",
-          "points": 3
-        },
-        {
-          "id": "D",
-          "text": "I would see it as a normal part of long-term investing",
-          "points": 4
-        }
-      ]
+      "id": "horizon",
+      "prompt": "How many years until you'll need most of this money?",
+      "min": 1,
+      "max": 40,
+      "step": 1,
+      "default": 20,
+      "unit": "years"
     }
   ],
   "results": [
     {
       "id": "conservative",
       "label": "Conservative Investor",
-      "scoreRange": {
-        "min": 6,
-        "max": 8
-      },
-      "allocation": {
-        "stocks": 10,
-        "bonds": 90,
-        "display": "10% stocks / 90% bonds"
-      },
-      "shortDescription": "You prioritize stability and capital preservation. You are likely more comfortable with smaller ups and downs, even if that means lower long-term growth."
+      "maxEquity": 20,
+      "shortDescription": "Stability comes first. This mix keeps swings small, at the cost of slower long-term growth."
     },
     {
       "id": "cautious",
       "label": "Cautious Investor",
-      "scoreRange": {
-        "min": 9,
-        "max": 11
-      },
-      "allocation": {
-        "stocks": 30,
-        "bonds": 70,
-        "display": "30% stocks / 70% bonds"
-      },
-      "shortDescription": "You want some growth, but limiting losses still matters a lot. This mix leans defensive while keeping exposure to long-term upside."
+      "maxEquity": 40,
+      "shortDescription": "Some growth, but limiting losses still matters a lot. Defensive, with a foot in the market."
     },
     {
       "id": "balanced",
       "label": "Balanced Investor",
-      "scoreRange": {
-        "min": 12,
-        "max": 15
-      },
-      "allocation": {
-        "stocks": 50,
-        "bonds": 50,
-        "display": "50% stocks / 50% bonds"
-      },
-      "shortDescription": "You want a middle ground between growth and stability. You can handle moderate market swings in exchange for better long-term return potential."
+      "maxEquity": 60,
+      "shortDescription": "A middle ground: enough stocks to grow, enough bonds to soften the bad years."
     },
     {
       "id": "growth",
       "label": "Growth-Oriented Investor",
-      "scoreRange": {
-        "min": 16,
-        "max": 19
-      },
-      "allocation": {
-        "stocks": 70,
-        "bonds": 30,
-        "display": "70% stocks / 30% bonds"
-      },
-      "shortDescription": "You are comfortable taking on more market risk for stronger long-term growth. Short-term volatility is acceptable if the long-run opportunity is higher."
+      "maxEquity": 80,
+      "shortDescription": "Built for long-run growth. Expect real drawdowns, and the time to wait them out."
     },
     {
       "id": "aggressive",
       "label": "Aggressive Growth Investor",
-      "scoreRange": {
-        "min": 20,
-        "max": 24
-      },
-      "allocation": {
-        "stocks": 90,
-        "bonds": 10,
-        "display": "90% stocks / 10% bonds"
-      },
-      "shortDescription": "You are focused heavily on long-term growth and can tolerate large short-term swings. This profile fits users who can stay invested through major downturns."
+      "maxEquity": 100,
+      "shortDescription": "Almost all stocks. Big swings are the price of the highest expected long-term return."
     }
-  ],
-  "resultLogic": {
-    "implementationNotes": [
-      "Sum the points from all six answers.",
-      "Each A answer is worth 1 point, B is 2, C is 3, and D is 4.",
-      "Find the result whose scoreRange contains the total score.",
-      "Display the label, allocation.display, and shortDescription."
-    ],
-    "tieHandling": "Not needed because score ranges are continuous and non-overlapping."
-  },
-  "uiSuggestions": {
-    "showOptionLetters": true,
-    "buttonLabels": {
-      "next": "Next",
-      "back": "Back",
-      "submit": "See results",
-      "restart": "Retake quiz"
-    }
-  }
+  ]
 }

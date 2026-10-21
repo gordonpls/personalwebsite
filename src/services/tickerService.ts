@@ -1,15 +1,15 @@
 const API_KEY = import.meta.env.VITE_ALPHAVANTAGE_KEY as string | undefined;
-const CACHE_KEY = "av_ticker_cache_v2";
+const CACHE_KEY = "av_ticker_cache_v3";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const SERVER_CACHE_URL = "/api/tickers.json";
 const SERVER_CACHE_MAX_AGE_MS = 25 * 60 * 60 * 1000;
 
-const TICKERS = ["VT", "VXUS", "BND", "BNDX"] as const;
+const TICKERS = ["VTI", "VXUS", "BND", "BNDX"] as const;
 type TickerKey = (typeof TICKERS)[number];
 
 export interface SeriesEntry {
     date: string; // "YYYY-MM"
-    VT: number | null;
+    VTI: number | null;
     VXUS: number | null;
     BND: number | null;
     BNDX: number | null;
@@ -35,7 +35,7 @@ function buildEntries(tickers: Record<TickerKey, Record<string, number>>): Serie
     const allDates = [...new Set(TICKERS.flatMap((t) => Object.keys(tickers[t] ?? {})))].sort();
     return allDates.map((date) => ({
         date,
-        VT: tickers.VT?.[date] ?? null,
+        VTI: tickers.VTI?.[date] ?? null,
         VXUS: tickers.VXUS?.[date] ?? null,
         BND: tickers.BND?.[date] ?? null,
         BNDX: tickers.BNDX?.[date] ?? null,
@@ -137,7 +137,7 @@ export async function getTickerSeries(): Promise<TickerResult> {
 
         const series: SeriesEntry[] = allDates.map((date) => ({
             date,
-            VT: results.VT?.[date] ?? null,
+            VTI: results.VTI?.[date] ?? null,
             VXUS: results.VXUS?.[date] ?? null,
             BND: results.BND?.[date] ?? null,
             BNDX: results.BNDX?.[date] ?? null,

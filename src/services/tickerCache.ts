@@ -5,13 +5,13 @@ import cron from "node-cron";
 
 const API_KEY = import.meta.env.VITE_ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY ?? "";
 const CACHE_PATH = path.resolve("src/data/tickerCache.json");
-const TICKERS = ["VT", "VXUS", "BND", "BNDX"] as const;
+const TICKERS = ["VTI", "VXUS", "BND", "BNDX"] as const;
 
 export type TickerKey = (typeof TICKERS)[number];
 
 export interface CacheEntry {
     date: string;        // "YYYY-MM-DD"
-    VT: number;
+    VTI: number;
     VXUS: number;
     BND: number;
     BNDX: number;
@@ -67,7 +67,7 @@ export async function buildCache(): Promise<void> {
 
         const series: CacheEntry[] = allDates.map((date) => ({
             date,
-            VT: results.VT[date] ?? 0,
+            VTI: results.VTI[date] ?? 0,
             VXUS: results.VXUS[date] ?? 0,
             BND: results.BND[date] ?? 0,
             BNDX: results.BNDX[date] ?? 0,

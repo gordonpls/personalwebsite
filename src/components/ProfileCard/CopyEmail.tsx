@@ -35,7 +35,7 @@ const CopyEmail = ({ icon, email, className = '' }: { icon: React.ReactNode; ema
     return (
         <div className={className}>
             {icon}
-            <button type="button" onClick={copy} className="cursor-copy hover:underline" title="Click to copy">
+            <button type="button" onClick={copy} className="cursor-pointer hover:underline" title="Click to copy">
                 <span ref={addressRef}>{email}</span>
             </button>
             <span className="relative -my-1 -mr-1.5 flex">
@@ -44,7 +44,7 @@ const CopyEmail = ({ icon, email, className = '' }: { icon: React.ReactNode; ema
                     onClick={copy}
                     aria-label={copied ? 'Email copied' : 'Copy email address'}
                     title="Copy"
-                    className="grid size-7 place-items-center rounded-full opacity-70 transition hover:bg-white/60 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary active:scale-90"
+                    className="grid size-7 cursor-pointer place-items-center rounded-full opacity-70 transition hover:bg-white/60 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-primary active:scale-90"
                 >
                     {/* Two-pages icon swaps for a check while "copied". */}
                     <AnimatePresence mode="wait" initial={false}>

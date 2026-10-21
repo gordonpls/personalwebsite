@@ -19,7 +19,7 @@ if (!API_KEY) {
     process.exit(1);
 }
 
-const TICKERS = ["VT", "VXUS", "BND", "BNDX"];
+const TICKERS = ["VTI", "VXUS", "BND", "BNDX"];
 const CACHE_PATH = resolve(__dirname, "../src/data/tickerCache.json");
 
 async function fetchTicker(ticker) {
@@ -48,7 +48,7 @@ async function main() {
     const allDates = [...new Set(Object.values(results).flatMap((r) => Object.keys(r)))].sort();
     const series = allDates.map((date) => ({
         date,
-        VT: results.VT[date] ?? null,
+        VTI: results.VTI[date] ?? null,
         VXUS: results.VXUS[date] ?? null,
         BND: results.BND[date] ?? null,
         BNDX: results.BNDX[date] ?? null,
