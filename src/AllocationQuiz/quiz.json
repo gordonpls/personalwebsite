@@ -62,11 +62,11 @@
   "sliders": [
     {
       "id": "age",
-      "prompt": "How old are you?",
+      "prompt": "What year were you born?",
       "min": 18,
       "max": 80,
       "step": 1,
-      "default": 49,
+      "default": 30,
       "unit": "years old"
     },
     {

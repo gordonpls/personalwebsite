@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { WheelPicker } from "./WheelPicker";
 import quizData from "../AllocationQuiz/quiz.json";
 
 type Step = "intro" | "question" | "sliders" | "result";
@@ -166,7 +167,10 @@ const ProgressBar = ({ index }: { index: number }) => (
 const ageSlider = sliders.find((s) => s.id === "age")!;
 const horizonSlider = sliders.find((s) => s.id === "horizon")!;
 // Horizon picks, inside the configured range (the max reads as "40+").
-const HORIZON_CHOICES = [1, 3, 5, 10, 15, 20, 30, 40].filter((y) => y >= horizonSlider.min && y <= horizonSlider.max);
+const HORIZON_CHOICES = [3, 5, 10, 20, 30].filter((y) => y >= horizonSlider.min && y <= horizonSlider.max);
+// Birth years for the wheel, newest first, within the configured age range.
+const THIS_YEAR = new Date().getFullYear();
+const BIRTH_YEARS = Array.from({ length: ageSlider.max - ageSlider.min + 1 }, (_, i) => THIS_YEAR - ageSlider.min - i);
 
 const initialSliders = () => Object.fromEntries(sliders.map((s) => [s.id, s.default])) as Record<string, number>;
 
@@ -176,13 +180,6 @@ export const AllocationQuiz = ({ onApply }: Props) => {
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [sliderVals, setSliderVals] = useState<Record<string, number>>(initialSliders);
     const reduce = useReducedMotion();
-    // Age box text, kept separately so it can be cleared while typing.
-    const [ageDraft, setAgeDraft] = useState(String(initialSliders().age));
-    const setAge = (n: number) => {
-        const v = clamp(n, ageSlider.min, ageSlider.max);
-        setSliderVals((prev) => ({ ...prev, age: v }));
-        setAgeDraft(String(v));
-    };
     const [shuffledOptions, setShuffledOptions] = useState<QuizOption[][]>(() => buildShuffledOptions());
 
     const currentQ = questions[qIndex];
@@ -226,7 +223,6 @@ export const AllocationQuiz = ({ onApply }: Props) => {
         setQIndex(0);
         setAnswers({});
         setSliderVals(initialSliders());
-        setAgeDraft(String(initialSliders().age));
         setShuffledOptions(buildShuffledOptions());
     };
 
@@ -300,40 +296,18 @@ export const AllocationQuiz = ({ onApply }: Props) => {
             <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
                 <ProgressBar index={questions.length} />
 
-                {/* Age: a big number with round − / + buttons (and typeable).
-                    Horizon: tap a chip. */}
+                {/* Birth year on an iOS-style wheel (age = this year − birth
+                    year); horizon as a short row of chips. */}
                 <div className="mx-auto max-w-lg space-y-8 py-2">
                     <div className="space-y-3 text-center">
-                        <label htmlFor="quiz-age" className="block text-base font-medium text-base-content">{ageSlider.prompt}</label>
-                        <div className="flex items-center justify-center gap-4">
-                            <button
-                                type="button"
-                                aria-label="Younger"
-                                onClick={() => setAge(sliderVals.age - 1)}
-                                disabled={sliderVals.age <= ageSlider.min}
-                                className="btn btn-circle btn-outline btn-sm text-lg"
-                            >−</button>
-                            <input
-                                id="quiz-age"
-                                inputMode="numeric"
-                                value={ageDraft}
-                                onChange={(e) => {
-                                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                                    setAgeDraft(v);
-                                    if (v) setSliderVals((prev) => ({ ...prev, age: clamp(Number(v), ageSlider.min, ageSlider.max) }));
-                                }}
-                                onBlur={() => setAgeDraft(String(sliderVals.age))}
-                                className="w-24 rounded-2xl border-2 border-base-300 bg-base-200/50 py-2 text-center text-4xl font-bold tabular-nums text-base-content outline-none transition focus:border-primary"
-                            />
-                            <button
-                                type="button"
-                                aria-label="Older"
-                                onClick={() => setAge(sliderVals.age + 1)}
-                                disabled={sliderVals.age >= ageSlider.max}
-                                className="btn btn-circle btn-outline btn-sm text-lg"
-                            >+</button>
-                        </div>
-                        <p className="text-xs text-base-content/60">years old</p>
+                        <p className="text-base font-medium text-base-content">{ageSlider.prompt}</p>
+                        <WheelPicker
+                            label="Birth year"
+                            values={BIRTH_YEARS}
+                            value={THIS_YEAR - sliderVals.age}
+                            onChange={(y) => setSliderVals((prev) => ({ ...prev, age: THIS_YEAR - y }))}
+                        />
+                        <p className="text-xs text-base-content/60">That makes you about {sliderVals.age}</p>
                     </div>
 
                     <div className="space-y-3 text-center">
@@ -352,7 +326,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
                                             ? "border-primary bg-primary text-primary-content shadow-sm"
                                             : "border-base-300 bg-base-200/50 text-base-content/80 hover:border-base-content/30"}`}
                                     >
-                                        {y === horizonSlider.max ? `${y}+` : y} {y === 1 ? "yr" : "yrs"}
+                                        {y === HORIZON_CHOICES[HORIZON_CHOICES.length - 1] ? `${y}+` : y} yrs
                                     </button>
                                 );
                             })}

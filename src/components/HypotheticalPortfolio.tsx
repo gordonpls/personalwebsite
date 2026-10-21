@@ -154,16 +154,32 @@ const Stat = ({ label, value, compare }: { label: string; value: string; compare
     </div>
 );
 
-// The two funds behind one side of the slider, e.g. "US 30% $BND · Intl 20% $BNDX".
-const FundLine = ({ funds }: { funds: { ticker: string; label: string; pct: number }[] }) => (
-    <span className="mt-0.5 block text-[11px] font-normal tabular-nums text-base-content/60">
-        {funds.map((f, i) => (
-            <span key={f.ticker}>
-                {i > 0 && " · "}
-                {f.label.split(" ")[0]} {Math.round(f.pct)}% <span className="text-base-content/50">${f.ticker}</span>
-            </span>
-        ))}
-    </span>
+// One side of the mix: its share in large type, then its two funds as rows
+// (color dot, plain name, $TICKER, share of the whole portfolio).
+const SideGroup = ({ title, hint, pct, color, funds, alignEnd = false }: {
+    title: string;
+    hint: string;
+    pct: number;
+    color: string;
+    funds: { ticker: string; label: string; pct: number; color: string }[];
+    alignEnd?: boolean;
+}) => (
+    <div className={`min-w-0 ${alignEnd ? "text-right" : ""}`}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-base-content/60">{title}</p>
+        <p className="text-3xl font-bold tabular-nums leading-tight" style={{ color }}>
+            {pct}%<span className="ml-1.5 hidden text-xs font-medium text-base-content/60 sm:inline">{hint}</span>
+        </p>
+        <ul className={`mt-2 space-y-1 ${alignEnd ? "flex flex-col items-end" : ""}`}>
+            {funds.map((f) => (
+                <li key={f.ticker} className={`flex items-baseline gap-1.5 text-[13px] sm:text-sm ${f.pct ? "" : "opacity-40"}`}>
+                    <span className="size-2.5 shrink-0 -translate-y-px self-center rounded-full" style={{ background: f.color }} />
+                    <span className="whitespace-nowrap text-base-content/80">{f.label}</span>
+                    <span className="font-semibold tabular-nums text-base-content">{Math.round(f.pct)}%</span>
+                    <span className="text-[11px] text-base-content/60">${f.ticker}</span>
+                </li>
+            ))}
+        </ul>
+    </div>
 );
 
 interface PortfolioProps {
@@ -394,29 +410,28 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
                 )}
             </AnimatePresence>
 
-            {/* Allocation: the slider, with each side's two funds listed under
-                its label (no separate bar, so there's one control to read). */}
-            <div className="space-y-3">
-                <div className="flex items-end justify-between gap-4 text-sm font-semibold">
-                    <span className="text-[#7F77DD]">
-                        Bonds {bondPct}% <span className="font-normal text-base-content/60">· steadier</span>
-                        <FundLine funds={segments.slice(2)} />
-                    </span>
-                    <span className="text-right text-[#378ADD]">
-                        <span className="font-normal text-base-content/60">more growth · </span>Stocks {equityPct}%
-                        <FundLine funds={segments.slice(0, 2)} />
-                    </span>
+            {/* Allocation as one control: bonds on the left, stocks on the
+                right, each with its share and its two funds in readable rows,
+                and the slider between them. Phones put both groups side by
+                side above the slider. */}
+            <div className="rounded-2xl border border-base-300 bg-base-200/40 p-4 sm:p-5">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)] lg:items-center">
+                    <SideGroup title="Bonds" hint="steadier" pct={bondPct} color="#7F77DD" funds={segments.slice(2)} />
+                    <div className="col-span-2 row-start-2 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+                        <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={10}
+                            value={equityPct}
+                            onChange={(e) => setEquityPct(Number(e.target.value))}
+                            aria-label="Stocks share of the portfolio"
+                            className="range w-full [--range-bg:#7F77DD] [--range-thumb:#378ADD] [--range-fill:0]"
+                        />
+                        <p className="mt-1.5 text-center text-xs text-base-content/60">Drag to change the mix</p>
+                    </div>
+                    <SideGroup title="Stocks" hint="more growth" pct={equityPct} color="#378ADD" funds={segments.slice(0, 2)} alignEnd />
                 </div>
-                <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={10}
-                    value={equityPct}
-                    onChange={(e) => setEquityPct(Number(e.target.value))}
-                    aria-label="Stocks share of the portfolio"
-                    className="range w-full [--range-bg:#7F77DD] [--range-thumb:#378ADD] [--range-fill:0]"
-                />
             </div>
 
             {/* Risk & return for the mix over the range; the blue dot line under
