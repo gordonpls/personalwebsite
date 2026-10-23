@@ -140,9 +140,13 @@ export const BADGES: Badge[] = [
     { label: "Foodie", detail: "Will travel for food", overlay: <FoodSlot /> },
 ];
 
-const GLASS = "rounded-full bg-white/55 text-slate-800 ring-1 ring-white/70 shadow-sm backdrop-blur-md";
 
-export const HeroBadge = ({ badge }: { badge: Badge }) => {
+// Two looks so the Hero isn't a wall of identical pills:
+//  - "credential": bare small-caps text with a dotted underline (the familiar
+//    "hover for a definition" cue, like <abbr>), for the degrees
+//  - "sticker": a little paper tag, slightly tilted, that straightens on hover,
+//    for the personality bits
+export const HeroBadge = ({ badge, variant = "credential", tilt = 0 }: { badge: Badge; variant?: "credential" | "sticker"; tilt?: number }) => {
     const reduce = useReducedMotion();
     const [open, setOpen] = useState(false);
 
@@ -155,9 +159,21 @@ export const HeroBadge = ({ badge }: { badge: Badge }) => {
             onClick={() => setOpen((o) => !o)}
             onFocus={() => setOpen(true)}
             onBlur={() => setOpen(false)}
-            className={`${GLASS} relative cursor-default select-none px-3.5 py-1 text-sm font-semibold tracking-wide outline-none transition-transform duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary ${open ? "z-20" : ""}`}
+            className={`group relative cursor-default select-none rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary ${open ? "z-20" : ""}`}
         >
-            {badge.label}
+            {variant === "credential" ? (
+                <span className="text-sm font-bold uppercase tracking-[0.18em] text-slate-800 underline decoration-slate-800/45 decoration-dotted decoration-2 underline-offset-[6px] transition-colors group-hover:decoration-solid group-hover:decoration-slate-800">
+                    {badge.label}
+                </span>
+            ) : (
+                // Rotation lives on the inner tag so the popover above stays level.
+                <span
+                    style={{ rotate: open ? "0deg" : `${tilt}deg` }}
+                    className="block rounded-[5px] bg-[#fffdf7] px-2.5 py-0.5 text-sm font-semibold text-slate-800 shadow-[0_2px_0_rgb(15_23_42/0.12),0_6px_14px_-6px_rgb(15_23_42/0.35)] transition-[rotate,translate] duration-300 ease-out group-hover:-translate-y-0.5"
+                >
+                    {badge.label}
+                </span>
+            )}
 
             {/* Floating frosted card above the badge. */}
             <AnimatePresence>

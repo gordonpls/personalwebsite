@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
     ComposedChart,
     Area,
@@ -350,15 +350,23 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
             </div>
 
             {/* Quiz hand-off banner: shown while the mix is being applied and
-                after, so it's clear where the current split came from. */}
-            <AnimatePresence initial={false}>
-                {handoff && handoff.phase !== "pending" && (
+                after, so it's clear where the current split came from.
+                It opens with a CSS grid-rows transition, NOT a framer-motion
+                height:"auto" animation: measuring "auto" makes framer call
+                window.scrollTo(), which cancels the smooth scroll from the
+                quiz's "Applied to the simulator below" button and strands the
+                visitor mid-page (the banner opens right as that scroll
+                brings the simulator into view). */}
+            {handoff && (
+                <div
+                    className="grid transition-[grid-template-rows,margin] duration-300 ease-out"
+                    style={{ gridTemplateRows: handoff.phase !== "pending" ? "1fr" : "0fr", marginBlockEnd: handoff.phase !== "pending" ? undefined : 0 }}
+                >
                     <motion.div
-                        key="handoff"
-                        initial={{ opacity: 0, y: -8, height: 0 }}
-                        animate={{ opacity: 1, y: 0, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        initial={false}
+                        animate={handoff.phase !== "pending" ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
+                        transition={{ duration: 0.3 }}
+                        className="min-h-0 overflow-hidden"
                     >
                         <div
                             className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-xl px-4 py-3"
@@ -407,8 +415,8 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
                             )}
                         </div>
                     </motion.div>
-                )}
-            </AnimatePresence>
+                </div>
+            )}
 
             {/* Allocation as one control: bonds on the left, stocks on the
                 right, each with its share and its two funds in readable rows,

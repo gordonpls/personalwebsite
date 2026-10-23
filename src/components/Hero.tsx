@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 // Refined typing animation; swap back to "./subcomponents/TypingGreeting" to use the classic one.
 import TypingGreetingRefined from "./subcomponents/TypingGreetingRefined";
 // Caret shape: "block" | "underscore" | "bar"
@@ -26,8 +26,11 @@ const AVATAR_STARS = [
 
 // Frosted-glass surface shared by badges and contact chips. The sky behind is
 // light in both themes, so dark ink on white glass reads everywhere.
-const GLASS = "rounded-full bg-white/55 text-slate-800 ring-1 ring-white/70 shadow-sm backdrop-blur-md";
-const CHIP = `${GLASS} flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium [&>svg]:size-5`;
+// Contact line items: plain icon + text (no container), so they read as a
+// business-card footer rather than another row of buttons.
+const CONTACT = "flex items-center gap-2 text-sm font-medium text-slate-800 [&>svg]:size-5";
+const DEGREES = new Set(["BSCS", "MBA", "MSF"]);
+const STICKER_TILTS = [-4, 3];
 
 export const Hero = () => {
     const myRef = useRef(null);
@@ -119,24 +122,37 @@ export const Hero = () => {
                         <div className="flex justify-center">
                             <TypingGreeting />
                         </div>
-                        {/* Badges + contact chips: frosted glass over the sky, no frame. */}
-                        <div className="mx-auto flex max-w-xl flex-col items-center gap-4 pt-2">
-                            <ul className="flex flex-wrap justify-center gap-2">
-                                {BADGES.map((b) => <HeroBadge key={b.label} badge={b} />)}
-                            </ul>
-                            <div className="flex flex-wrap justify-center gap-2.5">
-                                <CopyEmail icon={emailIcon} email="me@gordonzhong.com" className={CHIP} />
+                        {/* Credentials (dotted-underline text), personality stickers, and a
+                            plain contact line: three roles, three distinct looks. */}
+                        <div className="mx-auto flex max-w-xl flex-col items-center gap-5 pt-2">
+                            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+                                <ul className="flex items-center gap-2.5" aria-label="Degrees">
+                                    {BADGES.filter((b) => DEGREES.has(b.label)).map((b, i) => (
+                                        <Fragment key={b.label}>
+                                            {i > 0 && <li aria-hidden="true" className="text-slate-800/50">·</li>}
+                                            <HeroBadge badge={b} variant="credential" />
+                                        </Fragment>
+                                    ))}
+                                </ul>
+                                <ul className="flex items-center gap-3" aria-label="About me">
+                                    {BADGES.filter((b) => !DEGREES.has(b.label)).map((b, i) => (
+                                        <HeroBadge key={b.label} badge={b} variant="sticker" tilt={STICKER_TILTS[i % STICKER_TILTS.length]} />
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 [&>*+*]:border-l [&>*+*]:border-slate-800/20 [&>*+*]:pl-4">
+                                <CopyEmail icon={emailIcon} email="me@gordonzhong.com" className={CONTACT} />
                                 <a
                                     href="https://linkedin.com/in/gordon-zhong"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={() => trackEvent("linkedin_clicked")}
-                                    className={`${CHIP} transition-colors hover:bg-white/80`}
+                                    className={`${CONTACT} hover:underline`}
                                 >
                                     {linkedInIcon}
                                     in/gordon-zhong
                                 </a>
-                                <span className={CHIP}>
+                                <span className={CONTACT}>
                                     {locationIcon}
                                     New York, NY
                                 </span>
