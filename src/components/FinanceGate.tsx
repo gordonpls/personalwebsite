@@ -36,22 +36,38 @@ const TEASER_TAPE: TapeItem[] = [
     { symbol: "BTC", price: 64210, change: 2.4 }, { symbol: "EURUSD", price: 1.0942, change: -0.08 },
 ];
 
+// Wrong-password replies, in order (the last one repeats): dry, not mean.
+const WRONG_LINES = ["Nope.", "Not that one.", "Good guess. Wrong, though.", "Still no."];
+// Three or more tries inside this window counts as mashing the button.
+const SPAM_WINDOW_MS = 2000;
+
 const UnlockCard = () => {
     const [password, setPassword] = useState("");
-    const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "error">("idle");
+    const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "error" | "spam">("idle");
     const [nudge, setNudge] = useState(0);
+    const [misses, setMisses] = useState(0);
+    const tries = useRef<number[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { inputRef.current?.focus({ preventScroll: true }); }, []);
 
     const submit = async (e: FormEvent) => {
         e.preventDefault();
+        // Counts every press, empty ones included, so mashing Enter is caught.
+        const now = Date.now();
+        tries.current = [...tries.current.filter((t) => now - t < SPAM_WINDOW_MS), now];
+        if (tries.current.length >= 3 && status !== "checking") {
+            setStatus("spam");
+            setNudge((n) => n + 1);
+            return;
+        }
         if (!password.trim() || status === "checking") return;
         setStatus("checking");
         const result = await unlockFinance(password);
         if (result === "ok") return; // gate re-renders unlocked
         setStatus(result);
         if (result === "wrong") {
+            setMisses((m) => m + 1);
             setNudge((n) => n + 1);
             setPassword("");
             inputRef.current?.focus();
@@ -68,8 +84,8 @@ const UnlockCard = () => {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <CoffeeIcon />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-base-content">Private portfolio</h2>
-            <p className="mt-1 text-sm text-base-content/70">Happy to share over coffee.</p>
+            <h2 className="mt-4 text-lg font-semibold text-base-content">Ask me over coffee</h2>
+            <p className="mt-1 text-sm text-base-content/70">Or enter the password if I've already told you.</p>
 
             <form onSubmit={submit} className="mt-5 text-left">
                 <label className="input w-full">
@@ -83,13 +99,14 @@ const UnlockCard = () => {
                         value={password}
                         onChange={(e) => { setPassword(e.target.value); if (status !== "checking") setStatus("idle"); }}
                         placeholder="Password"
-                        aria-invalid={status === "wrong" || undefined}
+                        aria-invalid={status === "wrong" || status === "spam" || undefined}
                         aria-describedby="finance-password-help"
                         className="grow"
                     />
                 </label>
                 <p id="finance-password-help" aria-live="polite" className="mt-1.5 min-h-[1.25rem] text-xs text-base-content/70">
-                    {status === "wrong" && "Try again."}
+                    {status === "wrong" && WRONG_LINES[Math.min(misses, WRONG_LINES.length) - 1]}
+                    {status === "spam" && "Asking me would be easier."}
                     {status === "error" && "Couldn't reach the server. Please try again in a moment."}
                 </p>
                 <button type="submit" className="btn btn-primary mt-1 w-full" disabled={status === "checking"}>

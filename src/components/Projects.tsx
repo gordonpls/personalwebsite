@@ -295,7 +295,7 @@ const PadlockIcon = ({ className = "w-3.5 h-3.5" }: { className?: string }) => (
 
 // The dashboard is password-gated; until this browser has unlocked it, the hero
 // stays low-key about it: a softly blurred chart that sharpens on hover, with
-// a quiet "Private" tag over it in place of the live pulse. The dashboard page itself
+// a quiet "Locked" tag over it in place of the live pulse. The dashboard page itself
 // asks for the password.
 const FeaturedHero = () => {
     const unlocked = useFinanceUnlocked();
@@ -322,7 +322,7 @@ const FeaturedHero = () => {
                         <div className="absolute inset-0 flex items-center justify-center">
                             <span className="flex items-center gap-1.5 rounded-full border border-base-300 bg-base-100/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/70 shadow-sm backdrop-blur-sm">
                                 <PadlockIcon className="w-3 h-3" />
-                                Private
+                                Locked
                             </span>
                         </div>
                     )}
@@ -676,7 +676,7 @@ const MobileProjectList = () => {
                                 <span className="text-base font-bold leading-tight text-base-content line-clamp-2">{p.title}</span>
                                 <span className={`mt-0.5 flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-widest ${p.accent}`}>
                                     {locked && <PadlockIcon className="h-3 w-3" />}
-                                    {locked ? "Private" : p.tag}
+                                    {locked ? "Locked" : p.tag}
                                 </span>
                             </span>
                             <motion.span
@@ -721,7 +721,7 @@ const MobileProjectList = () => {
                                                 <div className="absolute inset-0 flex items-center justify-center">
                                                     <span className="flex items-center gap-1.5 rounded-full border border-base-300 bg-base-100/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/70 shadow-sm backdrop-blur-sm">
                                                         <PadlockIcon className="h-3 w-3" />
-                                                        Private
+                                                        Locked
                                                     </span>
                                                 </div>
                                             )}

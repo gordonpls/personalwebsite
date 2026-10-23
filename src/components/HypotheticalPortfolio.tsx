@@ -189,7 +189,7 @@ interface PortfolioProps {
 export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
     const reduce = useReducedMotion();
     const [years, setYears] = useState(10);
-    const [amount, setAmount] = useState(1_000);
+    const [amount, setAmount] = useState(10_000);
     const [age, setAge] = useState(30);
     const [ageDraft, setAgeDraft] = useState("30"); // the box's text; may be empty while typing
     const [equityPct, setEquityPct] = useState(80);

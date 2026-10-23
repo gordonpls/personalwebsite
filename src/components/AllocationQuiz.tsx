@@ -227,26 +227,47 @@ export const AllocationQuiz = ({ onApply }: Props) => {
     };
 
     // ── Intro ────────────────────────────────────────────────────────────────
+    // The page's headline act: a big centered pitch, the five profiles you
+    // could land on (each bobbing gently, in turn), and one large button.
     if (step === "intro") {
         return (
-            <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-4">
-                <div>
-                    <p className="text-xs text-base-content/60 uppercase tracking-widest font-medium mb-1">
-                        Asset Allocation Quiz
-                    </p>
-                    <h2 className="text-lg font-semibold text-base-content">Find your investor profile</h2>
-                    <p className="text-sm text-base-content/60 mt-1">
-                        {questions.length} quick questions and two sliders · ~2 minutes. We'll weigh how much risk
-                        you <em>want</em> against how much you can <em>afford</em>, then suggest a stock / bond split
-                        you can test in the portfolio simulator below.
-                    </p>
-                </div>
+            <div
+                className="relative overflow-hidden rounded-3xl border border-base-300 px-6 py-12 text-center sm:px-10 sm:py-16"
+                style={{ background: "radial-gradient(120% 90% at 50% 0%, color-mix(in oklch, var(--color-primary) 14%, var(--color-base-100)), var(--color-base-100) 70%)" }}
+            >
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">2-minute quiz</p>
+                <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-bold tracking-tight text-base-content sm:text-5xl">
+                    What kind of investor are you?
+                </h2>
+                <p className="mx-auto mt-4 max-w-xl text-base text-base-content/70 sm:text-lg">
+                    Answer {questions.length + 1} quick questions. No finance knowledge needed. You'll get a mix
+                    of stocks and bonds that fits you, and see what it would have done with real money.
+                </p>
+
+                <ul className="mx-auto mt-8 flex max-w-2xl flex-wrap justify-center gap-2" aria-label="Possible results">
+                    {results.map((r, i) => {
+                        const c = PROFILE_COLORS[r.id] ?? "#378ADD";
+                        return (
+                            <motion.li
+                                key={r.id}
+                                animate={reduce ? undefined : { y: [0, -4, 0] }}
+                                transition={{ repeat: Infinity, duration: 2.4, delay: i * 0.25, ease: "easeInOut" }}
+                                className="rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm"
+                                style={{ color: c, background: `color-mix(in oklch, ${c} 14%, transparent)` }}
+                            >
+                                {r.label.replace(/ Investor$/, "")}
+                            </motion.li>
+                        );
+                    })}
+                </ul>
+
                 <button
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-primary btn-lg mt-10 rounded-full px-10 shadow-lg shadow-primary/25 transition hover:scale-[1.03]"
                     onClick={() => { setStep("question"); setQIndex(0); }}
                 >
-                    Start quiz →
+                    Take the quiz →
                 </button>
+                <p className="mt-3 text-xs text-base-content/60">No sign-up · nothing is saved</p>
             </div>
         );
     }
@@ -256,18 +277,18 @@ export const AllocationQuiz = ({ onApply }: Props) => {
         const selected = answers[currentQ.id];
 
         return (
-            <div className="bg-base-100 border border-base-300 rounded-2xl p-6 space-y-5">
+            <div className="bg-base-100 border border-base-300 rounded-3xl px-6 py-8 sm:px-10 sm:py-10 space-y-6">
                 <ProgressBar index={qIndex} />
 
-                <p className="text-base font-medium text-base-content">{currentQ.prompt}</p>
+                <p className="mx-auto max-w-2xl text-center text-xl font-semibold tracking-tight text-base-content sm:text-2xl">{currentQ.prompt}</p>
 
-                <div className="space-y-2">
+                <div className="mx-auto max-w-2xl space-y-2.5">
                     {currentOptions.map((opt, i) => (
                         <button
                             key={opt.id}
                             onClick={() => select(opt.id)}
                             className={[
-                                "w-full text-left px-4 py-3 rounded-xl border text-sm transition-all duration-150",
+                                "w-full text-left px-5 py-4 rounded-2xl border text-base transition-all duration-150",
                                 selected === opt.id
                                     ? "border-primary bg-primary/10 text-base-content font-medium"
                                     : "border-base-300 bg-base-200/50 text-base-content/70 hover:border-base-content/20 hover:bg-base-200",
@@ -279,7 +300,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
                     ))}
                 </div>
 
-                <div className="flex justify-between pt-1">
+                <div className="mx-auto flex max-w-2xl justify-between pt-1">
                     <button className="btn btn-sm btn-ghost" onClick={goBack}>← Back</button>
                     {/* Forward only for a question already answered (i.e. after going back). */}
                     {selected && (
