@@ -3,16 +3,20 @@ import { useState, useEffect } from "react";
 export const JumpToTop = () => {
     const [isVisible, setIsVisible] = useState(false);
 
+    // Checked at most once per frame (scroll fires many times per frame), and
+    // React only hears about it when visibility actually flips.
     useEffect(() => {
-        const toggleVisibility = () => {
-            if (window.scrollY > 1) {
-                setIsVisible(true);
-            } else {
-                setIsVisible(false);
-            }
+        let frame = 0;
+        let visible = false;
+        const check = () => {
+            frame = 0;
+            const next = window.scrollY > 1;
+            if (next !== visible) { visible = next; setIsVisible(next); }
         };
-        window.addEventListener("scroll", toggleVisibility);
-        return () => window.removeEventListener("scroll", toggleVisibility);
+        const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
+        check();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); };
     }, []);
 
     const scrollToTop = () => {

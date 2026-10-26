@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently -k -n web,api -c blue,magenta \"vite\" \"cd server && node --watch app.js\"",
+    "predev:all": "npm run dev:kill",
+    "dev:all": "concurrently -k -n web,api -c blue,magenta \"vite\" \"cd server && ALLOW_LOCALHOST_ORIGINS=true node --watch app.js\"",
     "dev:kill": "lsof -ti tcp:5173 -i tcp:3000 | xargs kill 2>/dev/null || true",
     "build": "vite build",
     "lint": "eslint .",

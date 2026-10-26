@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "node --watch app.js"
+    "predev": "lsof -ti tcp:3000 | xargs kill 2>/dev/null || true",
+    "dev": "ALLOW_LOCALHOST_ORIGINS=true node --watch app.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

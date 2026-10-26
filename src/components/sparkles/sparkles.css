@@ -9,6 +9,11 @@
     z-index: 70;
     pointer-events: none;
     overflow: hidden;
+    /* Isolate the layer: the scroll trail adds/removes sparkles every ~55ms,
+       and without containment each change marks the WHOLE page's layout
+       dirty, so every scroll-time layout read (scrollY, offsetHeight, Vanta's
+       per-frame isOnScreen) forced a full-page synchronous relayout mid-scroll. */
+    contain: strict;
 }
 .sparkle-fx { position: absolute; width: 0; height: 0; }
 

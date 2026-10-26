@@ -72,12 +72,20 @@ export default function TypingGame() {
             <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden">
                 <Navbar embedded />
                 <div className="px-4 pt-6 pb-16 space-y-10">
-                    <SectionHeading
-                        className="mx-auto max-w-3xl"
-                        eyebrow="Typing Game"
-                        title="How fast are your fingers?"
-                        description="30 seconds, a random word pack, same rules for everyone. The clock starts on your first keystroke. Make the top 10 and your name goes on the board."
-                    />
+                    {/* The two rules as a pair of side-by-side notes under the eyebrow. */}
+                    <div className="mx-auto max-w-3xl space-y-4">
+                        <SectionHeading eyebrow="Typing Game" />
+                        <ul className="flex flex-col gap-3 text-sm text-base-content/80 sm:flex-row sm:items-center sm:gap-0 sm:divide-x sm:divide-base-content/15">
+                            <li className="flex items-center gap-2.5 sm:pr-5">
+                                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm" aria-hidden="true">⏱</span>
+                                The clock starts on your first keystroke.
+                            </li>
+                            <li className="flex items-center gap-2.5 sm:pl-5">
+                                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm" aria-hidden="true">🏆</span>
+                                Make the top 10 and your name goes on the board.
+                            </li>
+                        </ul>
+                    </div>
 
                     {editing ? (
                         <NameGate

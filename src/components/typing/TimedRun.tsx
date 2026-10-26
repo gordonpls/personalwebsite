@@ -185,6 +185,20 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
         return () => window.removeEventListener("keydown", onKey);
     }, [phase, retry]);
 
+    // Esc restarts with fresh words at any point; a run in progress is dropped
+    // unsaved. No grace window: nobody hits Esc by accident at the buzzer.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== "Escape" || loading) return;
+            const el = e.target as HTMLElement;
+            if (el !== inputRef.current && el?.closest?.("input, select, textarea, dialog")) return;
+            e.preventDefault();
+            restart();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [loading, restart]);
+
     // Every fresh mistake gives the sign a little shake.
     useEffect(() => {
         if (s.mistakes && !reduce) shake.start({ x: [0, -7, 6, -4, 2, 0], transition: { duration: 0.35 } });
@@ -406,6 +420,12 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                         ? `Time's up. ${result.wpm} words per minute, ${result.accuracy}% accuracy.${placed?.rank ? ` You placed number ${placed.rank} on the leaderboard.` : ""} Press space to try again.`
                         : ""}
                 </p>
+
+                {phase !== "done" && (
+                    <p className="pointer-events-none mt-3 flex items-center justify-center gap-1.5 text-xs text-base-content/60">
+                        Press <kbd className="kbd kbd-sm text-base-content">esc</kbd> to restart with new words
+                    </p>
+                )}
             </div>
 
             {/* Placement callout. */}

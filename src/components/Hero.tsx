@@ -72,9 +72,34 @@ export const Hero = () => {
             frame = requestAnimationFrame(() => effect?.resize());
         });
         if (myRef.current) observer.observe(myRef.current);
+
+        // Vanta reuses its mousemove handler for window "scroll" events, where
+        // it calls getBoundingClientRect() (a forced layout) and then bails
+        // because scroll events have no clientX/Y. Drop that listener; mouse
+        // tracking still works via mousemove.
+        if (effect) window.removeEventListener("scroll", effect.windowMouseMoveWrapper);
+
+        // Pause Vanta's loop while the hero is off screen. Left alone it runs
+        // every frame forever, calling offsetHeight + getBoundingClientRect
+        // (its isOnScreen check) each time: forced style/layout work that made
+        // long anchor scrolls stutter. `req` / `animationLoop` are Vanta's own
+        // rAF handle and bound loop (no public pause API).
+        let paused = false;
+        const visibility = new IntersectionObserver(([entry]) => {
+            if (!effect) return;
+            if (!entry.isIntersecting && !paused) {
+                cancelAnimationFrame(effect.req);
+                paused = true;
+            } else if (entry.isIntersecting && paused) {
+                paused = false;
+                effect.animationLoop();
+            }
+        });
+        if (myRef.current) visibility.observe(myRef.current);
         return () => {
             cancelAnimationFrame(frame);
             observer.disconnect();
+            visibility.disconnect();
             effect?.destroy();
         };
     }, [])

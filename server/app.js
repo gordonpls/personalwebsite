@@ -21,10 +21,17 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,h
     .split(",")
     .map((o) => o.trim());
 
+// Local dev only: any http://localhost:<port> / 127.0.0.1:<port> page may call
+// the API, so a dev or preview server on an unexpected port still works. Opt-in
+// via ALLOW_LOCALHOST_ORIGINS=true, which only the dev scripts set; production
+// (Passenger, `npm start`) never does.
+const ALLOW_LOCALHOST = process.env.ALLOW_LOCALHOST_ORIGINS === "true";
+const LOCALHOST_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 app.use(cors({
     origin: (origin, callback) => {
         // allow server-to-server requests (no origin) and listed origins only
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        if (!origin || ALLOWED_ORIGINS.includes(origin) || (ALLOW_LOCALHOST && LOCALHOST_ORIGIN.test(origin))) {
             callback(null, true);
         } else {
             callback(new Error(`CORS: origin ${origin} not allowed`));
