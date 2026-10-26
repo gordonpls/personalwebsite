@@ -8,9 +8,18 @@ export type TimelineEntry = {
     location?: string;
     bullets?: string[];
     note?: string;
+    // A role too new for real bullets: shown as this line plus skeleton rows.
+    inProgress?: string;
 };
 
 export const TIMELINE_ENTRIES: TimelineEntry[] = [
+    {
+        type: "role",
+        title: "Technical Support Engineer",
+        org: "Plaid",
+        period: "Sep 2026 – Present",
+        inProgress: "Bullets still loading. Please don't refresh.",
+    },
     {
         type: "education",
         title: "M.S. in Finance, with High Honors",

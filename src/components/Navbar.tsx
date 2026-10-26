@@ -13,6 +13,21 @@ const PROJECT_LINKS = [
   { label: "Typing Game", href: "/typing" },
 ];
 
+// Small outline icons beside each nav link (stroke follows the link color).
+const NAV_ICONS: Record<string, string> = {
+  Home: "M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z",
+  About: "M12 12a4 4 0 100-8 4 4 0 000 8zm-7 9a7 7 0 0114 0",
+  Resume: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  Projects: "M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5M9 13h6M9 17h6",
+  Highlights: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z",
+  Gallery: "M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 15M15.5 9.5h.01",
+};
+const NavIcon = ({ name }: { name: keyof typeof NAV_ICONS }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 opacity-80" aria-hidden="true">
+    <path d={NAV_ICONS[name]} />
+  </svg>
+);
+
 // `embedded` renders the navbar as the title bar of the page's mockup-window
 // (sticky inside it) instead of a fixed page bar.
 export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
@@ -80,12 +95,12 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
             tabIndex={0}
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow border border-base-300"
           >
-            <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}>Home</a></li>
-            <li><a className="link link-hover link-info" href="/#about">About</a></li>
-            <li><a className="link link-hover link-info" href="/#resume">Resume</a></li>
+            <li><a className="link link-hover link-info" href="/" onClick={handleHomeClick}><NavIcon name="Home" />Home</a></li>
+            <li><a className="link link-hover link-info" href="/#about"><NavIcon name="About" />About</a></li>
+            <li><a className="link link-hover link-info" href="/#resume"><NavIcon name="Resume" />Resume</a></li>
             <li>
               <details>
-                <summary className="link link-hover link-info">Projects</summary>
+                <summary className="link link-hover link-info"><NavIcon name="Projects" />Projects</summary>
                 <ul className="p-2">
                   <li><a className="link link-hover link-info" href="/#projects">All projects</a></li>
                   {PROJECT_LINKS.map((proj) => (
@@ -94,8 +109,8 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
                 </ul>
               </details>
             </li>
-            <li><a className="link link-hover link-info" href="/#highlights">Highlights</a></li>
-            <li><a className="link link-hover link-info" href="/#gallery">Gallery</a></li>
+            <li><a className="link link-hover link-info" href="/#highlights"><NavIcon name="Highlights" />Highlights</a></li>
+            <li><a className="link link-hover link-info" href="/#gallery"><NavIcon name="Gallery" />Gallery</a></li>
           </ul>
         </div>
       </div>
@@ -103,9 +118,9 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
       {/* Centered Menu (hidden on small screens, shown on md+) */}
       <div className="navbar-center hidden md:flex">
         <ul className="menu menu-horizontal px-1">
-          <li><a className="link link-info no-underline nav-underline" href="/" onClick={handleHomeClick}>Home</a></li>
-          <li><a className="link link-info no-underline nav-underline" href="/#about">About</a></li>
-          <li><a className="link link-info no-underline nav-underline" href="/#resume">Resume</a></li>
+          <li><a className="link link-info no-underline nav-underline gap-1.5" href="/" onClick={handleHomeClick}><NavIcon name="Home" />Home</a></li>
+          <li><a className="link link-info no-underline nav-underline gap-1.5" href="/#about"><NavIcon name="About" />About</a></li>
+          <li><a className="link link-info no-underline nav-underline gap-1.5" href="/#resume"><NavIcon name="Resume" />Resume</a></li>
           <li
             className="relative"
             onMouseEnter={() => setProjectsOpen(true)}
@@ -116,10 +131,11 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
             <a
               aria-haspopup="true"
               aria-expanded={projectsOpen}
-              className="link link-info no-underline nav-underline gap-1"
+              className="link link-info no-underline nav-underline gap-1.5"
               href="/#projects"
               onClick={handleProjectsClick}
             >
+              <NavIcon name="Projects" />
               Projects
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 -ml-0.5 fill-current opacity-60 pointer-events-none" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 10l5 5 5-5z" />
@@ -135,8 +151,8 @@ export const Navbar = ({ embedded = false }: { embedded?: boolean }) => {
               </ul>
             )}
           </li>
-          <li><a className="link link-info no-underline nav-underline" href="/#highlights">Highlights</a></li>
-          <li><a className="link link-info no-underline nav-underline" href="/#gallery">Gallery</a></li>
+          <li><a className="link link-info no-underline nav-underline gap-1.5" href="/#highlights"><NavIcon name="Highlights" />Highlights</a></li>
+          <li><a className="link link-info no-underline nav-underline gap-1.5" href="/#gallery"><NavIcon name="Gallery" />Gallery</a></li>
         </ul>
       </div>
 

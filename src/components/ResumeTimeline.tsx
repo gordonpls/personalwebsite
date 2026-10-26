@@ -3,6 +3,7 @@ import resumePDF from "../assets/Gordon Zhong 2026 Resume.pdf";
 import { SectionHeading } from "./SectionHeading";
 import { useSpotlight } from "../hooks/useSpotlight";
 import { TIMELINE_ENTRIES, type TimelineEntry, type EntryType } from "../data/timelineData";
+import { trackEvent } from "../lib/analytics";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,21 @@ function RoleEntry({ entry }: { entry: TimelineEntry }) {
                     )}
                 </div>
             </div>
+            {entry.inProgress && (
+                // New role: one cheeky line, then shimmering placeholder rows.
+                <div className="space-y-2.5" aria-label="Details coming soon">
+                    <p className="flex gap-2.5 text-sm italic text-base-content/70 leading-snug">
+                        <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/50" />
+                        {entry.inProgress}
+                    </p>
+                    {["w-11/12", "w-4/5", "w-2/3"].map((w) => (
+                        <div key={w} className="flex items-center gap-2.5" aria-hidden="true">
+                            <span className="h-1 w-1 shrink-0 rounded-full bg-primary/30" />
+                            <div className={`skeleton h-3 ${w} rounded-full`} />
+                        </div>
+                    ))}
+                </div>
+            )}
             {entry.bullets && (
                 <ul className="space-y-2">
                     {entry.bullets.map((b, i) => (
@@ -169,57 +185,26 @@ export function ResumeTimeline() {
 
     return (
         <div
-            className="spotlight text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary scroll-mt-24"
-            id="resume"
+            className="spotlight text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary"
             onPointerMove={spotlight}
         >
-            {/* Breadcrumbs + download: snug right of breadcrumbs on sm+, stacked below on mobile */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-                <div className="breadcrumbs max-w-fit">
-                    <ul>
-                        <li className="pointer-events-none">
-                            <span className="inline-flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                </svg>
-                                <span>Home</span>
-                            </span>
-                        </li>
-                        <li className="pointer-events-none">
-                            <span className="inline-flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                </svg>
-                                <span>Resume</span>
-                            </span>
-                        </li>
-                        <li className="pointer-events-none">
-                            <span className="inline-flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-4 w-4 stroke-current">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                                </svg>
-                                <span>Career Timeline</span>
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div className="btn-rgb-border shrink-0">
-                    <a
-                        href={resumePDF}
-                        download
-                        className="btn btn-primary btn-sm gap-2"
-                    >
-                        <DownloadIcon />
-                        Download Full Resume
-                    </a>
-                </div>
+            {/* Heading with the résumé download beside it (below it on phones). */}
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <SectionHeading eyebrow="Experience" title="Career Timeline" />
+                <a
+                    href={resumePDF}
+                    download
+                    onClick={() => trackEvent("resume_downloaded")}
+                    className="btn btn-outline btn-primary btn-sm shrink-0 gap-2 self-start rounded-full sm:self-auto"
+                >
+                    <DownloadIcon />
+                    Download résumé (PDF)
+                </a>
             </div>
 
-            <SectionHeading eyebrow="Experience" title="Career Timeline" className="mb-6" />
-
             {/* Filter tabs — the interactive flashy feature */}
-            <div className="join mb-8">
+            {/* Scrolls sideways on narrow phones rather than overflowing the card. */}
+            <div className="join mb-8 max-w-full overflow-x-auto">
                 {FILTERS.map(f => (
                     <button
                         key={f.id}
