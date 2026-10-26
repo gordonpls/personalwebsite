@@ -375,6 +375,10 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
         setError("server not configured — set ADMIN_PASSWORD");
         return;
       }
+      if (res.status === 429) {
+        setError("too many attempts — try again in 15 minutes");
+        return;
+      }
       if (!res.ok) {
         setError("wrong password");
         return;

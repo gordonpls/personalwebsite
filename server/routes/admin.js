@@ -1,5 +1,5 @@
 const express = require("express");
-const { createToken, safeCompare, requireAdmin } = require("../lib/admin-auth");
+const { createToken, safeCompare, requireAdmin, loginLimiter } = require("../lib/admin-auth");
 const { getDb, getLoginFailures, getStartDay, todayStr } = require("../lib/analytics-db");
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 // POST /api/admin/login
 // Body: { password: string }
 // Returns: { token: string } on success, 401 on failure
-router.post("/login", (req, res) => {
+router.post("/login", loginLimiter, (req, res) => {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) {
     return res.status(503).json({ error: "Admin not configured" });

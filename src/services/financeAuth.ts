@@ -46,7 +46,7 @@ export function financeAuthHeaders(): Record<string, string> {
     return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
-export type LoginResult = "ok" | "wrong" | "error";
+export type LoginResult = "ok" | "wrong" | "limited" | "error";
 
 export async function unlockFinance(password: string): Promise<LoginResult> {
     try {
@@ -56,6 +56,7 @@ export async function unlockFinance(password: string): Promise<LoginResult> {
             body: JSON.stringify({ password }),
         });
         if (r.status === 401) return "wrong";
+        if (r.status === 429) return "limited";
         if (!r.ok) return "error";
         const { token } = await r.json();
         setToken(token);

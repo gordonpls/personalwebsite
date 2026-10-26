@@ -158,7 +158,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
         setToken(token);
         onLogin();
       } else {
-        setError("Incorrect password.");
+        setError(r.status === 429 ? "Too many attempts. Try again in 15 minutes." : "Incorrect password.");
       }
     } catch {
       setError("Could not reach the server.");

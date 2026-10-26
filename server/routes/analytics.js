@@ -88,7 +88,14 @@ router.post("/event", (req, res) => {
       return res.status(204).end();
     }
 
-    const { eventType, path, projectSlug, referrer } = req.body || {};
+    const body = req.body || {};
+    const { eventType } = body;
+    // Client-supplied strings land in the DB and (paths) on the public summary,
+    // so drop non-strings and cap their length.
+    const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : null);
+    const path = str(body.path, 200);
+    const projectSlug = str(body.projectSlug, 100);
+    const referrer = str(body.referrer, 500);
 
     // Validate event type
     if (!eventType || !ALLOWED_EVENT_TYPES.has(eventType)) {

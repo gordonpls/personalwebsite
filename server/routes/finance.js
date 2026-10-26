@@ -1,6 +1,6 @@
 const express = require("express");
 const path = require("path");
-const { createToken, safeCompare, requireFinance } = require("../lib/admin-auth");
+const { createToken, safeCompare, requireFinance, loginLimiter } = require("../lib/admin-auth");
 const { logFailedAttempt } = require("../lib/login-failures");
 
 const router = express.Router();
@@ -8,7 +8,7 @@ const router = express.Router();
 // POST /api/finance/login
 // Body: { password: string }
 // Returns: { token: string } on success, 401 on failure
-router.post("/login", (req, res) => {
+router.post("/login", loginLimiter, (req, res) => {
   const financePassword = process.env.FINANCE_PASSWORD;
   if (!financePassword) {
     return res.status(503).json({ error: "Finance access not configured" });

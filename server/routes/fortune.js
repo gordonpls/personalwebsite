@@ -134,6 +134,8 @@ router.get("/fortune", async (req, res) => {
         message = FORTUNES[Math.floor(rand() * FORTUNES.length)];
         source = "corpus";
     }
+    // Keys are per (day, visitor); drop earlier days so the map can't grow forever.
+    for (const key of dayCache.keys()) if (!key.startsWith(`${date}|`)) dayCache.delete(key);
     dayCache.set(seed, { message, source });
 
     res.json({

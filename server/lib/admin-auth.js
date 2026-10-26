@@ -84,4 +84,29 @@ function requireFinance(req, res, next) {
   next();
 }
 
-module.exports = { createToken, verifyToken, safeCompare, requireAdmin, requireFinance };
+// Brute-force brake for the password endpoints: each IP gets LOGIN_MAX_ATTEMPTS
+// tries per LOGIN_WINDOW_MS, then 429s until the window rolls over. In-memory,
+// so it's per Passenger process; that's plenty to make guessing impractical.
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+
+function loginLimiter(req, res, next) {
+  const now = Date.now();
+  if (loginAttempts.size > 10000) {
+    for (const [ip, a] of loginAttempts) if (now > a.resetAt) loginAttempts.delete(ip);
+  }
+  const ip = req.ip || "anon";
+  let a = loginAttempts.get(ip);
+  if (!a || now > a.resetAt) {
+    a = { count: 0, resetAt: now + LOGIN_WINDOW_MS };
+    loginAttempts.set(ip, a);
+  }
+  if (++a.count > LOGIN_MAX_ATTEMPTS) {
+    res.set("Retry-After", String(Math.ceil((a.resetAt - now) / 1000)));
+    return res.status(429).json({ error: "Too many attempts — try again later" });
+  }
+  next();
+}
+
+module.exports = { createToken, verifyToken, safeCompare, requireAdmin, requireFinance, loginLimiter };

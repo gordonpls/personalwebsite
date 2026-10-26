@@ -43,7 +43,7 @@ const SPAM_WINDOW_MS = 2000;
 
 const UnlockCard = () => {
     const [password, setPassword] = useState("");
-    const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "error" | "spam">("idle");
+    const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "limited" | "error" | "spam">("idle");
     const [nudge, setNudge] = useState(0);
     const [misses, setMisses] = useState(0);
     const tries = useRef<number[]>([]);
@@ -99,7 +99,7 @@ const UnlockCard = () => {
                         value={password}
                         onChange={(e) => { setPassword(e.target.value); if (status !== "checking") setStatus("idle"); }}
                         placeholder="Password"
-                        aria-invalid={status === "wrong" || status === "spam" || undefined}
+                        aria-invalid={status === "wrong" || status === "limited" || status === "spam" || undefined}
                         aria-describedby="finance-password-help"
                         className="grow"
                     />
@@ -107,6 +107,7 @@ const UnlockCard = () => {
                 <p id="finance-password-help" aria-live="polite" className="mt-1.5 min-h-[1.25rem] text-xs text-base-content/70">
                     {status === "wrong" && WRONG_LINES[Math.min(misses, WRONG_LINES.length) - 1]}
                     {status === "spam" && "Asking me would be easier."}
+                    {status === "limited" && "That's a lot of guesses. Try again in 15 minutes, or just ask me."}
                     {status === "error" && "Couldn't reach the server. Please try again in a moment."}
                 </p>
                 <button type="submit" className="btn btn-primary mt-1 w-full" disabled={status === "checking"}>

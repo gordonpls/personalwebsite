@@ -4,7 +4,7 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const items = require("../lib/plaid-items");
 const { logPlaid, logPlaidResponse, logPlaidError } = require("../lib/plaid-log");
 const { sendPlaidRelinkEmail } = require("../lib/notify");
-const { requireFinance } = require("../lib/admin-auth");
+const { requireFinance, safeCompare } = require("../lib/admin-auth");
 const { verifyPlaidWebhook } = require("../lib/plaid-webhook-verify");
 const snapshots = require("../lib/holdings-snapshots");
 
@@ -572,7 +572,7 @@ async function renderRelinkChooser(allItems, secret) {
 
 router.get("/plaid/relink", async (req, res) => {
     const secret = process.env.PLAID_RELINK_SECRET;
-    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+    if (!secret || !safeCompare(req.query.secret, secret)) return res.status(401).send("Unauthorized");
 
     const allItems = items.loadItems();
     if (!allItems.length) return res.status(404).send("No items in catalog.");
@@ -586,13 +586,13 @@ router.get("/plaid/relink", async (req, res) => {
     let target;
     if (req.query.item_id) {
         target = allItems.find((i) => i.itemId === req.query.item_id);
-        if (!target) return res.status(404).send(`item_id ${req.query.item_id} not found in catalog.`);
+        if (!target) return res.status(404).send(`item_id ${escHtml(req.query.item_id)} not found in catalog.`);
     } else {
         // Target by institution name — needed when an item's catalog entry is
         // missing its itemId (so it can't be flagged/auto-targeted by error).
         const want = String(req.query.institution).toLowerCase();
         target = allItems.find((i) => (i.institution || "").toLowerCase() === want);
-        if (!target) return res.status(404).send(`institution "${req.query.institution}" not found in catalog.`);
+        if (!target) return res.status(404).send(`institution "${escHtml(req.query.institution)}" not found in catalog.`);
     }
 
     // Backfill a missing itemId (matched by access token) so relink completion,
@@ -713,7 +713,7 @@ router.post("/plaid/relink/complete", async (req, res) => {
 // GET /api/plaid/notify-test?secret=<PLAID_RELINK_SECRET>
 router.get("/plaid/notify-test", async (req, res) => {
     const secret = process.env.PLAID_RELINK_SECRET;
-    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+    if (!secret || !safeCompare(req.query.secret, secret)) return res.status(401).send("Unauthorized");
 
     const to = process.env.NOTIFY_TO;
     if (!to) return res.status(503).send("NOTIFY_TO not set in server/.env — no recipient configured.");
@@ -771,7 +771,7 @@ router.post("/plaid/webhook", async (req, res) => {
 // trial-cap safe. GET /api/plaid/webhook/register?secret=<PLAID_RELINK_SECRET>
 router.get("/plaid/webhook/register", async (req, res) => {
     const secret = process.env.PLAID_RELINK_SECRET;
-    if (!secret || req.query.secret !== secret) return res.status(401).send("Unauthorized");
+    if (!secret || !safeCompare(req.query.secret, secret)) return res.status(401).send("Unauthorized");
     if (!WEBHOOK_URL) return res.status(503).json({ error: "PLAID_WEBHOOK_URL not set" });
     const results = [];
     for (const it of items.loadItems()) {

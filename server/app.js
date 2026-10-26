@@ -15,6 +15,7 @@ const app = express();
 // Behind LiteSpeed/Passenger; trust the proxy chain so req.ip resolves to the
 // real client (read from X-Forwarded-For) instead of 127.0.0.1.
 app.set("trust proxy", true);
+app.disable("x-powered-by");
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:3000")
     .split(",")

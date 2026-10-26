@@ -31,6 +31,12 @@ RewriteRule ^ index.html [QSA,L]
 # by a stale cached index.html (which would keep loading old hashed bundles).
 # The hashed JS/CSS/font/image assets are immutable and cached aggressively.
 <IfModule mod_headers.c>
+  # Baseline hardening: no MIME sniffing, no framing by other sites (the admin
+  # and finance pages hold login tokens), and no full URLs leaked as referrers.
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Strict-Transport-Security "max-age=31536000"
   <FilesMatch "index\.html$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>

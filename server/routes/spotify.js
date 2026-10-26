@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const { safeCompare } = require("../lib/admin-auth");
 
 const router = express.Router();
 
@@ -227,7 +228,7 @@ router.get("/now-playing", async (_req, res) => {
 
 router.get("/spotify/reauth", async (req, res) => {
     const secret = process.env.SPOTIFY_REAUTH_SECRET;
-    if (!secret || req.query.secret !== secret) {
+    if (!secret || !safeCompare(req.query.secret, secret)) {
         return res.status(401).send("Unauthorized — set SPOTIFY_REAUTH_SECRET in server/.env");
     }
     if (!process.env.SPOTIFY_CLIENT_ID) {
@@ -256,6 +257,9 @@ router.get("/spotify/reauth", async (req, res) => {
 
 router.get("/spotify/callback", async (req, res) => {
     const { code, state, error } = req.query;
+    // Plain text: these messages echo query params / upstream errors, and this
+    // page is on the site's own origin, so HTML here would be a reflected XSS.
+    res.type("text/plain");
     if (error) return res.status(400).send(`Spotify auth error: ${error}`);
     if (!code) return res.status(400).send("No authorization code in callback.");
 
@@ -287,10 +291,7 @@ router.get("/spotify/callback", async (req, res) => {
         tokenCache = { token: null, exp: 0 }; // force a clean refresh on next /now-playing
 
         console.log("[spotify] Reauthorization successful — new refresh token stored.");
-        res.send(
-            "<h2>Spotify reauthorized successfully.</h2>" +
-            "<p>The now-playing widget will resume on the next poll. You can close this tab.</p>"
-        );
+        res.send("Spotify reauthorized successfully. The now-playing widget will resume on the next poll. You can close this tab.");
     } catch (e) {
         console.error("[spotify] Reauth callback failed:", e.message);
         res.status(500).send("Token exchange failed: " + e.message);

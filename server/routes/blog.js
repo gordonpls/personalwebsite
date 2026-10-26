@@ -4,6 +4,7 @@ const { getDb, getAllPosts, createPost, updatePost, deletePost } = require("../l
 const { snapshot } = require("../lib/blog-backup");
 
 const { logFailedAttempt } = require("../lib/login-failures");
+const { loginLimiter } = require("../lib/admin-auth");
 
 const router = express.Router();
 // Long-lived so a one-time login persists (token is stored client-side and
@@ -66,7 +67,7 @@ function requireBlogAuth(req, res, next) {
 }
 
 // POST /api/blog/auth  — exchange password for session token
-router.post("/auth", (req, res) => {
+router.post("/auth", loginLimiter, (req, res) => {
   const { password } = req.body || {};
   if (!process.env.ADMIN_PASSWORD) {
     return res.status(503).json({ error: "Blog not configured" });
