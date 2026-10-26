@@ -7,8 +7,9 @@ import { trackEvent } from "../lib/analytics";
 import CopyEmail from "./ProfileCard/CopyEmail";
 import { BADGES, HeroBadge } from "./HeroBadge";
 import { emailIcon, locationIcon, linkedInIcon } from "./ProfileCard/icons";
-import avatar from "../assets/avatar.webp";
-import avatarCartoon from "../assets/avatar.jpeg";
+// Avatars render at most 336px (h-84); ship ~2× that, as webp.
+import avatar from "../assets/avatar.webp?w=720&format=webp";
+import avatarCartoon from "../assets/avatar.jpeg?w=720&format=webp";
 import { NowPlaying } from "./NowPlaying";
 
 import CLOUDS from "vanta/dist/vanta.clouds.min";

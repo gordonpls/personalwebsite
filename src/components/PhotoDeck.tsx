@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
-import avatar2 from "../assets/avatar2.webp";
+// The source is a full-res 3024×4032 phone photo; ship it resized.
+import avatar2 from "../assets/avatar2.webp?w=900&format=webp";
 
 // About Me photos. The existing portrait is always first; any images dropped
 // into src/assets/about/ are appended (optimized to ~800px webp at build time).
@@ -145,7 +146,9 @@ export function PhotoDeck() {
                         <img
                             src={p.src}
                             alt={p.alt}
-                            loading={i === 0 ? undefined : "lazy"}
+                            // About sits below the fold, and one of the two layouts is
+                            // always display:none: lazy keeps both off the initial load.
+                            loading="lazy"
                             className="relative h-full w-full rounded-2xl object-cover shadow-xl ring-1 ring-base-300"
                         />
                     </div>
@@ -173,13 +176,13 @@ export function PhotoDeck() {
                                     aria-hidden="true"
                                     className="absolute inset-0 translate-x-3 translate-y-3 rotate-6 overflow-hidden rounded-2xl bg-base-100 shadow-lg ring-1 ring-base-300"
                                 >
-                                    <img src={back2.src} alt="" className="h-full w-full object-cover opacity-70" />
+                                    <img src={back2.src} alt="" loading="lazy" className="h-full w-full object-cover opacity-70" />
                                 </div>
                                 <div
                                     aria-hidden="true"
                                     className="absolute inset-0 translate-x-1.5 translate-y-1.5 rotate-3 overflow-hidden rounded-2xl bg-base-100 shadow-lg ring-1 ring-base-300"
                                 >
-                                    <img src={back1.src} alt="" className="h-full w-full object-cover opacity-90" />
+                                    <img src={back1.src} alt="" loading="lazy" className="h-full w-full object-cover opacity-90" />
                                 </div>
                             </>
                         )}
@@ -191,6 +194,7 @@ export function PhotoDeck() {
                                     key={index}
                                     src={PHOTOS[index].src}
                                     alt={PHOTOS[index].alt}
+                                    loading="lazy"
                                     custom={dir}
                                     variants={slide}
                                     initial="enter"

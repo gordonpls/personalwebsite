@@ -5,9 +5,10 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import cuDenverLogo from "../assets/badge-hover-photos/cudenver.webp";
-import uncoLogo from "../assets/badge-hover-photos/unco.png";
-import buLogo from "../assets/badge-hover-photos/bu-cropped.png";
+// Logos show at h-14 (56px); ship 2× height as webp.
+import cuDenverLogo from "../assets/badge-hover-photos/cudenver.webp?h=112&format=webp";
+import uncoLogo from "../assets/badge-hover-photos/unco.png?h=112&format=webp";
+import buLogo from "../assets/badge-hover-photos/bu-cropped.png?h=112&format=webp";
 
 // Shared card body: a fixed-size media box with a two-line caption under it,
 // so every popover has the same footprint whatever its logo's shape.
