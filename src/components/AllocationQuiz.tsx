@@ -14,7 +14,7 @@ interface QuizResult {
 
 interface Props {
     // Called as soon as results show: the simulator below takes the mix.
-    onApply: (equityPct: number, label: string, color: string, age: number, years: number) => void;
+    onApply: (equityPct: number, label: string, color: string, years: number) => void;
 }
 
 const PROFILE_COLORS: Record<string, string> = {
@@ -214,7 +214,7 @@ export const AllocationQuiz = ({ onApply }: Props) => {
     // Hand the mix to the simulator the moment results show (once per result).
     useEffect(() => {
         if (step !== "result" || !analysis) return;
-        onApply(analysis.equity, analysis.profile.label, PROFILE_COLORS[analysis.profile.id] ?? "#378ADD", sliderVals.age, sliderVals.horizon);
+        onApply(analysis.equity, analysis.profile.label, PROFILE_COLORS[analysis.profile.id] ?? "#378ADD", sliderVals.horizon);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step]);
 

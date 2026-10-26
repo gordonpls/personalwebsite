@@ -9,7 +9,7 @@ export const Allocation = () => {
 
     return (
         <div className="space-y-6">
-            <AllocationQuiz onApply={(equity, label, color, age, years) => setApplied({ equity, label, color, age, years, nonce: Date.now() })} />
+            <AllocationQuiz onApply={(equity, label, color, years) => setApplied({ equity, label, color, years, nonce: Date.now() })} />
             {/* Until the quiz hands over a mix, the simulator is the side door. */}
             {!applied && (
                 <div className="divider divider-quiet text-xs font-medium uppercase tracking-widest text-base-content/60">

@@ -20,14 +20,13 @@ export interface AppliedMix {
     equity: number;
     label: string;
     color: string;
-    age: number;    // quiz age: the "invested at age N" in the headline
     years: number;  // quiz time horizon: the holding period
     nonce: number;
 }
 
 interface DataPoint {
     date: string;
-    month: number; // months since the start, for the age in the tooltip
+    month: number; // months since the start
     portfolio: number;
     equities: number;
     bonds: number;
@@ -44,7 +43,6 @@ interface CustomTooltipProps {
     payload?: Array<{ dataKey: string; value: number; payload: DataPoint }>;
     label?: string;
     amount: number;
-    startAge: number;
 }
 
 function getAllocation(equityPct: number) {
@@ -113,12 +111,11 @@ const fmtCompact = (n: number) =>
     `$${Intl.NumberFormat("en-US", { notation: "compact", maximumSignificantDigits: 2 }).format(n)}`;
 const fmtPct = (n: number, d = 1) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(d)}%`;
 
-const CustomTooltip = ({ active, payload, label, amount, startAge }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload, label, amount }: CustomTooltipProps) => {
     if (!active || !payload?.length) return null;
-    const age = startAge + Math.floor((payload[0].payload?.month ?? 0) / 12);
     return (
         <div className="bg-base-100/95 backdrop-blur border border-base-300 rounded-xl px-4 py-3 text-sm shadow-xl">
-            <p className="text-base-content/70 text-xs font-medium mb-2">{label} · age {age}</p>
+            <p className="text-base-content/70 text-xs font-medium mb-2">{label}</p>
             {LINES.map(({ key, label: name, color }) => {
                 const entry = payload.find((p) => p.dataKey === key);
                 if (!entry) return null;
@@ -190,8 +187,6 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
     const reduce = useReducedMotion();
     const [years, setYears] = useState(10);
     const [amount, setAmount] = useState(10_000);
-    const [age, setAge] = useState(30);
-    const [ageDraft, setAgeDraft] = useState("30"); // the box's text; may be empty while typing
     const [equityPct, setEquityPct] = useState(80);
     const equityRef = useRef(equityPct);
     equityRef.current = equityPct;
@@ -203,8 +198,6 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
     useEffect(() => {
         if (!applied) return;
         setHandoff({ ...applied, phase: "pending" });
-        setAge(applied.age);
-        setAgeDraft(String(applied.age));
         setYears(applied.years);
     }, [applied]);
 
@@ -242,7 +235,6 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
     const { data: tickerData, maxMonths, isLive, isLoading, asOfDate } = useTickerData(months);
     useEffect(() => { if (maxMonths) setMaxMonthsSeen(maxMonths); }, [maxMonths]);
     const maxYears = Math.floor(maxMonthsSeen / 12);
-    const heldYears = Math.round(months / 12 * 10) / 10;
     const capped = years * 12 > maxMonthsSeen;
     const yearButtons = [...new Set([...YEAR_OPTIONS, Math.min(years, maxYears)])].filter((y) => y <= maxYears).sort((a, b) => a - b);
     const alloc = getAllocation(equityPct);
@@ -284,7 +276,7 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
         >
 
             {/* Header: the title, then the question the whole card answers,
-                with the amount, age and holding period editable in place. */}
+                with the amount and holding period editable in place. */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold text-base-content">Hypothetical Diversified Portfolio</h2>
@@ -310,43 +302,29 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
                     >
                         {AMOUNT_OPTIONS.map((a) => <option key={a} value={a}>{fmtDollar(a)}</option>)}
                     </select>{" "}
-                    at age{" "}
-                    <input
-                        inputMode="numeric"
-                        value={ageDraft}
-                        onChange={(e) => {
-                            const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                            setAgeDraft(v);
-                            if (v) setAge(Number(v));
-                        }}
-                        onBlur={() => setAgeDraft(String(age))}
-                        aria-label="Age when invested"
-                        className="w-14 rounded-md border-b-2 border-dashed border-base-content/30 bg-transparent px-1 text-center font-semibold text-base-content [appearance:textfield] hover:border-base-content/60 [&::-webkit-inner-spin-button]:appearance-none"
-                    />{" "}
-                    and held it {heldYears} {heldYears === 1 ? "year" : "years"}, you'd have{" "}
+                    and held it for{" "}
+                    <select
+                        value={Math.min(years, maxYears)}
+                        onChange={(e) => setYears(Number(e.target.value))}
+                        aria-label="Years held"
+                        className="cursor-pointer appearance-none rounded-md border-b-2 border-dashed border-base-content/30 bg-transparent px-1 font-semibold text-base-content hover:border-base-content/60"
+                    >
+                        {yearButtons.map((y) => (
+                            <option key={y} value={y}>
+                                {y} {y === 1 ? "year" : "years"}{y === maxYears ? " (max)" : ""}
+                            </option>
+                        ))}
+                    </select>, you'd have{" "}
                     <span className="whitespace-nowrap text-2xl font-bold tabular-nums sm:text-3xl" style={{ color: MIX_COLOR }}>
                         {stats ? fmtDollar(amount, stats.total) : "…"}
-                    </span>{" "}
-                    at {age + Math.floor(heldYears)}.
+                    </span>.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-1">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-base-content/60">Held for</span>
-                    {yearButtons.map((y) => (
-                        <button
-                            key={y}
-                            onClick={() => setYears(y)}
-                            className={`btn btn-sm rounded-lg font-medium ${Math.min(years, maxYears) === y ? "btn-neutral" : "btn-ghost text-base-content/60"}`}
-                        >
-                            {y === maxYears ? `${y}Y (max)` : `${y}Y`}
-                        </button>
-                    ))}
-                    {capped && (
-                        <span className="ml-1 text-xs text-base-content/60">
-                            Your {years}-year horizon is longer than the data: all four funds only go back {maxYears} years.
-                        </span>
-                    )}
-                </div>
+                {capped && (
+                    <p className="text-xs text-base-content/60">
+                        Your {years}-year horizon is longer than the data: all four funds only go back {maxYears} years.
+                    </p>
+                )}
             </div>
 
             {/* Quiz hand-off banner: shown while the mix is being applied and
@@ -497,7 +475,7 @@ export const HypotheticalPortfolio = ({ applied }: PortfolioProps = {}) => {
                         />
                         <ReferenceLine y={0} stroke="currentColor" strokeOpacity={0.3} />
                         <Tooltip
-                            content={<CustomTooltip amount={amount} startAge={age} />}
+                            content={<CustomTooltip amount={amount} />}
                             cursor={{ stroke: "currentColor", strokeOpacity: 0.2, strokeWidth: 1 }}
                         />
                         <Line type="monotone" dataKey="bonds" stroke="#7F77DD" strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.7} dot={false} activeDot={{ r: 3, strokeWidth: 0 }} animationDuration={300} />
