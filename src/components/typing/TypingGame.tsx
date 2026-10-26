@@ -1,6 +1,6 @@
 // /typing — Typing Game. Asks for a name once (remembered in localStorage so
 // retries and return visits skip the prompt), then hands off to TimedRun:
-// 30s and 60s runs, themed word packs, and a top-10 board for each run length.
+// 30-second runs, a random word pack each time, and one top-10 board.
 
 import { useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -76,7 +76,7 @@ export default function TypingGame() {
                         className="mx-auto max-w-3xl"
                         eyebrow="Typing Game"
                         title="How fast are your fingers?"
-                        description="Pick a run length and a word pack. The clock starts on your first keystroke. Make the top 10 and your name goes on the board."
+                        description="30 seconds, a random word pack, same rules for everyone. The clock starts on your first keystroke. Make the top 10 and your name goes on the board."
                     />
 
                     {editing ? (

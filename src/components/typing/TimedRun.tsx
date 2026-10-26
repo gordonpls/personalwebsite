@@ -8,38 +8,38 @@
 // server/routes/typing.js). If the server is offline, runs are dealt locally
 // and simply aren't saved.
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import { useTypingSession } from "./useTypingSession";
 import { Leaderboard, type ScoreEntry } from "./Leaderboard";
-import { PACKS, makeRunText, type PackId } from "./wordPacks";
+import { PACKS, LINE_MAX, makeRunText, randomPack, type PackId } from "./wordPacks";
 
-const DURATIONS = [30, 60] as const;
-type Duration = (typeof DURATIONS)[number];
+// One run length and a random word pack, so every score is the same game.
+const SECONDS = 30;
 type Boards = Record<number, ScoreEntry[]>;
 type Phase = "ready" | "running" | "done";
-type Run = { token: string | null; text: string };
+type Run = { token: string | null; text: string; pack: PackId };
 // [ms since first key, inserted text | number of chars deleted]
 type RunLog = [number, string | number][];
 
-// Most characters on the sign at once, even when the box is wide: short
-// chunks are easier to read ahead in.
-const MAX_CHUNK_CHARS = 24;
 // After time's up, ignore space briefly so a word-ending space typed right at
 // the buzzer doesn't instantly restart and hide the results.
 const RETRY_GRACE_MS = 700;
 
-async function fetchRun(seconds: number, pack: PackId): Promise<Run> {
+async function fetchRun(): Promise<Run> {
     try {
         const r = await fetch("/api/typing/runs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ seconds, pack }),
+            body: JSON.stringify({ seconds: SECONDS }),
         });
         if (!r.ok) throw new Error();
-        return await r.json();
+        const run = await r.json();
+        if (!(run.pack in PACKS)) throw new Error(); // an older server that doesn't pick the pack
+        return run;
     } catch {
-        return { token: null, text: makeRunText(pack) };
+        const pack = randomPack();
+        return { token: null, text: makeRunText(pack), pack };
     }
 }
 
@@ -60,7 +60,7 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
     const inputRef = useRef<HTMLInputElement>(null);
     const shake = useAnimationControls();
 
-    const [seconds, setSeconds] = useState<Duration>(30);
+    const seconds = SECONDS;
     const [pack, setPack] = useState<PackId>("code");
     const s = useTypingSession("");
 
@@ -78,29 +78,10 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
     const [boardStatus, setBoardStatus] = useState<"loading" | "ready" | "offline">("loading");
     const [placed, setPlaced] = useState<{ rank: number | null; at: number | null } | null>(null);
 
-    // How many sign letters fit on one line, measured from the real font so a
-    // chunk never wraps (the sign is monospace, so every letter is one width).
-    const signRef = useRef<HTMLDivElement>(null);
-    const measureRef = useRef<HTMLSpanElement>(null);
-    const [lineChars, setLineChars] = useState(MAX_CHUNK_CHARS);
-    useLayoutEffect(() => {
-        const box = signRef.current;
-        const probe = measureRef.current;
-        if (!box || !probe) return;
-        const measure = () => {
-            const charW = probe.getBoundingClientRect().width / 10;
-            if (charW > 0) setLineChars(Math.max(8, Math.min(MAX_CHUNK_CHARS, Math.floor(box.clientWidth / charW))));
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        ro.observe(box);
-        return () => ro.disconnect();
-    }, []);
-
     const logRef = useRef<RunLog>([]);
     const runId = useRef(0);
     // The next run is dealt while you type this one, so retry is instant.
-    const nextRun = useRef<{ key: string; run: Promise<Run> } | null>(null);
+    const nextRun = useRef<Promise<Run> | null>(null);
 
     useEffect(() => {
         fetch("/api/typing/scores")
@@ -109,7 +90,7 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
             .catch(() => setBoardStatus("offline"));
     }, []);
 
-    const restart = useCallback(async (d: Duration = seconds, p: PackId = pack) => {
+    const restart = useCallback(async () => {
         const id = ++runId.current;
         setLoading(true);
         setPhase("ready");
@@ -118,16 +99,16 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
         setSaveNote(null);
         setPlaced(null);
         logRef.current = [];
-        const key = `${d}-${p}`;
-        const pending = nextRun.current?.key === key ? nextRun.current.run : fetchRun(d, p);
+        const pending = nextRun.current ?? fetchRun();
         nextRun.current = null;
         const run = await pending;
         if (id !== runId.current) return; // a newer restart won
         s.reset(run.text);
         setToken(run.token);
+        setPack(run.pack);
         setLoading(false);
         inputRef.current?.focus();
-    }, [seconds, pack, s]);
+    }, [s]);
 
     // Deal the first run on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,13 +209,10 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
             setStartedAt(t0);
             setNow(t0);
             setPhase("running");
-            nextRun.current = { key: `${seconds}-${pack}`, run: fetchRun(seconds, pack) };
+            nextRun.current = fetchRun();
         }
         s.input(value);
     };
-
-    const pickSeconds = (d: Duration) => { setSeconds(d); restart(d, pack); };
-    const pickPack = (p: PackId) => { setPack(p); restart(seconds, p); };
 
     // Cut the run into chunks of whole words that fit on one line (trailing
     // space included). A word that would overflow starts the next chunk, so
@@ -246,12 +224,12 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
         let pos = 0;
         for (const w of s.target.split(" ")) {
             const next = Math.min(pos + w.length + 1, len);
-            if (next - start > lineChars && pos > start) { out.push({ start, end: pos }); start = pos; }
+            if (next - start > LINE_MAX + 1 && pos > start) { out.push({ start, end: pos }); start = pos; }
             pos = next;
         }
         if (start < len) out.push({ start, end: len });
         return out;
-    }, [s.target, lineChars]);
+    }, [s.target]);
 
     const caretAt = s.typed.length;
     const ci = Math.max(0, chunks.findIndex((c) => caretAt < c.end));
@@ -271,7 +249,7 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
 
     return (
         <div className="flex flex-col items-center gap-6">
-            {/* Run length + word pack. */}
+            {/* Who's playing, and this run's (randomly drawn) word pack. */}
             <div className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-base-content/60">
                     Playing as <span className="font-semibold text-base-content">{name}</span>
@@ -279,34 +257,12 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                         change
                     </button>
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="join" role="group" aria-label="Run length">
-                        {DURATIONS.map((d) => (
-                            <button
-                                key={d}
-                                type="button"
-                                aria-pressed={seconds === d}
-                                onClick={() => pickSeconds(d)}
-                                className={`btn join-item btn-sm ${seconds === d ? "btn-primary" : "btn-ghost"}`}
-                            >
-                                {d}s
-                            </button>
-                        ))}
-                    </div>
-                    <div className="join" role="group" aria-label="Word pack">
-                        {(Object.keys(PACKS) as PackId[]).map((p) => (
-                            <button
-                                key={p}
-                                type="button"
-                                aria-pressed={pack === p}
-                                onClick={() => pickPack(p)}
-                                className={`btn join-item btn-sm gap-1 ${pack === p ? "btn-primary" : "btn-ghost"}`}
-                            >
-                                <span aria-hidden="true">{PACKS[p].emoji}</span> {PACKS[p].label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <p className="text-sm text-base-content/60">
+                    30 seconds · words:{" "}
+                    <span className="font-semibold text-base-content">
+                        <span aria-hidden="true">{PACKS[pack].emoji}</span> {PACKS[pack].label}
+                    </span>
+                </p>
             </div>
 
             <div
@@ -337,15 +293,19 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                     className={`absolute inset-0 h-full w-full cursor-text opacity-0 ${phase === "done" ? "pointer-events-none" : ""}`}
                 />
 
-                <motion.div ref={signRef} animate={shake} className="pointer-events-none relative select-none" aria-hidden="true">
-                    {/* Ten-letter probe in the sign's exact font, for lineChars. */}
-                    <span ref={measureRef} className="invisible absolute left-0 top-0 whitespace-pre font-mono text-3xl font-bold tracking-tight md:text-5xl">
-                        mmmmmmmmmm
-                    </span>
+                {/* Every line is up to LINE_MAX letters on every screen: the text
+                    shrinks to fit a narrow box instead of re-wrapping, so all
+                    players read the same lines. (Mono letters are ~0.6em wide.) */}
+                <motion.div
+                    animate={shake}
+                    className="pointer-events-none relative select-none [container-type:inline-size]"
+                    aria-hidden="true"
+                >
+                  <div style={{ fontSize: `min(3rem, ${(100 / ((LINE_MAX + 1) * 0.6)).toFixed(2)}cqw)` }}>
                     {phase === "done" && result ? (
                         // Time's up: the score takes over the sign and ripples a wave.
                         <>
-                            <p className="text-center font-mono text-3xl font-bold leading-relaxed tracking-tight text-primary md:text-5xl">
+                            <p className="text-center font-mono text-[1em] font-bold leading-relaxed tracking-tight text-primary">
                                 {[...`${result.wpm} wpm`].map((ch, i) => (
                                     <motion.span
                                         key={`${result.wpm}-${i}`}
@@ -358,8 +318,8 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                                     </motion.span>
                                 ))}
                             </p>
-                            <p className="mt-2 h-8 text-center font-mono text-lg text-base-content/60 md:h-10 md:text-2xl">
-                                {result.accuracy}% accuracy · {seconds}s · {PACKS[pack].label}
+                            <p className="mt-2 h-[1.4em] text-center font-mono text-[0.5em] text-base-content/60">
+                                {result.accuracy}% accuracy · {PACKS[pack].label}
                             </p>
                         </>
                     ) : (
@@ -370,7 +330,7 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                                 initial={reduce || chunk.start === 0 ? false : { opacity: 0, y: 18 }}
                                 animate={{ opacity: loading ? 0.3 : 1, y: 0 }}
                                 transition={{ duration: 0.22, ease: "easeOut" }}
-                                className="min-h-[1.625em] text-center font-mono text-3xl font-bold leading-relaxed tracking-tight md:text-5xl"
+                                className="min-h-[1.625em] text-center font-mono text-[1em] font-bold leading-relaxed tracking-tight"
                             >
                                 {wordGroups(s.target, chunk.start, chunk.end).map(([a, b]) => (
                                     <span key={a} className="inline-block whitespace-nowrap">
@@ -400,11 +360,12 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                                 ))}
                             </motion.p>
                             {/* What's next, small and quiet underneath. */}
-                            <p className="mt-2 h-8 truncate text-center font-mono text-lg text-base-content/60 md:h-10 md:text-2xl">
+                            <p className="mt-2 h-[1.4em] truncate text-center font-mono text-[0.5em] text-base-content/60">
                                 {upcoming ? s.target.slice(upcoming.start, upcoming.end).trim() : ""}
                             </p>
                         </>
                     )}
+                  </div>
                 </motion.div>
 
                 {/* Retry prompt: a big spacebar that keeps pressing itself, so
@@ -461,19 +422,16 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                 )}
             </div>
 
-            {/* One board per run length, side by side; the one you're playing is outlined. */}
-            <div className="grid w-full max-w-3xl gap-6 md:grid-cols-2">
-                {DURATIONS.map((d) => (
-                    <Leaderboard
-                        key={d}
-                        seconds={d}
-                        active={d === seconds}
-                        entries={boards[d] ?? []}
-                        you={name}
-                        highlightAt={d === seconds ? placed?.at ?? null : null}
-                        status={boardStatus}
-                    />
-                ))}
+            {/* The one board. */}
+            <div className="w-full max-w-xl">
+                <Leaderboard
+                    seconds={SECONDS}
+                    active={false}
+                    entries={boards[SECONDS] ?? []}
+                    you={name}
+                    highlightAt={placed?.at ?? null}
+                    status={boardStatus}
+                />
             </div>
         </div>
     );

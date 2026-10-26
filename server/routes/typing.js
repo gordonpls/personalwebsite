@@ -1,4 +1,4 @@
-// Typing Game leaderboard: a top-10 board per run length (30s and 60s), stored
+// Typing Game leaderboard: one top-10 board for 30-second runs, stored
 // as a small JSON file. Runtime data — gitignored and excluded from the deploy
 // rsync so scores survive deploys.
 //
@@ -25,10 +25,17 @@ const router = express.Router();
 const DATA = path.join(__dirname, "..", "data");
 const FILE = path.join(DATA, "typingScores.json");
 const WORDS = JSON.parse(fs.readFileSync(path.join(DATA, "typing-words.json"), "utf8"));
-const DURATIONS = [30, 60];
+// One run length, and the word pack is drawn at random per run, so every
+// score on the board comes from the same game.
+const DURATIONS = [30];
 const PACKS = Object.keys(WORDS);
 const BOARD_SIZE = 10;
-const RUN_WORDS = 200;
+// Every line on the sign is 19-21 characters, so reading speed doesn't depend
+// on how the words happened to wrap. 40 lines is ~800 characters: more than
+// anyone types in 30 seconds (250 wpm caps at 625).
+const LINE_MIN = 19;
+const LINE_MAX = 21;
+const RUN_LINES = 40;
 const MAX_WPM = 250;              // anything above this is a bot
 const TOKEN_TTL_MS = 60 * 60e3;   // a dealt run can be played within the hour
 const CLOCK_SLACK_MS = 2000;      // network + timer-tick wiggle room
@@ -71,14 +78,47 @@ function readToken(token) {
     try { return JSON.parse(Buffer.from(body, "base64url").toString("utf8")); } catch { return null; }
 }
 
+// Deals a run as fixed-length lines from a shuffled deck: no word repeats
+// until the whole pack has been used. Each line takes the first deck word that
+// fits, skipping lengths that would strand the line short of LINE_MIN. The
+// browser re-splits the text greedily at LINE_MAX, which lands on exactly
+// these breaks (a line of 19+ can't take another word under 22).
+// Keep in sync with makeRunText in src/components/typing/wordPacks.ts.
 function dealText(pack) {
     const pool = WORDS[pack];
-    const out = [];
-    while (out.length < RUN_WORDS) {
-        const w = pool[crypto.randomInt(pool.length)];
-        if (w !== out[out.length - 1]) out.push(w);
+    const shuffled = () => {
+        const a = [...pool];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = crypto.randomInt(i + 1);
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+    let deck = shuffled();
+    const lines = [];
+    while (lines.length < RUN_LINES) {
+        if (deck.length < 12) deck = [...deck, ...shuffled().filter((w) => !deck.includes(w))];
+        const line = [];
+        let len = 0;
+        // A word fits if the line lands in range, or stays short enough
+        // (≤ 16) that a 4+ letter word can still finish it.
+        const fits = (w) => {
+            const next = len ? len + 1 + w.length : w.length;
+            return next <= LINE_MAX && (next >= LINE_MIN || LINE_MAX - next - 1 >= 4);
+        };
+        while (len < LINE_MIN) {
+            let i = deck.findIndex(fits);
+            let w;
+            if (i !== -1) [w] = deck.splice(i, 1);
+            // Deck has nothing of the right length: borrow one from the pack.
+            else w = pool.find((x) => fits(x) && !line.includes(x));
+            if (!w) break;
+            line.push(w);
+            len = len ? len + 1 + w.length : w.length;
+        }
+        lines.push(line.join(" "));
     }
-    return out.join(" ");
+    return lines.join(" ");
 }
 
 function load() {
@@ -157,7 +197,7 @@ function timingCV(times) {
     return sd / mean;
 }
 
-// GET /api/typing/scores → { 30: [...], 60: [...] }
+// GET /api/typing/scores → { 30: [...] }
 router.get("/scores", (_req, res) => {
     const store = load();
     const out = {};
@@ -165,15 +205,16 @@ router.get("/scores", (_req, res) => {
     res.json(out);
 });
 
-// POST /api/typing/runs { seconds, pack } → { token, text }
+// POST /api/typing/runs { seconds } → { token, text, pack }; the pack is the server's pick.
 router.post("/runs", (req, res) => {
-    const { seconds, pack } = req.body || {};
-    if (!DURATIONS.includes(seconds) || !PACKS.includes(pack)) {
+    const { seconds } = req.body || {};
+    if (!DURATIONS.includes(seconds)) {
         return res.status(400).json({ error: "Unknown run type" });
     }
+    const pack = PACKS[crypto.randomInt(PACKS.length)];
     const text = dealText(pack);
     const token = makeToken({ id: crypto.randomUUID(), seconds, pack, issuedAt: Date.now(), text });
-    res.json({ token, text });
+    res.json({ token, text, pack });
 });
 
 const lastPost = new Map();
