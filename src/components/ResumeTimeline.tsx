@@ -207,12 +207,13 @@ export function ResumeTimeline() {
             className="spotlight text-left bg-base-200 p-4 lg:p-8 lg:w-full mx-auto rounded-md border-2 border-secondary"
             onPointerMove={spotlight}
         >
-            {/* Heading with the résumé download beside it (below it on phones). */}
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            {/* Header: one left-aligned column in the reading path (eyebrow →
+                title → download), so the résumé button isn't stranded
+                at the far right where the eye doesn't go. */}
+            <header className="mb-8">
                 <SectionHeading eyebrow="Experience" title="Career Timeline" />
-                {/* The original button: pastel RGB floating border (.btn-rgb-border).
-                    Wrapped so the row can align it (that class pins align-self). */}
-                <div className="shrink-0">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {/* The original button: pastel RGB floating border (.btn-rgb-border). */}
                     <div className="btn-rgb-border">
                         <a
                             href={resumePDF}
@@ -224,8 +225,9 @@ export function ResumeTimeline() {
                             Download Full Resume
                         </a>
                     </div>
+                    <span className="text-xs font-medium uppercase tracking-widest text-base-content/60">PDF</span>
                 </div>
-            </div>
+            </header>
 
             {/* Filter tabs — the interactive flashy feature */}
             {/* Scrolls sideways on narrow phones rather than overflowing the card. */}

@@ -36,12 +36,7 @@
     100% { opacity: 0; transform: scale(0) rotate(45deg); }
 }
 .sparkle-twinkle { animation: sparkle-twinkle 1.1s ease-in-out both; }
+/* Trail stars skip the glow filters: each filter is an offscreen render pass
+   per frame, and the trail can have dozens of stars alive at once. */
+.sparkle-star.sparkle-trail { filter: none; }
 
-/* Float: stars drift upward with a sideways sway (--sway). */
-@keyframes sparkle-float {
-    0%   { opacity: 0; transform: translate(0, 0) scale(0.3) rotate(0deg); }
-    20%  { opacity: 1; transform: translate(calc(var(--sway) * -0.5), -15px) scale(1) rotate(15deg); }
-    60%  { opacity: 1; transform: translate(var(--sway), -55px) scale(0.9) rotate(-10deg); }
-    100% { opacity: 0; transform: translate(0, -95px) scale(0.4) rotate(20deg); }
-}
-.sparkle-float { animation: sparkle-float 1.6s ease-out both; }
