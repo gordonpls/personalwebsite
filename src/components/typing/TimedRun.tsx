@@ -22,6 +22,9 @@ type Run = { token: string | null; text: string; pack: PackId };
 // [ms since first key, inserted text | number of chars deleted]
 type RunLog = [number, string | number][];
 
+// The sign shows this many lines at once, each LINE_EM tall.
+const VISIBLE_LINES = 3;
+const LINE_EM = 1.5;
 // After time's up, ignore space briefly so a word-ending space typed right at
 // the buzzer doesn't instantly restart and hide the results.
 const RETRY_GRACE_MS = 700;
@@ -248,7 +251,6 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
     const caretAt = s.typed.length;
     const ci = Math.max(0, chunks.findIndex((c) => caretAt < c.end));
     const chunk = chunks[ci] ?? { start: 0, end: 0 };
-    const upcoming = chunks[ci + 1];
     const signText = s.target.slice(chunk.start, chunk.end).trim();
 
     const hint = loading
@@ -315,7 +317,7 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                     className="pointer-events-none relative select-none [container-type:inline-size]"
                     aria-hidden="true"
                 >
-                  <div style={{ fontSize: `min(3rem, ${(100 / ((LINE_MAX + 1) * 0.6)).toFixed(2)}cqw)` }}>
+                  <div style={{ fontSize: `min(2.5rem, ${(100 / ((LINE_MAX + 1) * 0.6)).toFixed(2)}cqw)` }}>
                     {phase === "done" && result ? (
                         // Time's up: the score takes over the sign and ripples a wave.
                         <>
@@ -338,45 +340,59 @@ export const TimedRun = ({ name, onChangeName }: { name: string; onChangeName: (
                         </>
                     ) : (
                         <>
-                            {/* The current chunk. Each new chunk rises in from the preview line. */}
-                            <motion.p
-                                key={`${s.target.length}-${chunk.start}`}
-                                initial={reduce || chunk.start === 0 ? false : { opacity: 0, y: 18 }}
-                                animate={{ opacity: loading ? 0.3 : 1, y: 0 }}
-                                transition={{ duration: 0.22, ease: "easeOut" }}
-                                className="min-h-[1.625em] text-center font-mono text-[1em] font-bold leading-relaxed tracking-tight"
-                            >
-                                {wordGroups(s.target, chunk.start, chunk.end).map(([a, b]) => (
-                                    <span key={a} className="inline-block whitespace-nowrap">
-                                        {[...s.target.slice(a, b)].map((ch, j) => {
-                                            const i = a + j;
-                                            const st = s.statuses[i];
-                                            return (
-                                                <span
-                                                    key={i}
-                                                    className={`relative inline-block whitespace-pre transition-colors duration-150 ${
-                                                        st === "correct" ? "text-primary" : st === "wrong" ? "rounded-sm bg-error/15 text-error" : "text-base-content/60"
-                                                    }`}
-                                                >
-                                                    {/* Caret glides between letters via a shared layoutId. */}
-                                                    {i === caretAt && !loading && (
-                                                        <motion.span
-                                                            layoutId="typer-caret"
-                                                            transition={{ type: "spring", stiffness: 700, damping: 40 }}
-                                                            className={`absolute -left-[2px] top-[12%] h-[76%] w-[3px] rounded-full bg-primary ${phase === "ready" ? "typer-caret-idle" : ""}`}
-                                                        />
-                                                    )}
-                                                    {ch}
-                                                </span>
-                                            );
-                                        })}
-                                    </span>
-                                ))}
-                            </motion.p>
-                            {/* What's next, small and quiet underneath. */}
-                            <p className="mt-2 h-[1.4em] truncate text-center font-mono text-[0.5em] text-base-content/60">
-                                {upcoming ? s.target.slice(upcoming.start, upcoming.end).trim() : ""}
-                            </p>
+                            {/* Monkeytype-style: three same-size lines in a window. The
+                                line you're on sits in the middle (the first line starts
+                                at the top), the one you just finished fades to a ghost
+                                above, and finishing a line snaps the block up a row in
+                                120ms, so your eyes stay on one spot: the next word. */}
+                            <div className="relative overflow-hidden" style={{ height: `${VISIBLE_LINES * LINE_EM}em`, opacity: loading ? 0.3 : 1 }}>
+                                <motion.div
+                                    initial={false}
+                                    animate={{ y: `${-Math.max(0, ci - 1) * LINE_EM}em` }}
+                                    transition={reduce ? { duration: 0 } : { duration: 0.12, ease: "easeOut" }}
+                                >
+                                    {chunks.map((c, li) => {
+                                        // Only lines near the window are drawn; the rest keep their height.
+                                        const near = li >= ci - 2 && li <= ci + VISIBLE_LINES;
+                                        return (
+                                            <p
+                                                key={`${s.target.length}-${c.start}`}
+                                                // Finished lines fade almost out right away, so the
+                                                // only bright text is where you're typing next.
+                                                className={`text-center font-mono text-[1em] font-bold tracking-tight whitespace-nowrap transition-opacity duration-100 ${li < ci ? "opacity-15" : ""}`}
+                                                style={{ height: `${LINE_EM}em`, lineHeight: `${LINE_EM}em` }}
+                                            >
+                                                {near && wordGroups(s.target, c.start, c.end).map(([a, b]) => (
+                                                    <span key={a} className="inline-block whitespace-nowrap">
+                                                        {[...s.target.slice(a, b)].map((ch, j) => {
+                                                            const i = a + j;
+                                                            const st = s.statuses[i];
+                                                            return (
+                                                                <span
+                                                                    key={i}
+                                                                    className={`relative inline-block whitespace-pre transition-colors duration-150 ${
+                                                                        st === "correct" ? "text-primary" : st === "wrong" ? "rounded-sm bg-error/15 text-error" : "text-base-content/60"
+                                                                    }`}
+                                                                >
+                                                                    {/* Caret glides between letters via a shared layoutId. */}
+                                                                    {i === caretAt && !loading && (
+                                                                        <motion.span
+                                                                            layoutId="typer-caret"
+                                                                            transition={{ type: "spring", stiffness: 700, damping: 40 }}
+                                                                            className={`absolute -left-[2px] top-[12%] h-[76%] w-[3px] rounded-full bg-primary ${phase === "ready" ? "typer-caret-idle" : ""}`}
+                                                                        />
+                                                                    )}
+                                                                    {ch}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </span>
+                                                ))}
+                                            </p>
+                                        );
+                                    })}
+                                </motion.div>
+                            </div>
                         </>
                     )}
                   </div>
