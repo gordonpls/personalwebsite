@@ -21,7 +21,7 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
         org: "Plaid",
         period: "Sep 2026 – Present",
         inProgress: "In progress",
-        startedOn: "2026-09-01", // exact day assumed; adjust to the real start date
+        startedOn: "2026-09-21",
     },
     {
         type: "education",

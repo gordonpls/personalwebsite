@@ -72,19 +72,11 @@ export default function TypingGame() {
             <div className="mockup-window border bg-base-300 !border-neutral dark:border-white rounded-md !overflow-visible !pt-0 before:!hidden">
                 <Navbar embedded />
                 <div className="px-4 pt-6 pb-16 space-y-10">
-                    {/* The two rules as a pair of side-by-side notes under the eyebrow. */}
-                    <div className="mx-auto max-w-3xl space-y-4">
+                    <div className="mx-auto max-w-3xl">
                         <SectionHeading eyebrow="Typing Game" />
-                        <ul className="flex flex-col gap-3 text-sm text-base-content/80 sm:flex-row sm:items-center sm:gap-0 sm:divide-x sm:divide-base-content/15">
-                            <li className="flex items-center gap-2.5 sm:pr-5">
-                                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm" aria-hidden="true">⏱</span>
-                                The clock starts on your first keystroke.
-                            </li>
-                            <li className="flex items-center gap-2.5 sm:pl-5">
-                                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm" aria-hidden="true">🏆</span>
-                                Make the top 10 and your name goes on the board.
-                            </li>
-                        </ul>
+                        <p className="mt-3 max-w-md text-balance text-base leading-relaxed text-base-content/70">
+                            The clock starts on your first keystroke. Make the top 10 and your name goes on the board.
+                        </p>
                     </div>
 
                     {editing ? (
