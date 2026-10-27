@@ -4,6 +4,7 @@ import { SectionHeading } from "./SectionHeading";
 import { useSpotlight } from "../hooks/useSpotlight";
 import { TIMELINE_ENTRIES, type TimelineEntry, type EntryType } from "../data/timelineData";
 import { trackEvent } from "../lib/analytics";
+import { CountUp } from "./CountUp";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -43,15 +44,30 @@ function DownloadIcon() {
 
 // ─── Icon node for left rail ──────────────────────────────────────────────────
 
-function IconNode({ type }: { type: EntryType }) {
+function IconNode({ type, live = false }: { type: EntryType; live?: boolean }) {
     const base = "flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm relative z-10";
     if (type === "role") {
-        return <div className={`${base} bg-primary text-primary-content`}><BriefcaseIcon /></div>;
+        return (
+            <div className={`${base} bg-primary text-primary-content`}>
+                {/* Current role: a soft ring pulses out from the node, like a "live" status dot. */}
+                {live && <span aria-hidden="true" className="absolute inset-0 rounded-full bg-primary/40 animate-ping [animation-duration:2.4s]" />}
+                <BriefcaseIcon />
+            </div>
+        );
     }
     if (type === "education") {
         return <div className={`${base} bg-secondary text-secondary-content`}><GraduationIcon /></div>;
     }
     return <div className={`${base} bg-base-300 text-base-content/50`}><MapPinIcon /></div>;
+}
+
+// Day N of a role, counting the start date as day 1 (local calendar days).
+function daysSince(isoDate: string) {
+    const [y, m, d] = isoDate.split("-").map(Number);
+    const start = new Date(y, m - 1, d);
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.max(1, Math.round((todayMidnight.getTime() - start.getTime()) / 86_400_000) + 1);
 }
 
 // ─── Entry renderers ──────────────────────────────────────────────────────────
@@ -72,19 +88,22 @@ function RoleEntry({ entry }: { entry: TimelineEntry }) {
                 </div>
             </div>
             {entry.inProgress && (
-                // New role: one cheeky line, then shimmering placeholder rows.
-                <div className="space-y-2.5" aria-label="Details coming soon">
-                    <p className="flex gap-2.5 text-sm italic text-base-content/70 leading-snug">
-                        <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/50" />
-                        {entry.inProgress}
-                    </p>
-                    {["w-11/12", "w-4/5", "w-2/3"].map((w) => (
-                        <div key={w} className="flex items-center gap-2.5" aria-hidden="true">
-                            <span className="h-1 w-1 shrink-0 rounded-full bg-primary/30" />
-                            <div className={`skeleton h-3 ${w} rounded-full`} />
-                        </div>
-                    ))}
-                </div>
+                // New role: one quiet line with a day count (the node pulses beside it).
+                // The number counts up from 0 the first time it scrolls into view.
+                <p className="flex items-baseline gap-2 text-sm text-base-content/70">
+                    {entry.inProgress}
+                    {entry.startedOn && (
+                        <>
+                            <span aria-hidden="true" className="text-base-content/40">·</span>
+                            <span className="flex items-baseline gap-1" aria-label={`Day ${daysSince(entry.startedOn)}`}>
+                                <span aria-hidden="true" className="text-[10px] font-bold uppercase tracking-[0.2em] text-base-content/60">Day</span>
+                                <span aria-hidden="true" className="text-xl font-bold leading-none text-primary">
+                                    <CountUp value={daysSince(entry.startedOn)} />
+                                </span>
+                            </span>
+                        </>
+                    )}
+                </p>
             )}
             {entry.bullets && (
                 <ul className="space-y-2">
@@ -191,15 +210,21 @@ export function ResumeTimeline() {
             {/* Heading with the résumé download beside it (below it on phones). */}
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <SectionHeading eyebrow="Experience" title="Career Timeline" />
-                <a
-                    href={resumePDF}
-                    download
-                    onClick={() => trackEvent("resume_downloaded")}
-                    className="btn btn-outline btn-primary btn-sm shrink-0 gap-2 self-start rounded-full sm:self-auto"
-                >
-                    <DownloadIcon />
-                    Download résumé (PDF)
-                </a>
+                {/* The original button: pastel RGB floating border (.btn-rgb-border).
+                    Wrapped so the row can align it (that class pins align-self). */}
+                <div className="shrink-0">
+                    <div className="btn-rgb-border">
+                        <a
+                            href={resumePDF}
+                            download
+                            onClick={() => trackEvent("resume_downloaded")}
+                            className="btn btn-primary btn-sm gap-2"
+                        >
+                            <DownloadIcon />
+                            Download Full Resume
+                        </a>
+                    </div>
+                </div>
             </div>
 
             {/* Filter tabs — the interactive flashy feature */}
@@ -239,7 +264,7 @@ export function ResumeTimeline() {
                             className="grid grid-cols-[36px_1fr] gap-x-4 items-start"
                             style={{ animation: `timeline-entry-in 0.35s ease-out ${i * 0.07}s both` }}
                         >
-                            <IconNode type={entry.type} />
+                            <IconNode type={entry.type} live={!!entry.inProgress} />
                             <div>
                                 {entry.type === "role" && <RoleEntry entry={entry} />}
                                 {entry.type === "education" && <EducationEntry entry={entry} />}

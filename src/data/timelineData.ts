@@ -8,8 +8,10 @@ export type TimelineEntry = {
     location?: string;
     bullets?: string[];
     note?: string;
-    // A role too new for real bullets: shown as this line plus skeleton rows.
+    // A role too new for real bullets: shown as this note with a live day
+    // count from `startedOn` (YYYY-MM-DD), and a pulsing timeline marker.
     inProgress?: string;
+    startedOn?: string;
 };
 
 export const TIMELINE_ENTRIES: TimelineEntry[] = [
@@ -18,7 +20,8 @@ export const TIMELINE_ENTRIES: TimelineEntry[] = [
         title: "Technical Support Engineer",
         org: "Plaid",
         period: "Sep 2026 – Present",
-        inProgress: "Bullets still loading. Please don't refresh.",
+        inProgress: "In progress",
+        startedOn: "2026-09-01", // exact day assumed; adjust to the real start date
     },
     {
         type: "education",
